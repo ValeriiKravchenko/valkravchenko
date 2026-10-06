@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-sans/cyrillic-400.css';
+@import '@fontsource/ibm-plex-sans/cyrillic-600.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';
+@import '@fontsource/ibm-plex-mono/cyrillic-400.css';
+@import '@fontsource/ibm-plex-mono/cyrillic-600.css';
+/* Silkscreen has no Cyrillic: Latin only. */
+@import '@fontsource/silkscreen/latin-400.css';
+@import '@fontsource/silkscreen/latin-700.css';
+
+@theme {
+  /* Colors, light theme */
+  --color-desk: #eceae3;
+  --color-window: #ffffff;
+  --color-titlebar: #f3f2ec;
+  --color-divider: #e2e0d6;
+  --color-border: #cfcdc2;
+  --color-ink: #1b1b1b;
+  --color-muted: #5a5a55;
+  --color-accent: #c8372d;
+  --color-dot-red: #d9553f;
+  --color-dot-yellow: #e0a93a;
+  --color-dot-green: #5a9e5e;
+
+  /* Fonts */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-pixel: 'Silkscreen', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-window: 12px;
+  --radius-button: 8px;
+  --radius-chip: 10px;
+
+  /* Shadows */
+  --shadow-window: 0 10px 30px rgba(27, 27, 27, 0.08);
+  --shadow-hard: 3px 3px 0 #1b1b1b;
+
+  /* Breakpoints (mobile first: base < 640, sm >= 640, lg >= 1024) */
+  --breakpoint-sm: 640px;
+  --breakpoint-lg: 1024px;
+}
+
+/* Dark theme is reserved, not applied yet. */
+:root {
+  --reserved-dark-desk: #17120e;
+  --reserved-dark-window: #211b15;
+  --reserved-dark-ink: #efe3c8;
+  --reserved-dark-muted: #b8a98a;
+  --reserved-dark-accent: #f0b24b;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-desk);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    overflow-x: hidden;
+    background-color: var(--color-desk);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  /* Visible focus: 2 px ink outline, 2 px offset. */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Striped title bar: the single "special window" device. */
+  .titlebar-striped {
+    background-color: var(--color-titlebar);
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-titlebar) 0 6px,
+      var(--color-divider) 6px 12px
+    );
+  }
+
+  /* Primary button focus: dark outer outline (global) plus a light inner ring. */
+  .btn-primary:focus-visible {
+    box-shadow:
+      var(--shadow-hard),
+      inset 0 0 0 2px #ffffff;
+  }
+}
