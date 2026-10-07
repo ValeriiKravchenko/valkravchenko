@@ -4,29 +4,37 @@ import type { Dictionary } from './types'
 export const ru: Dictionary = {
   lang: 'ru',
   siteTitle: 'Валерий Кравченко',
-  skipLink: 'К содержимому',
-  logo: { text: 'VK', ariaLabel: 'Валерий Кравченко, на главную', href: '#home' },
+  skipLink: 'Перейти к содержимому',
+  logo: { text: 'VK', ariaLabel: 'Валерий Кравченко, на главную' },
   nav: {
     ariaLabel: 'Основная навигация',
-    items: [
-      { href: '#home', label: 'Главная' },
-      { href: '#projects', label: 'Проекты' },
-      { href: '#contacts', label: 'Контакты' },
-    ],
+    labels: {
+      home: 'Главная',
+      projects: 'Проекты',
+      contacts: 'Контакты',
+      java: 'Java',
+      basics: 'Основы IT',
+      trainers: 'Тренажёры',
+      library: 'Библиотека',
+    },
   },
+  footer: { text: '© Валерий Кравченко' },
   home: {
+    documentTitle: 'Валерий Кравченко',
     windowTitle: 'WELCOME',
     heading: 'Привет, я Валерий',
     lead: 'Здесь будут мои проекты и заметки. Текст страницы появится позже.',
-    primaryCta: { href: '#projects', label: 'Смотреть проекты' },
-    secondaryCta: { href: '#contacts', label: 'Контакты' },
+    primaryCta: { section: 'projects', label: 'Смотреть проекты' },
+    secondaryCta: { section: 'contacts', label: 'Контакты' },
     chips: [
       { label: 'Проектов', count: '[число]' },
       { label: 'Книг', count: '[число]' },
     ],
   },
   projects: {
-    windowTitle: 'Проекты',
+    documentTitle: 'Проекты — Валерий Кравченко',
+    heading: 'Проекты',
+    windowTitle: 'Список проектов',
     items: [
       {
         id: 'project-1',
@@ -55,11 +63,20 @@ export const ru: Dictionary = {
     chip: { label: 'Тестов', count: '[число]' },
   },
   contacts: {
+    documentTitle: 'Контакты — Валерий Кравченко',
+    heading: 'Контакты',
     windowTitle: 'Контакты',
     intro: 'Связаться со мной можно так.',
     items: [
       { label: 'GITHUB', value: '[github]' },
       { label: 'EMAIL', value: '[email]' },
     ],
+  },
+  notFound: {
+    windowTitle: '404',
+    documentTitle: 'Страница не найдена — Валерий Кравченко',
+    heading: 'Страница не найдена',
+    body: 'Такой страницы нет. Возможно, адрес набран с ошибкой.',
+    homeLink: 'На главную',
   },
 }

@@ -23,7 +23,7 @@ export function ContactsWindow({ title, intro, items, id }: ContactsWindowProps)
             <dt>
               <Label font="pixel">{item.label}</Label>
             </dt>
-            <dd className="m-0 font-mono">{item.value}</dd>
+            <dd className="m-0 font-mono [overflow-wrap:anywhere]">{item.value}</dd>
           </div>
         ))}
       </dl>
