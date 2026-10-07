@@ -1,5 +1,7 @@
 # valkravchenko
 
+[![CI](https://github.com/ValeriiKravchenko/valkravchenko/actions/workflows/ci.yml/badge.svg)](https://github.com/ValeriiKravchenko/valkravchenko/actions/workflows/ci.yml)
+
 Personal portfolio site: a multi-page React app with client-side routing.
 
 ## Sections
@@ -38,6 +40,10 @@ npm test -- --run  # tests
 npm run lint       # lint
 npm run build      # production build into dist/
 ```
+
+## CI
+
+On every push to `main` and every pull request, GitHub Actions runs the type check, lint, tests (fails if none ran or any is skipped) and the production build.
 
 ## Static hosting
 
