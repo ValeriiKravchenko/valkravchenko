@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new run for the same branch or PR cancels the previous unfinished one
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Vitest 5 requires Node ^22.12 or ^24; same Node as in the reference setup
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx --no-install tsc --noEmit -p tsconfig.app.json
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test -- --run 2>&1 | tee test-output.log
+          # Guard against silent skipping: executed tests must not be zero and none may be skipped
+          # CI output is colored: strip escape codes, otherwise the "Tests" line is not found
+          plain=$(sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' test-output.log)
+          summary=$(printf '%s\n' "$plain" | grep -E '^ *Tests +[0-9]+' | head -n 1)
+          passed=$(printf '%s\n' "$summary" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -n 1)
+          if [ -z "$passed" ] || [ "$passed" -eq 0 ]; then
+            echo "::error::No tests were executed"
+            exit 1
+          fi
+          if printf '%s\n' "$summary" | grep -qE '[0-9]+ (skipped|todo)'; then
+            echo "::error::Skipped tests found: $summary"
+            exit 1
+          fi
+          echo "Tests passed: $passed"
+
+      - name: Build
+        run: npm run build
