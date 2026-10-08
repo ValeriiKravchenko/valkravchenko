@@ -11,6 +11,7 @@ export const ru: Dictionary = {
     labels: {
       home: 'Главная',
       projects: 'Проекты',
+      automation: 'Автоматизация',
       contacts: 'Контакты',
       java: 'Java',
       basics: 'Основы IT',
@@ -35,32 +36,83 @@ export const ru: Dictionary = {
     documentTitle: 'Проекты — Валерий Кравченко',
     heading: 'Проекты',
     windowTitle: 'Список проектов',
-    items: [
+    linkLabel: 'Код на GitHub',
+    newTabNote: '(откроется в новой вкладке)',
+    tagsLabel: 'Стек',
+    texts: {
+      studynotes: {
+        title: 'studynotes',
+        description:
+          'Сервис заметок на Java: REST API, вход и защита от CSRF для одностраничного клиента, импорт архива заметок, полнотекстовый поиск. Тесты идут на настоящей PostgreSQL в Docker, проверки запускаются в CI.',
+      },
+      'bank-statement-automation': {
+        title: 'bank-statement-automation',
+        description:
+          'Выписки четырёх банков приходят в разных форматах: шапка начинается с разной строки, столбцы называются по-разному. Конвейер сам находит шапку и приводит названия к единому виду через вкладку «Справочник»: новый банк подключается строкой в таблице, без правки кода. Затем добавляет пять аналитических столбцов, которых в выписках нет: филиал, категорию плательщика, услугу, канал сбора и номер документа. 100 000+ операций в месяц: вместо нескольких часов вручную 20–30 секунд.',
+      },
+      'payment-registry-automation': {
+        title: 'payment-registry-automation',
+        description:
+          'Сбор txt-реестров платежей из папки в одну таблицу: разбор формата, филиал по справочнику договоров вместо цепочки условий, проверка «принято − перечислено = комиссия», сводная по дням и филиалам. Данные выдуманы генератором на Python.',
+      },
+      valkravchenko: {
+        title: 'valkravchenko',
+        description:
+          'Этот сайт: React, TypeScript и Tailwind, разделы и маршруты из одного реестра, доступность с клавиатуры, проверки в CI.',
+      },
+    },
+    tags: {
+      java: 'Java',
+      'spring-boot': 'Spring Boot',
+      'spring-security': 'Spring Security',
+      postgresql: 'PostgreSQL',
+      flyway: 'Flyway',
+      openapi: 'OpenAPI',
+      testcontainers: 'Testcontainers',
+      'github-actions': 'GitHub Actions',
+      excel: 'Excel',
+      'power-query': 'Power Query (M)',
+      python: 'Python',
+      react: 'React',
+      typescript: 'TypeScript',
+      tailwind: 'Tailwind CSS',
+      vite: 'Vite',
+      vitest: 'Vitest',
+    },
+  },
+  automation: {
+    documentTitle: 'Автоматизация — Валерий Кравченко',
+    heading: 'Автоматизация',
+    intro: 'Больше 10 лет автоматизирую обработку данных в Excel и Power Query.',
+    workflowTitle: 'Как я работаю',
+    tableHeaders: { stage: 'Этап', action: 'Что делаю' },
+    workflow: [
       {
-        id: 'project-1',
-        title: '[название проекта 1]',
-        description: '[описание проекта]',
-        chip: { label: 'Тестов', count: '[число]' },
+        stage: 'Приём',
+        action:
+          'запрос сам забирает все файлы из папки: txt-реестры из банков и учётных систем, Excel с плавающей шапкой',
       },
       {
-        id: 'project-2',
-        title: '[название проекта 2]',
-        description: '[описание проекта]',
-        chip: { label: 'Тестов', count: '[число]' },
+        stage: 'Нормализация',
+        action:
+          'справочник соответствия столбцов между источниками (таблица на листе, а не код), типы данных, отсев служебных строк',
       },
       {
-        id: 'project-3',
-        title: '[название проекта 3]',
-        description: '[описание проекта]',
-        chip: { label: 'Тестов', count: '[число]' },
+        stage: 'Сопоставление',
+        action:
+          'связь записей по лицевому счёту, номеру договора, id или составному ключу; номер при необходимости извлекается из текста назначения платежа',
+      },
+      {
+        stage: 'Обогащение',
+        action:
+          'новые аналитические столбцы по правилам: филиал, категория плательщика, услуга, канал оплаты; каскад по двум полям, исключения, порядок от частного к общему',
+      },
+      {
+        stage: 'Результат',
+        action: 'одна таблица под сводные и срезы, обновление одной кнопкой',
       },
     ],
-  },
-  trainer: {
-    windowTitle: 'Тренажёр',
-    heading: 'Окно тренажёра',
-    body: '[описание тренажёра]',
-    chip: { label: 'Тестов', count: '[число]' },
+    tools: 'Инструменты: Power Query (каждый день в работе), Python (pandas).',
   },
   contacts: {
     documentTitle: 'Контакты — Валерий Кравченко',

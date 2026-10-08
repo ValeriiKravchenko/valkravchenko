@@ -1,12 +1,17 @@
-import { Chip, type ChipProps } from './Chip'
+import { TagList } from './TagList'
 
 export interface ProjectItem {
   id: string
   title: string
   description: string
-  chip: ChipProps
-  /** When present, the title becomes a real link. */
-  href?: string
+  tags: string[]
+  tagsLabel: string
+  link: {
+    href: string
+    label: string
+    /** Accessible name: title plus the new-tab note. */
+    ariaLabel: string
+  }
 }
 
 export interface ProjectListProps {
@@ -19,23 +24,21 @@ export function ProjectList({ items }: ProjectListProps) {
       {items.map((item) => (
         <li
           key={item.id}
-          className="flex flex-col gap-2 border-b border-divider py-4 first:pt-0 last:border-b-0 last:pb-0"
+          className="flex flex-col gap-3 border-b border-divider py-5 first:pt-0 last:border-b-0 last:pb-0"
         >
-          <h3 className="m-0 text-xl font-semibold">
-            {item.href ? (
-              <a
-                href={item.href}
-                className="inline-flex min-h-11 items-center text-ink underline decoration-accent underline-offset-4"
-              >
-                {item.title}
-              </a>
-            ) : (
-              item.title
-            )}
-          </h3>
+          <h3 className="m-0 text-xl font-semibold [overflow-wrap:anywhere]">{item.title}</h3>
           <p className="m-0 text-[15px] text-muted">{item.description}</p>
+          <TagList tags={item.tags} ariaLabel={`${item.tagsLabel}: ${item.title}`} />
           <div>
-            <Chip {...item.chip} />
+            <a
+              href={item.link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={item.link.ariaLabel}
+              className="inline-flex min-h-11 items-center text-ink underline decoration-accent underline-offset-4"
+            >
+              {item.link.label}
+            </a>
           </div>
         </li>
       ))}
