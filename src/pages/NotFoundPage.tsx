@@ -2,11 +2,12 @@ import { LinkButton } from '../components/LinkButton'
 import { PageHeading } from '../components/PageHeading'
 import { Window } from '../components/Window'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { pageTitle } from '../i18n/pageTitle'
 import { useDictionary } from '../i18n'
 
 export function NotFoundPage() {
   const t = useDictionary()
-  useDocumentTitle(t.notFound.documentTitle)
+  useDocumentTitle(pageTitle(t, t.notFound.heading))
 
   return (
     <Window title={t.notFound.windowTitle} titleAs="p" pixelTitle>

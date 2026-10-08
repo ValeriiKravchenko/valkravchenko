@@ -4,11 +4,12 @@ import { Window } from '../components/Window'
 import { buildProjectItems } from '../data/projectItems'
 import { PROJECTS } from '../data/projects'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { pageTitle } from '../i18n/pageTitle'
 import { useDictionary } from '../i18n'
 
 export function ProjectsPage() {
   const t = useDictionary()
-  useDocumentTitle(t.projects.documentTitle)
+  useDocumentTitle(pageTitle(t, t.projects.heading))
 
   return (
     <>

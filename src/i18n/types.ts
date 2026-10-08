@@ -6,11 +6,6 @@ export interface ChipText {
   count: string
 }
 
-export interface LinkText {
-  href: string
-  label: string
-}
-
 /** Link to a section by registry id; hidden when the section is disabled. */
 export interface SectionLinkText {
   section: SectionId
@@ -29,14 +24,12 @@ export interface ProjectText {
 
 /** Shape shared by every locale file (ru.ts now, en.ts later). */
 export interface Dictionary {
-  lang: string
   siteTitle: string
   skipLink: string
   logo: { text: string; ariaLabel: string }
   nav: { ariaLabel: string; labels: Record<SectionId, string> }
   footer: { text: string }
   home: {
-    documentTitle: string
     windowTitle: string
     heading: string
     lead: string
@@ -45,7 +38,6 @@ export interface Dictionary {
     chips: ChipText[]
   }
   projects: {
-    documentTitle: string
     heading: string
     windowTitle: string
     linkLabel: string
@@ -55,7 +47,6 @@ export interface Dictionary {
     tags: Record<TagId, string>
   }
   automation: {
-    documentTitle: string
     heading: string
     intro: string
     workflowTitle: string
@@ -64,11 +55,10 @@ export interface Dictionary {
     tools: string
   }
   contacts: {
-    documentTitle: string
     heading: string
     windowTitle: string
     intro: string
     items: ContactText[]
   }
-  notFound: { windowTitle: string; documentTitle: string; heading: string; body: string; homeLink: string }
+  notFound: { windowTitle: string; heading: string; body: string; homeLink: string }
 }

@@ -2,7 +2,6 @@ import type { Dictionary } from './types'
 
 // Placeholders in square brackets are filled in at publication time.
 export const ru: Dictionary = {
-  lang: 'ru',
   siteTitle: 'Валерий Кравченко',
   skipLink: 'Перейти к содержимому',
   logo: { text: 'VK', ariaLabel: 'Валерий Кравченко, на главную' },
@@ -21,7 +20,6 @@ export const ru: Dictionary = {
   },
   footer: { text: '© Валерий Кравченко' },
   home: {
-    documentTitle: 'Валерий Кравченко',
     windowTitle: 'WELCOME',
     heading: 'Привет, я Валерий',
     lead: 'Здесь будут мои проекты и заметки. Текст страницы появится позже.',
@@ -33,7 +31,6 @@ export const ru: Dictionary = {
     ],
   },
   projects: {
-    documentTitle: 'Проекты — Валерий Кравченко',
     heading: 'Проекты',
     windowTitle: 'Список проектов',
     linkLabel: 'Код на GitHub',
@@ -81,7 +78,6 @@ export const ru: Dictionary = {
     },
   },
   automation: {
-    documentTitle: 'Автоматизация — Валерий Кравченко',
     heading: 'Автоматизация',
     intro: 'Больше 10 лет автоматизирую обработку данных в Excel и Power Query.',
     workflowTitle: 'Как я работаю',
@@ -115,7 +111,6 @@ export const ru: Dictionary = {
     tools: 'Инструменты: Power Query (каждый день в работе), Python (pandas).',
   },
   contacts: {
-    documentTitle: 'Контакты — Валерий Кравченко',
     heading: 'Контакты',
     windowTitle: 'Контакты',
     intro: 'Связаться со мной можно так.',
@@ -126,7 +121,6 @@ export const ru: Dictionary = {
   },
   notFound: {
     windowTitle: '404',
-    documentTitle: 'Страница не найдена — Валерий Кравченко',
     heading: 'Страница не найдена',
     body: 'Такой страницы нет. Возможно, адрес набран с ошибкой.',
     homeLink: 'На главную',

@@ -4,11 +4,12 @@ import { PageHeading } from '../components/PageHeading'
 import { Window } from '../components/Window'
 import { getSectionPath, SECTIONS, type Section } from '../data/sections'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { pageTitle } from '../i18n/pageTitle'
 import { useDictionary } from '../i18n'
 
 export function HomePage({ sections = SECTIONS }: { sections?: readonly Section[] }) {
   const t = useDictionary()
-  useDocumentTitle(t.home.documentTitle)
+  useDocumentTitle(pageTitle(t))
 
   const ctas = [
     { cta: t.home.primaryCta, variant: 'primary' as const },

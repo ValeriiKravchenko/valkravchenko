@@ -13,9 +13,9 @@ describe('section registry', () => {
     }
   })
 
-  it('has unique ids and paths, and a dictionary label for every nav key', () => {
+  it('has unique ids and paths, and a dictionary label for every section', () => {
     expect(new Set(SECTIONS.map((s) => s.id)).size).toBe(SECTIONS.length)
     expect(new Set(SECTIONS.map((s) => s.path)).size).toBe(SECTIONS.length)
-    for (const s of SECTIONS) expect(dictionary.nav.labels[s.navKey]).toBeTruthy()
+    for (const s of SECTIONS) expect(dictionary.nav.labels[s.id]).toBeTruthy()
   })
 })
