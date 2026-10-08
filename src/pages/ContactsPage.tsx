@@ -1,11 +1,12 @@
 import { ContactsWindow } from '../components/ContactsWindow'
 import { PageHeading } from '../components/PageHeading'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { pageTitle } from '../i18n/pageTitle'
 import { useDictionary } from '../i18n'
 
 export function ContactsPage() {
   const t = useDictionary()
-  useDocumentTitle(t.contacts.documentTitle)
+  useDocumentTitle(pageTitle(t, t.contacts.heading))
 
   return (
     <>

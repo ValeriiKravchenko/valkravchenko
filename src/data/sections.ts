@@ -15,8 +15,6 @@ export interface Section {
   id: SectionId
   /** Absolute URL path, `/` for the home page. */
   path: string
-  /** Key of the menu label in `dictionary.nav.labels`. */
-  navKey: SectionId
   /** A section is published (menu, routes, home page) only when enabled. */
   enabled: boolean
 }
@@ -26,14 +24,14 @@ export interface Section {
  * the dictionary, and flip `enabled` to true. Menu and routes follow.
  */
 export const SECTIONS: readonly Section[] = [
-  { id: 'home', path: '/', navKey: 'home', enabled: true },
-  { id: 'projects', path: '/projects', navKey: 'projects', enabled: true },
-  { id: 'automation', path: '/automation', navKey: 'automation', enabled: true },
-  { id: 'contacts', path: '/contacts', navKey: 'contacts', enabled: true },
-  { id: 'java', path: '/java', navKey: 'java', enabled: false },
-  { id: 'basics', path: '/basics', navKey: 'basics', enabled: false },
-  { id: 'trainers', path: '/trainers', navKey: 'trainers', enabled: false },
-  { id: 'library', path: '/library', navKey: 'library', enabled: false },
+  { id: 'home', path: '/', enabled: true },
+  { id: 'projects', path: '/projects', enabled: true },
+  { id: 'automation', path: '/automation', enabled: true },
+  { id: 'contacts', path: '/contacts', enabled: true },
+  { id: 'java', path: '/java', enabled: false },
+  { id: 'basics', path: '/basics', enabled: false },
+  { id: 'trainers', path: '/trainers', enabled: false },
+  { id: 'library', path: '/library', enabled: false },
 ]
 
 export function getEnabledSections(sections: readonly Section[] = SECTIONS): Section[] {

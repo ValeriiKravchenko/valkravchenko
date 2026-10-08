@@ -4,11 +4,12 @@ import { Window } from '../components/Window'
 import { buildProjectItems } from '../data/projectItems'
 import { getProjectsByDirection } from '../data/projects'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { pageTitle } from '../i18n/pageTitle'
 import { useDictionary } from '../i18n'
 
 export function AutomationPage() {
   const t = useDictionary()
-  useDocumentTitle(t.automation.documentTitle)
+  useDocumentTitle(pageTitle(t, t.automation.heading))
   const { tableHeaders } = t.automation
 
   return (

@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { PROJECTS } from '../data/projects'
 import { dictionary as t } from '../i18n'
+import { pageTitle } from '../i18n/pageTitle'
 import { AutomationPage } from './AutomationPage'
 import { ContactsPage } from './ContactsPage'
 import { HomePage } from './HomePage'
@@ -16,7 +17,7 @@ describe('pages', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('tabindex', '-1')
     expect(screen.getByRole('link', { name: t.home.primaryCta.label })).toHaveAttribute('href', '/projects')
     expect(screen.getByRole('link', { name: t.home.secondaryCta.label })).toHaveAttribute('href', '/contacts')
-    expect(document.title).toBe(t.home.documentTitle)
+    expect(document.title).toBe(pageTitle(t))
   })
 
   it('ProjectsPage lists four projects with external links and no striped window', () => {
@@ -34,7 +35,7 @@ describe('pages', () => {
       expect(link.getAttribute('aria-label')).toContain('(откроется в новой вкладке)')
     }
     expect(container.querySelectorAll('[data-variant="striped"]')).toHaveLength(0)
-    expect(document.title).toBe(t.projects.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.projects.heading))
   })
 
   it('AutomationPage has a table with headers and only automation projects', () => {
@@ -57,12 +58,12 @@ describe('pages', () => {
   it('ContactsPage shows placeholder contacts only', () => {
     wrap(<ContactsPage />)
     expect(screen.getByText('[email]')).toBeInTheDocument()
-    expect(document.title).toBe(t.contacts.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.contacts.heading))
   })
 
   it('NotFoundPage links home', () => {
     wrap(<NotFoundPage />)
     expect(screen.getByRole('link', { name: t.notFound.homeLink })).toHaveAttribute('href', '/')
-    expect(document.title).toBe(t.notFound.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.notFound.heading))
   })
 })

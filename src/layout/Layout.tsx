@@ -29,7 +29,7 @@ export function Layout({ sections = SECTIONS }: LayoutProps) {
 
   const items = getEnabledSections(sections).map((section) => ({
     to: section.path,
-    label: t.nav.labels[section.navKey],
+    label: t.nav.labels[section.id],
   }))
 
   return (

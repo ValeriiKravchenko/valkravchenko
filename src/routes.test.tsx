@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SECTIONS } from './data/sections'
 import { dictionary as t } from './i18n'
+import { pageTitle } from './i18n/pageTitle'
 import { HomePage } from './pages/HomePage'
 import { buildRoutes } from './routes'
 import { renderAt } from './test/renderAt'
@@ -35,7 +36,7 @@ describe('routes', () => {
   })
 
   it('throws when an enabled section has no page', () => {
-    const sections = [...SECTIONS, { id: 'java', path: '/java', navKey: 'java', enabled: true } as const]
+    const sections = [...SECTIONS, { id: 'java', path: '/java', enabled: true } as const]
     expect(() => buildRoutes(sections)).toThrow(/java/)
   })
 
@@ -174,16 +175,16 @@ describe('navigation behaviour', () => {
 
   it('updates document.title per page', async () => {
     renderAt('/')
-    expect(document.title).toBe(t.home.documentTitle)
+    expect(document.title).toBe(pageTitle(t))
     const user = userEvent.setup()
     await user.click(navLink(t.nav.labels.projects))
-    expect(document.title).toBe(t.projects.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.projects.heading))
     await user.click(navLink(t.nav.labels.contacts))
-    expect(document.title).toBe(t.contacts.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.contacts.heading))
   })
 
   it('sets the 404 title', () => {
     renderAt('/missing')
-    expect(document.title).toBe(t.notFound.documentTitle)
+    expect(document.title).toBe(pageTitle(t, t.notFound.heading))
   })
 })

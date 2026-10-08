@@ -22,10 +22,11 @@ A disabled section has no menu item, no route (its path shows the 404 page) and 
 
 ### Add a section
 
-1. Create the page in `src/pages/` (an `h1` via `PageHeading`, and `useDocumentTitle` with a title from the dictionary).
-2. Add its texts to `src/i18n/types.ts` (`Dictionary`) and `src/i18n/ru.ts`. The menu label already exists in `nav.labels`.
-3. Register the page in `PAGES` in `src/routes.tsx` and set `enabled: true` for the section in `src/data/sections.ts`.
-4. Add a test next to the page.
+1. Add the new `id` to `SECTION_IDS` in `src/data/sections.ts` (a closed list) and its menu label to `nav.labels`.
+2. Create the page in `src/pages/` (an `h1` via `PageHeading`, and `useDocumentTitle` with a title built by `pageTitle`).
+3. Add its texts to `src/i18n/types.ts` (`Dictionary`) and `src/i18n/ru.ts`.
+4. Register the page in `PAGES` in `src/routes.tsx` and set `enabled: true` for the section in `src/data/sections.ts`.
+5. Add a test next to the page.
 
 ## Stack
 
