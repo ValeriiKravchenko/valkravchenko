@@ -1,6 +1,7 @@
 export const SECTION_IDS = [
   'home',
   'projects',
+  'automation',
   'contacts',
   'java',
   'basics',
@@ -27,6 +28,7 @@ export interface Section {
 export const SECTIONS: readonly Section[] = [
   { id: 'home', path: '/', navKey: 'home', enabled: true },
   { id: 'projects', path: '/projects', navKey: 'projects', enabled: true },
+  { id: 'automation', path: '/automation', navKey: 'automation', enabled: true },
   { id: 'contacts', path: '/contacts', navKey: 'contacts', enabled: true },
   { id: 'java', path: '/java', navKey: 'java', enabled: false },
   { id: 'basics', path: '/basics', navKey: 'basics', enabled: false },

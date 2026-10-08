@@ -2,8 +2,8 @@ import { SECTIONS, getEnabledSections, getSectionPath } from './sections'
 import { dictionary } from '../i18n'
 
 describe('section registry', () => {
-  it('enables home, projects and contacts only', () => {
-    expect(getEnabledSections().map((s) => s.id)).toEqual(['home', 'projects', 'contacts'])
+  it('enables home, projects, automation and contacts only', () => {
+    expect(getEnabledSections().map((s) => s.id)).toEqual(['home', 'projects', 'automation', 'contacts'])
   })
 
   it('keeps java, basics, trainers and library disabled', () => {

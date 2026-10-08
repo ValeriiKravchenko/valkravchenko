@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import type { RouteObject } from 'react-router'
 import { SECTIONS, getEnabledSections, type SectionId, type Section } from './data/sections'
 import { Layout } from './layout/Layout'
+import { AutomationPage } from './pages/AutomationPage'
 import { ContactsPage } from './pages/ContactsPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -14,6 +15,7 @@ export type PageMap = Partial<Record<SectionId, ComponentType<PageProps>>>
 export const PAGES: PageMap = {
   home: HomePage,
   projects: ProjectsPage,
+  automation: AutomationPage,
   contacts: ContactsPage,
 }
 

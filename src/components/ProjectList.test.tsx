@@ -1,27 +1,37 @@
-import { render, screen } from '@testing-library/react'
-import { ProjectList } from './ProjectList'
+import { render, screen, within } from '@testing-library/react'
+import { ProjectList, type ProjectItem } from './ProjectList'
 
-const items = [
-  { id: 'a', title: 'Alpha', description: 'First', chip: { label: 'Tests', count: '[число]' } },
-  {
-    id: 'b',
-    title: 'Beta',
-    description: 'Second',
-    chip: { label: 'Tests', count: '[число]' },
-    href: '#beta',
-  },
-]
+const make = (id: string, title: string): ProjectItem => ({
+  id,
+  title,
+  description: `About ${title}`,
+  tags: ['X', 'Y'],
+  tagsLabel: 'Stack',
+  link: { href: `https://example.test/${id}`, label: 'Code', ariaLabel: `Code ${title} (new tab)` },
+})
+
+const items = [make('a', 'Alpha'), make('b', 'Beta')]
 
 describe('ProjectList', () => {
-  it('renders one list item per project', () => {
+  it('renders title, description and tags for each project', () => {
     render(<ProjectList items={items} />)
-    expect(screen.getAllByRole('listitem')).toHaveLength(2)
     expect(screen.getByRole('heading', { level: 3, name: 'Alpha' })).toBeInTheDocument()
+    expect(screen.getByText('About Beta')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Stack: Alpha' })).toBeInTheDocument()
   })
 
-  it('makes only projects with href into links', () => {
+  it('renders an external link with safe attributes and a full accessible name', () => {
     render(<ProjectList items={items} />)
-    expect(screen.getAllByRole('link')).toHaveLength(1)
-    expect(screen.getByRole('link', { name: 'Beta' })).toHaveAttribute('href', '#beta')
+    const link = screen.getByRole('link', { name: 'Code Beta (new tab)' })
+    expect(link).toHaveAttribute('href', 'https://example.test/b')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(link).toHaveClass('min-h-11')
+  })
+
+  it('keeps the visible link label', () => {
+    render(<ProjectList items={[items[0]]} />)
+    const item = screen.getAllByRole('listitem')[0]
+    expect(within(item).getByText('Code')).toBeInTheDocument()
   })
 })

@@ -1,3 +1,4 @@
+import type { ProjectId, TagId } from '../data/projects'
 import type { SectionId } from '../data/sections'
 
 export interface ChipText {
@@ -22,10 +23,8 @@ export interface ContactText {
 }
 
 export interface ProjectText {
-  id: string
   title: string
   description: string
-  chip: ChipText
 }
 
 /** Shape shared by every locale file (ru.ts now, en.ts later). */
@@ -49,9 +48,21 @@ export interface Dictionary {
     documentTitle: string
     heading: string
     windowTitle: string
-    items: ProjectText[]
+    linkLabel: string
+    newTabNote: string
+    tagsLabel: string
+    texts: Record<ProjectId, ProjectText>
+    tags: Record<TagId, string>
   }
-  trainer: { windowTitle: string; heading: string; body: string; chip: ChipText }
+  automation: {
+    documentTitle: string
+    heading: string
+    intro: string
+    workflowTitle: string
+    tableHeaders: { stage: string; action: string }
+    workflow: { stage: string; action: string }[]
+    tools: string
+  }
   contacts: {
     documentTitle: string
     heading: string
