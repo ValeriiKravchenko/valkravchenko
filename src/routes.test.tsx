@@ -82,10 +82,9 @@ describe('routes', () => {
     expect(title).toMatch(/^sky-os — /)
   })
 
-  it('shows contact placeholders only', () => {
+  it('shows the GitHub contact link', () => {
     renderAt('/contacts')
-    expect(screen.getByText('[email]')).toBeInTheDocument()
-    expect(screen.getByText('[github]')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'github.com/ValeriiKravchenko' })).toBeInTheDocument()
   })
 })
 

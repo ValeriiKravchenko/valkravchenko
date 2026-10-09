@@ -18,6 +18,8 @@ export interface SectionLinkText {
 export interface ContactText {
   label: string
   value: string
+  /** Optional external link target; when set, the value is rendered as a link. */
+  href?: string
 }
 
 export interface ProjectText {

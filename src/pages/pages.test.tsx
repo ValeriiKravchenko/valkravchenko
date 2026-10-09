@@ -122,9 +122,7 @@ describe('pages', () => {
     expect(win).toHaveTextContent('bank-statement-automation')
     expect(win).toHaveTextContent('несколько часов')
     expect(win).toHaveTextContent('20–30 секунд')
-    expect(win).toHaveTextContent('payment-registry-automation')
-    expect(win).toHaveTextContent('[до]')
-    expect(win).toHaveTextContent('[после]')
+    expect(win).not.toHaveTextContent('payment-registry-automation')
   })
 
   it('every page window is titled "sky-os — <section>"', () => {
@@ -136,9 +134,12 @@ describe('pages', () => {
     expect(t.about.windowTitle).toBe('sky-os — обо мне')
   })
 
-  it('ContactsPage shows placeholder contacts only', () => {
+  it('ContactsPage shows the GitHub contact as an external link and no email', () => {
     wrap(<ContactsPage />)
-    expect(screen.getByText('[email]')).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'github.com/ValeriiKravchenko' })
+    expect(link).toHaveAttribute('href', 'https://github.com/ValeriiKravchenko')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.queryByText('EMAIL')).not.toBeInTheDocument()
     expect(document.title).toBe(pageTitle(t, t.contacts.heading))
   })
 
