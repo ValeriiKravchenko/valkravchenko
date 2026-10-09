@@ -28,7 +28,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Verified independently: files exist.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -38,7 +38,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Verified independently: files exist.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 1006,
   },
   {
@@ -48,7 +48,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Git shows only the intended changes.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 1114,
   },
   {
@@ -58,7 +58,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Count reconciliation: exact match on all 16 categories.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -68,7 +68,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Exact match on all 16 categories.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 2327,
   },
   {
@@ -78,7 +78,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Exact match on all 16 categories.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 850,
   },
   {
@@ -88,7 +88,7 @@ export const englishWords: EnglishWord[] = [
     example: 'No discrepancies.',
     note: 'мн. ч. discrepancies',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -98,7 +98,7 @@ export const englishWords: EnglishWord[] = [
     example: 'engine/ untouched.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -108,7 +108,7 @@ export const englishWords: EnglishWord[] = [
     example: '184 passed (181 pre-existing + 3 new).',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -118,7 +118,7 @@ export const englishWords: EnglishWord[] = [
     example: 'getHeadTree is wired in.',
     note: 'дословно «провести провод»',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 2038,
   },
   {
@@ -128,7 +128,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Sorting is always on rather than a toggle.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -138,7 +138,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Sorting is always on rather than a toggle.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 292,
   },
   {
@@ -148,7 +148,7 @@ export const englishWords: EnglishWord[] = [
     example: 'The task only asked for one sort criterion.',
     note: 'мн. ч. criteria',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -158,7 +158,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Nothing was deployed.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -368,7 +368,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Build and lint clean.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 221,
   },
   {
@@ -378,7 +378,7 @@ export const englishWords: EnglishWord[] = [
     example: 'The build succeeds.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 1586,
   },
   {
@@ -388,7 +388,7 @@ export const englishWords: EnglishWord[] = [
     example: '184 passed.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 416,
   },
   {
@@ -498,7 +498,7 @@ export const englishWords: EnglishWord[] = [
     example: 'auto mode on',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 2204,
   },
   {
@@ -508,7 +508,7 @@ export const englishWords: EnglishWord[] = [
     example: 'shift+tab to cycle',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 1394,
   },
   {
@@ -518,7 +518,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Already reported this above.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 166,
   },
   {
@@ -528,7 +528,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Already reported this above.',
     note: 'обратное — below',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 440,
   },
   {
@@ -538,7 +538,7 @@ export const englishWords: EnglishWord[] = [
     example: 'The task is complete.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 581,
   },
   {
@@ -548,7 +548,7 @@ export const englishWords: EnglishWord[] = [
     example: 'The external source file was not touched.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 623,
   },
   {
@@ -558,7 +558,7 @@ export const englishWords: EnglishWord[] = [
     example: 'The external source file was not touched.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 2125,
   },
   {
@@ -1634,7 +1634,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Bash is disabled for this session, in subagents as well as here.',
     note: 'противоположность — enable',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: null,
   },
   {
@@ -1644,7 +1644,7 @@ export const englishWords: EnglishWord[] = [
     example: 'Bash is disabled for this session, in subagents as well as here.',
     note: '',
     kind: 'it',
-    source: 'отчёт агента',
+    source: '',
     ngslRank: 1558,
   },
   {
