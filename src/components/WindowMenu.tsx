@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { getSectionPath } from '../data/sections'
+import { ABOUT_PATH } from '../data/aboutPaths'
 import { useDictionary } from '../i18n'
 import { useTheme } from '../theme/useTheme'
 
@@ -148,7 +148,7 @@ function ThemeItem({ label, pressed, onChoose }: { label: string; pressed: boole
   )
 }
 
-function HomeItem({ label, to }: { label: string; to: string }) {
+function PageItem({ label, to }: { label: string; to: string }) {
   const close = useContext(CloseContext)
   return (
     <li>
@@ -166,7 +166,6 @@ function HomeItem({ label, to }: { label: string; to: string }) {
 export function WindowMenu() {
   const t = useDictionary().windowMenu
   const { theme, setTheme } = useTheme()
-  const homePath = getSectionPath('home') ?? '/'
 
   const themes = [
     { id: 'day', label: t.view.themeDay },
@@ -186,8 +185,7 @@ export function WindowMenu() {
         ))}
       </MenuDropdown>
       <MenuDropdown label={t.help.button} listLabel={t.help.listLabel}>
-        {/* Temporary target: replace with the "About me" page when task G4 lands. */}
-        <HomeItem label={t.help.about} to={homePath} />
+        <PageItem label={t.help.about} to={ABOUT_PATH} />
       </MenuDropdown>
     </div>
   )

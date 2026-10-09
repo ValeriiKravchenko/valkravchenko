@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { getSectionPath } from '../data/sections'
+import { ABOUT_PATH } from '../data/aboutPaths'
 import { dictionary } from '../i18n'
 import { ThemeToggle } from './ThemeToggle'
 import { Window } from './Window'
@@ -203,14 +203,14 @@ describe('WindowMenu', () => {
   })
 
   describe('help', () => {
-    it('"About me" is a link to the home section path from the registry', async () => {
+    it('"About me" is a link to the About page', async () => {
       const { router } = renderPage()
       await userEvent.click(helpButtons()[0])
       const list = screen.getByRole('list', { name: t.help.listLabel })
       const link = within(list).getByRole('link', { name: t.help.about })
-      expect(link).toHaveAttribute('href', getSectionPath('home'))
+      expect(link).toHaveAttribute('href', ABOUT_PATH)
       await userEvent.click(link)
-      expect(router.state.location.pathname).toBe(getSectionPath('home'))
+      expect(router.state.location.pathname).toBe(ABOUT_PATH)
       expect(screen.queryByRole('list')).not.toBeInTheDocument()
     })
   })

@@ -18,7 +18,7 @@ export const ru: Dictionary = {
       library: 'Библиотека',
     },
   },
-  systemBar: { language: 'RU', user: 'valerii@sky-os' },
+  systemBar: { language: 'RU', user: 'valerii@sky-os', avatarLabel: 'Обо мне' },
   theme: {
     labels: { day: 'День', night: 'Ночь' },
     ariaLabels: {
@@ -194,6 +194,17 @@ export const ru: Dictionary = {
     failedOutput: 'Команда не выполнена:',
     missionDone: 'выполнено:',
     missionTodo: 'не выполнено:',
+  },
+  about: {
+    windowTitle: 'sky-os — обо мне',
+    heading: 'Обо мне',
+    paragraphs: [
+      'Я Валерий Кравченко. По специальности экономист, но больше 10 лет занимаюсь не экономическими показателями, а автоматизацией рутины в Power Query. Свожу выгрузки из разных программ в единые таблицы, связываю их по лицевым счетам и составным ключам, разбираю таблицы и извлекаю нужные поля для аналитики, превращаю txt-реестры в нормальные Excel-отчёты. Power Query у меня в работе каждый день, для части задач использую Python и pandas.',
+      'Сейчас перехожу в Java-разработку. Основа уже есть: синтаксис, Java Core, Spring Core. Первый проект на Spring Boot — studynotes: REST API, PostgreSQL, Spring Security.',
+      'Развиваюсь в трёх направлениях: автоматизация данных, Java-разработка и ИИ (LLM, RAG).',
+    ],
+    photoAlt: 'Валерий Кравченко',
+    buttons: { projects: 'Проекты', github: 'GitHub', contacts: 'Контакты' },
   },
   contacts: {
     heading: 'Контакты',

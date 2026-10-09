@@ -1,4 +1,7 @@
 import { Link } from 'react-router'
+import avatar64 from '../assets/about/avatar-64.webp'
+import avatar128 from '../assets/about/avatar-128.webp'
+import { ABOUT_PATH } from '../data/aboutPaths'
 import { useDictionary } from '../i18n'
 import { LogoIcon } from './icons'
 import { Menu, type MenuItem } from './Menu'
@@ -37,6 +40,21 @@ export function SystemBar({ logoTo, items }: SystemBarProps) {
           <span aria-hidden="true" className="hidden font-mono text-[13px] text-bar-muted sm:inline">
             {t.systemBar.user}
           </span>
+          <Link
+            to={ABOUT_PATH}
+            aria-label={t.systemBar.avatarLabel}
+            className="hidden size-7 shrink-0 rounded-full sm:inline-block"
+          >
+            <img
+              src={avatar64}
+              srcSet={`${avatar64} 64w, ${avatar128} 128w`}
+              sizes="28px"
+              width={28}
+              height={28}
+              alt=""
+              className="size-7 rounded-full border border-bar-line object-cover"
+            />
+          </Link>
         </div>
       </div>
     </header>

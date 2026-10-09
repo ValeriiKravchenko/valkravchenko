@@ -15,6 +15,7 @@ describe('document titles', () => {
     ['/trainers/git/collaborating', 'Git: командная работа — Валерий Кравченко'],
     ['/trainers/git/searching', 'Git: поиск — Валерий Кравченко'],
     ['/trainers/english', 'Английский — Валерий Кравченко'],
+    ['/about', 'Обо мне — Валерий Кравченко'],
     ['/contacts', 'Контакты — Валерий Кравченко'],
     ['/nope', 'Страница не найдена — Валерий Кравченко'],
   ])('at %s the title is %s', (path, title) => {
