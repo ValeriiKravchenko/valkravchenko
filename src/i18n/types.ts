@@ -38,8 +38,10 @@ export interface Dictionary {
     /** Shorter captions for the narrow phone dock; the full label stays in aria-label and title. */
     shortLabels: Partial<Record<SectionId, string>>
   }
-  /** Decorative window menu (aria-hidden). */
-  windowMenu: string[]
+  windowMenu: {
+    view: { button: string; listLabel: string; themeDay: string; themeNight: string }
+    help: { button: string; listLabel: string; about: string }
+  }
   footer: { text: string }
   home: {
     windowTitle: string

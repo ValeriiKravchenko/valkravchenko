@@ -10,13 +10,15 @@ describe('Window', () => {
     expect(screen.getByText('Content')).toBeInTheDocument()
   })
 
-  it('hides the decorative dots and the window menu from assistive tech', () => {
+  it('hides the decorative dots from assistive tech and shows a real window menu', () => {
     const { container } = render(<Window title="T">x</Window>)
-    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(1)
-    const menu = screen.getByText(t.windowMenu[0]).parentElement!
-    expect(menu).toHaveAttribute('aria-hidden', 'true')
-    expect(menu).toHaveTextContent(t.windowMenu.join(''))
-    expect(t.windowMenu).toEqual(['file', 'edit', 'view', 'help'])
+    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      t.windowMenu.view.button,
+      t.windowMenu.help.button,
+    ])
+    expect(t.windowMenu.view.button).toBe('view')
+    expect(t.windowMenu.help.button).toBe('help')
   })
 
   it('supports a non-heading title', () => {
