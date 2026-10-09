@@ -14,6 +14,8 @@ export interface ProjectItem {
     ariaLabel: string
     /** In-site link: opens in the same tab through the router. */
     internal?: boolean
+    /** Separate page of this site: a plain same-tab anchor, loaded from the server. */
+    fullLoad?: boolean
   }
 }
 
@@ -39,7 +41,11 @@ export function ProjectList({ items, headingLevel }: ProjectListProps) {
           <p className="m-0 text-[15px] text-muted">{item.description}</p>
           <TagList tags={item.tags} ariaLabel={`${item.tagsLabel}: ${item.title}`} />
           <div>
-            {item.link.internal ? (
+            {item.link.fullLoad ? (
+              <a href={item.link.href} aria-label={item.link.ariaLabel} className={linkClass}>
+                {item.link.label}
+              </a>
+            ) : item.link.internal ? (
               <Link to={item.link.href} aria-label={item.link.ariaLabel} className={linkClass}>
                 {item.link.label}
               </Link>

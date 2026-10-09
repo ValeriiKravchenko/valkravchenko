@@ -1,10 +1,5 @@
-/** Paths of the trainer screens. They live under the `/trainers` section. */
-export const TRAINER_PATHS = {
-  git: '/trainers/git/basics',
-  branching: '/trainers/git/branching',
-  inspecting: '/trainers/git/inspecting',
-  undoing: '/trainers/git/undoing',
-  collaborating: '/trainers/git/collaborating',
-  searching: '/trainers/git/searching',
-  english: '/trainers/english',
-} as const
+/**
+ * Address of the separate trainers page. It is a standalone HTML entry, so the
+ * links to it are plain anchors that load it from the server.
+ */
+export const TRAINERS_APP_PATH = '/trainers-app/'

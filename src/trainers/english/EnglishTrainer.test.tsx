@@ -38,7 +38,7 @@ describe('EnglishTrainer', () => {
     renderScreen()
     const win = screen.getByRole('region', { name: site.trainers.english.windowTitle })
     expect(within(win).getByRole('heading', { level: 1 })).toHaveTextContent(ru.ui.heading)
-    expect(within(win).getByRole('link', { name: site.trainers.backLabel })).toHaveAttribute('href', '/trainers')
+    expect(within(win).getByRole('link', { name: site.trainers.backLabel })).toHaveAttribute('href', '/')
     const word = englishWordIds.map(getWordById).find((w) => w?.word === currentWordText())
     expect(word).toBeDefined()
     expect(screen.getByRole('button', { name: new RegExp(ru.ui.card.revealButton) })).toBeInTheDocument()

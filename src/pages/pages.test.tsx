@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { books } from '../data/library'
 import { PROJECTS } from '../data/projects'
-import { SECTIONS } from '../data/sections'
 import { dictionary as t } from '../i18n'
 import { pageTitle } from '../i18n/pageTitle'
 import { AutomationPage } from './AutomationPage'
@@ -22,7 +21,7 @@ describe('pages', () => {
     expect(document.title).toBe(pageTitle(t))
   })
 
-  it('ProjectsPage lists five projects: repository links open a new tab, the trainer link stays on site', () => {
+  it('ProjectsPage lists five projects: repository links open a new tab, the trainer link is a plain same-tab anchor', () => {
     const { container } = wrap(<ProjectsPage />)
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(PROJECTS.length)
     expect(PROJECTS).toHaveLength(5)
@@ -40,15 +39,16 @@ describe('pages', () => {
     expect(document.title).toBe(pageTitle(t, t.projects.heading))
   })
 
-  it('ProjectsPage has the Git trainer card with an in-site link and no English card', () => {
+  it('ProjectsPage has the Git trainer card with a plain link to the trainers page and no English card', () => {
     wrap(<ProjectsPage />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(t.projects.heading)
     const card = PROJECTS.find((p) => p.id === 'git-trainer')!
     const title = t.projects.texts['git-trainer'].title
     expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument()
     const link = screen.getByRole('link', { name: `${t.projects.pathLinkLabel}: ${title}` })
-    expect(link).toHaveAttribute('href', SECTIONS.find((s) => s.id === 'trainers')!.path)
+    expect(link).toHaveAttribute('href', '/trainers-app/')
     expect(link).toHaveAttribute('href', card.path)
+    expect(link.tagName).toBe('A')
     expect(link).not.toHaveAttribute('target')
     expect(screen.getByRole('list', { name: `${t.projects.tagsLabel}: ${title}` })).toBeInTheDocument()
     const description = t.projects.texts['git-trainer'].description

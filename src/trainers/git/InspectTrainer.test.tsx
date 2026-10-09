@@ -30,7 +30,7 @@ describe('InspectTrainer', () => {
     const win = screen.getByRole('region', { name: site.trainers.gitInspecting.windowTitle })
     expect(within(win).getByRole('heading', { level: 1 })).toHaveTextContent(ui.heading)
     expect(within(win).getByText(ui.subheading)).toBeInTheDocument()
-    expect(within(win).getByRole('link', { name: site.trainers.backLabel })).toHaveAttribute('href', '/trainers')
+    expect(within(win).getByRole('link', { name: site.trainers.backLabel })).toHaveAttribute('href', '/')
   })
 
   it('labels the command input', () => {

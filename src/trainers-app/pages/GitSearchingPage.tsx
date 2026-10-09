@@ -1,11 +1,11 @@
 import { lazy, Suspense } from 'react'
-import { Window } from '../components/Window'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { useDictionary } from '../i18n'
-import { pageTitle } from '../i18n/pageTitle'
+import { Window } from '../../components/Window'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
+import { useDictionary } from '../../i18n'
+import { pageTitle } from '../../i18n/pageTitle'
 
 // Loaded on demand: keeps the trainer code and data out of the main chunk.
-const SearchTrainer = lazy(() => import('../trainers/git/SearchTrainer'))
+const SearchTrainer = lazy(() => import('../../trainers/git/SearchTrainer'))
 
 export function GitSearchingPage() {
   const t = useDictionary()

@@ -101,8 +101,17 @@ export interface Dictionary {
     heading: string
     windowTitle: string
     intro: string
-    /** Link back from a trainer window to the trainers page. */
+    /** Link back from a trainer window to the list of trainers. */
     backLabel: string
+    /** Plain link from the trainers page to the main site. */
+    siteLink: string
+    /** Texts of the public showcase on the main site. */
+    showcase: {
+      intro: string
+      /** Note before the repository link. */
+      note: string
+      repoLabel: string
+    }
     /** Shown while a trainer screen is loading. */
     loading: string
     cta: string
@@ -113,7 +122,7 @@ export interface Dictionary {
     gitUndoing: GitScreenText
     gitCollaborating: GitScreenText
     gitSearching: GitScreenText
-    /** Accessible name of the list of Git sections on the trainers page. */
+    /** Accessible name of the list of Git sections on the list of trainers. */
     gitSectionsLabel: string
     /** Visible link text for a Git section: its number and name. */
     gitSectionLink: (number: number, name: string) => string

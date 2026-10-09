@@ -16,6 +16,7 @@ export function buildProjectItems(projects: readonly Project[], t: Dictionary): 
         ? {
             href: project.path,
             internal: true,
+            fullLoad: project.fullLoad,
             label: t.projects.pathLinkLabel,
             ariaLabel: `${t.projects.pathLinkLabel}: ${text.title}`,
           }
