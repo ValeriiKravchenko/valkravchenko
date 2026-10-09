@@ -9,7 +9,7 @@
 //
 // Разбор ошибок BRE (Invalid range end / Trailing backslash / Unmatched ( or \( /
 // Invalid regular expression) сверен буквально прогоном git 2.53.0, 26.09.2026
-// (docs/git-trainer/reports/section6-git-runs.txt, «Д1»/«Д12»/основной блок GREP).
+// (сверено на git 2.53.0).
 // ============================================================
 import type { FileTree } from './searchTypes'
 import { has } from './util'

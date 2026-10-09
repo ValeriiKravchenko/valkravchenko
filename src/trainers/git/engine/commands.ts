@@ -486,7 +486,7 @@ function handleCommit(state: SectionState, restTokens: ShellToken[]): { state: S
       // target.md, A8 + A12: `git commit -m <сообщение> <pathspec>...` —
       // не только «самый опасный случай» забытых кавычек (suspect), а законный синтаксис
       // git сам по себе: коммитит только перечисленные пути (известные git — проверено выше),
-      // а не весь индекс. Проверено прямым запуском на git 2.43+ (см. отчёт): берёт РАБОЧЕЕ
+      // а не весь индекс. Проверено прямым запуском на git 2.43+: берёт РАБОЧЕЕ
       // дерево для этих путей, а для остальных путей — HEAD как есть (пояснение к A11: индекс
       // ДЛЯ ЭТИХ путей git затем застейджит — см. commitPathspec/A11 в repo.ts).
       const outcome = commitPathspec(state, message, matchedFiles)
@@ -518,7 +518,7 @@ function handleCommit(state: SectionState, restTokens: ShellToken[]): { state: S
   if (sameTree(head, nextIndex)) {
     // Важно: индекс ещё НЕ переключён на nextIndex (это происходит только перед реальным
     // commitFromIndex ниже) — статус в выводе и пояснении считается по текущему, неизменённому
-    // состоянию, как в source.html (`friendlyCommit`: `repo.index = nextIndex` присваивается позже).
+    // состоянию, как в исходной версии тренажёра (там `repo.index = nextIndex` присваивается позже).
     const snapshot = getStatus(state)
     const kind = statusTailKind(snapshot)
     const explanation =

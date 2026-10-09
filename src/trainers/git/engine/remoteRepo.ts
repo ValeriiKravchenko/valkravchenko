@@ -22,7 +22,7 @@
 // Строки-литералы настоящего git ("Everything up-to-date", "Fast-forward",
 // "fatal: …", hint-блоки) — буквальный вывод, сверенный напрямую запуском
 // git 2.53.0 (LC_ALL=C, без глобального конфига) во временном каталоге
-// 26.09.2026 (см. docs/git-trainer/reports/section5-git-runs.txt) — не по
+// 26.09.2026 — не по
 // памяти. Диффстат после fast-forward/слияния при pull НЕ печатается — то же
 // сознательное упрощение, что и в branchCommands.ts; вместо него pull добавляет одну строку
 // тренажёра о пропуске (ru.remote.notes.pullStatOmitted; target.md, часть VII, опасное место 9).
@@ -342,8 +342,7 @@ export function formatRemoteStatus(local: LocalRepo): string {
  * Строка ссылки push/fetch: пробел, флаг, пробел, поле сводки (дополнено до 17 символов),
  * пробел, `<откуда> -> <куда>` (у fetch `from` ещё дополняется до ширины самого длинного имени в
  * этом выводе, минимум 10 — передаётся через `padFrom`; у push имя не выравнивается, `padFrom`
- * не передаётся). Сверено напрямую по байтам (см. отчёт о переносе, раздел «Формат строк push
- * и fetch»).
+ * не передаётся). Сверено напрямую по байтам.
  */
 export function refLine(flag: ' ' | '+' | '*' | '!', summary: string, from: string, to: string, suffix = '', padFrom?: number): string {
   const fromPart = padFrom !== undefined ? from.padEnd(padFrom) : from

@@ -1,7 +1,6 @@
 // ============================================================
 // Раздел 6 git-тренажёра, шаг A: вычисление и форматирование `git blame`
-// (searchBlame.ts). Ожидания — буквально из
-// docs/git-trainer/reports/section6-git-runs.txt (блок BLAME, Д5, Д13).
+// (searchBlame.ts). Ожидания сверены на git 2.53.0.
 // ============================================================
 import { describe, expect, it } from 'vitest'
 import { computeBlame, formatBlame } from './searchBlame'

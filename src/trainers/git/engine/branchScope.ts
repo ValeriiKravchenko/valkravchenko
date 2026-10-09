@@ -29,7 +29,7 @@ export function isSection2Command(sub: string): sub is Section2Command {
  * Буквальный вывод настоящего git на неизвестное имя подкоманды — тот же
  * текст, что и в разделе 1 (commands.ts, gitNotACommand), сверен независимо
  * на git 2.53.0, 23.09.2026. Копия, а не импорт: gitNotACommand в commands.ts
- * не экспортирована, а раздел 1 трогать эта задача не должна (см. отчёт).
+ * не экспортирована, а раздел 1 трогать эта задача не должна.
  */
 export function gitNotACommand(sub: string): string {
   return `git: '${sub}' is not a git command. See 'git --help'.`

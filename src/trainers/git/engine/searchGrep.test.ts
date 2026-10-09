@@ -1,8 +1,7 @@
 // ============================================================
 // Раздел 6 git-тренажёра, шаг A: перевод BRE → JS RegExp и поиск по деревьям
-// (searchGrep.ts). Все ожидания — буквально из
-// docs/git-trainer/reports/section6-git-runs.txt (git 2.53.0, 26.09.2026,
-// блоки GREP, Д1, Д12).
+// (searchGrep.ts). Все ожидания сверены на
+// git 2.53.0 (26.09.2026).
 // ============================================================
 import { describe, expect, it } from 'vitest'
 import { compilePattern, escapeFixedString, grepTree, translateBrePattern } from './searchGrep'

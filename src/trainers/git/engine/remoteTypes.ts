@@ -74,7 +74,7 @@ export interface LocalRepo {
 
 /**
  * Идентификаторы пяти миссий раздела 5 (target.md, часть VII, «Миссии», формулировки 1–4 из
- * source.html, миссия 5 — переписана под опасные места 2 и 5). Порядок = порядок показа.
+ * исходной версии тренажёра, миссия 5 — переписана под опасные места 2 и 5). Порядок = порядок показа.
  */
 export type RemoteMissionId = 'cloneRepo' | 'commitLocally' | 'pushCommit' | 'commitAfterColleague' | 'rejectPullPush'
 

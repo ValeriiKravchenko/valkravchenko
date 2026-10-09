@@ -97,8 +97,7 @@ export interface CommandResult {
    * { CommandResult } from './types'` БЕЗ изменений полей). Там, где поле не заполняется
    * (остаётся `undefined` — существующие тесты, сравнивающие результат через `toEqual`, его не
    * замечают: `toEqual` игнорирует свойства со значением `undefined`). Закреплено тестами
-   * раздела 5 (remoteCommands.test.ts) — коды сверены прогоном git 2.53.0, 26.09.2026 (см.
-   * docs/git-trainer/reports/section5-git-runs.txt).
+   * раздела 5 (remoteCommands.test.ts) — коды сверены прогоном git 2.53.0, 26.09.2026.
    */
   exitCode?: number
 }

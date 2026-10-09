@@ -87,7 +87,7 @@ function tzString(offsetMinutes: number): string {
 /**
  * Формат `git show`/`git log` (target.md, «Форматы»): `Thu Mar 12 10:00:00 2026 +0300`. День —
  * БЕЗ ведущего нуля/пробела (сверено прогоном: `Fri May 1 10:00:00 2026 +0300` — ровно один
- * пробел перед однозначным днём, docs/git-trainer/reports/section6-git-runs.txt, Д14).
+ * пробел перед однозначным днём; сверено на git 2.53.0).
  */
 export function formatGitLongDate(d: CommitDate): string {
   return `${weekdayOf(d)} ${MONTHS[d.month - 1]} ${d.day} ${pad2(d.hour)}:${pad2(d.minute)}:${pad2(d.second)} ${d.year} ${tzString(d.tzOffsetMinutes)}`
