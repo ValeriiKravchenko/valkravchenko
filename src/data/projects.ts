@@ -1,4 +1,4 @@
-import { SECTIONS } from './sections'
+import { TRAINERS_APP_PATH } from './trainerPaths'
 
 export const PROJECT_IDS = [
   'studynotes',
@@ -40,6 +40,8 @@ export interface Project {
   url?: string
   /** In-site path. Set for projects shown on the site itself; used instead of `url`. */
   path?: string
+  /** The path is a separate page served by the server: open it with a full page load. */
+  fullLoad?: boolean
   /** Stack tags; labels live in the dictionary. */
   tags: readonly TagId[]
 }
@@ -81,8 +83,9 @@ export const PROJECTS: readonly Project[] = [
   {
     id: 'git-trainer',
     direction: 'web',
-    // Opens the trainers page, taken from the section registry.
-    path: SECTIONS.find((section) => section.id === 'trainers')?.path,
+    // Opens the separate trainers page.
+    path: TRAINERS_APP_PATH,
+    fullLoad: true,
     tags: ['react', 'typescript', 'vitest'],
   },
 ]

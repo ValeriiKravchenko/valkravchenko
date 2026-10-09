@@ -167,6 +167,12 @@ export const ru: Dictionary = {
     windowTitle: 'sky-os — тренажёры',
     intro: 'Два тренажёра, которые работают прямо в браузере. Выберите один.',
     backLabel: '← К тренажёрам',
+    siteLink: 'На главный сайт',
+    showcase: {
+      intro: 'Два тренажёра, которые работают прямо в браузере.',
+      note: 'Запуск на сайте открыт только владельцу. Код открыт на GitHub:',
+      repoLabel: 'valkravchenko на GitHub',
+    },
     loading: 'Загрузка тренажёра…',
     cta: 'Открыть',
     ctaAriaLabel: (title) => `Открыть: ${title}`,

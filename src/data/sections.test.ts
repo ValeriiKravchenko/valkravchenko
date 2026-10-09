@@ -1,5 +1,6 @@
 import { SECTIONS, getEnabledSections, getSectionPath } from './sections'
 import { ABOUT_PATH } from './aboutPaths'
+import { TRAINERS_APP_PATH } from './trainerPaths'
 import { dictionary } from '../i18n'
 
 describe('section registry', () => {
@@ -21,6 +22,11 @@ describe('section registry', () => {
 
   it('publishes trainers at /trainers', () => {
     expect(getSectionPath('trainers')).toBe('/trainers')
+  })
+
+  it('holds no trainer screens: only the showcase section, no path below /trainers', () => {
+    expect(SECTIONS.filter((s) => s.path.startsWith('/trainers')).map((s) => s.path)).toEqual(['/trainers'])
+    expect(SECTIONS.map((s) => s.path)).not.toContain(TRAINERS_APP_PATH)
   })
 
   it('has unique ids and paths, and a dictionary label for every section', () => {

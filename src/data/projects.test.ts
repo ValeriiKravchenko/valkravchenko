@@ -1,5 +1,5 @@
 import { dictionary as t } from '../i18n'
-import { SECTIONS } from './sections'
+import { TRAINERS_APP_PATH } from './trainerPaths'
 import { PROJECT_IDS, PROJECTS, TAG_IDS, getProjectsByDirection } from './projects'
 
 describe('projects data', () => {
@@ -12,10 +12,11 @@ describe('projects data', () => {
     }
   })
 
-  it('points the Git trainer card at the trainers section path from the registry', () => {
-    const trainers = SECTIONS.find((s) => s.id === 'trainers')
+  it('points the Git trainer card at the separate trainers page, loaded from the server', () => {
     const card = PROJECTS.find((p) => p.id === 'git-trainer')
-    expect(card?.path).toBe(trainers?.path)
+    expect(card?.path).toBe('/trainers-app/')
+    expect(card?.path).toBe(TRAINERS_APP_PATH)
+    expect(card?.fullLoad).toBe(true)
     expect(card?.url).toBeUndefined()
     expect(PROJECTS.map((p) => p.id)).not.toContain('english')
   })

@@ -108,7 +108,9 @@ describe('TrainerWindow', () => {
     expect(within(win).getByText('Вступление')).toBeInTheDocument()
     expect(within(win).getByRole('button', { name: 'Сброс' })).toBeInTheDocument()
     expect(within(win).getByText('содержимое')).toBeInTheDocument()
-    expect(within(win).getByRole('link', { name: t.trainers.backLabel })).toHaveAttribute('href', '/trainers')
+    expect(within(win).getByRole('link', { name: t.trainers.backLabel })).toHaveAttribute('href', '/')
+    // The main site is reached with a plain anchor (full page load), not a router link.
+    expect(within(win).getByRole('link', { name: t.trainers.siteLink })).toHaveAttribute('href', '/')
   })
 })
 

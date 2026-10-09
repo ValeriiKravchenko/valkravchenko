@@ -38,6 +38,20 @@ describe('routes', () => {
     expect(h1()).toHaveTextContent(t.notFound.heading)
   })
 
+  it.each([
+    '/trainers/git/basics',
+    '/trainers/git/branching',
+    '/trainers/git/inspecting',
+    '/trainers/git/undoing',
+    '/trainers/git/collaborating',
+    '/trainers/git/searching',
+    '/trainers/english',
+    '/trainers-app',
+  ])('has no trainer screen in the site router: %s opens 404', (path) => {
+    renderAt(path)
+    expect(h1()).toHaveTextContent(t.notFound.heading)
+  })
+
   it('throws when an enabled section has no page', () => {
     const sections = [...SECTIONS, { id: 'java', path: '/java', enabled: true } as const]
     expect(() => buildRoutes(sections)).toThrow(/java/)

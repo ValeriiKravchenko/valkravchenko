@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { Link } from 'react-router'
 import { ABOUT_PATH } from '../data/aboutPaths'
 import { useDictionary } from '../i18n'
+import { SiteLink } from './SiteLinkMode'
 import { useTheme } from '../theme/useTheme'
 
 // Which menu is open on the page. One store for all windows, so opening a menu
@@ -152,9 +152,9 @@ function PageItem({ label, to }: { label: string; to: string }) {
   const close = useContext(CloseContext)
   return (
     <li>
-      <Link to={to} onClick={close} className={itemClasses}>
+      <SiteLink to={to} onClick={close} className={itemClasses}>
         {label}
-      </Link>
+      </SiteLink>
     </li>
   )
 }
