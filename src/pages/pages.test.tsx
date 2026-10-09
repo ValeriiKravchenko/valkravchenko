@@ -123,6 +123,7 @@ describe('pages', () => {
     expect(t.automation.windowTitle).toBe('sky-os — автоматизация')
     expect(t.library.windowTitle).toBe('sky-os — библиотека')
     expect(t.contacts.windowTitle).toBe('sky-os — контакты')
+    expect(t.about.windowTitle).toBe('sky-os — обо мне')
   })
 
   it('ContactsPage shows placeholder contacts only', () => {

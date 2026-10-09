@@ -19,6 +19,7 @@ describe('routes', () => {
     ['/library', t.library.heading],
     ['/trainers', t.trainers.heading],
     ['/contacts', t.contacts.heading],
+    ['/about', t.about.heading],
   ])('opens %s with its own h1', (path, heading) => {
     renderAt(path)
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
@@ -42,7 +43,7 @@ describe('routes', () => {
     expect(() => buildRoutes(sections)).toThrow(/java/)
   })
 
-  it.each(['/', '/projects', '/automation', '/library', '/trainers', '/contacts', '/nope'])(
+  it.each(['/', '/projects', '/automation', '/library', '/trainers', '/contacts', '/about', '/nope'])(
     'has no striped windows at %s',
     (path) => {
       const { container } = renderAt(path)
@@ -58,6 +59,7 @@ describe('routes', () => {
     ['/library', t.library.windowTitle],
     ['/trainers', t.trainers.windowTitle],
     ['/contacts', t.contacts.windowTitle],
+    ['/about', t.about.windowTitle],
     ['/nope', t.notFound.windowTitle],
   ])('wraps the page at %s in a window titled "%s" that holds the h1', (path, title) => {
     renderAt(path)

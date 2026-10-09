@@ -31,7 +31,7 @@ export interface Dictionary {
   skipLink: string
   logo: { text: string; ariaLabel: string }
   nav: { ariaLabel: string; labels: Record<SectionId, string> }
-  systemBar: { language: string; user: string }
+  systemBar: { language: string; user: string; avatarLabel: string }
   theme: { labels: Record<Theme, string>; ariaLabels: Record<Theme, string> }
   dock: {
     ariaLabel: string
@@ -122,6 +122,13 @@ export interface Dictionary {
     /** Screen-reader state words for a mission in the list. */
     missionDone: string
     missionTodo: string
+  }
+  about: {
+    windowTitle: string
+    heading: string
+    paragraphs: string[]
+    photoAlt: string
+    buttons: { projects: string; github: string; contacts: string }
   }
   contacts: {
     heading: string

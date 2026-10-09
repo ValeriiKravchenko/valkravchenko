@@ -21,6 +21,23 @@ describe('SystemBar', () => {
     expect(within(banner).getByText(t.systemBar.user)).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('has an avatar link to the About page, hidden below 640 px, with an empty alt', () => {
+    render(
+      <MemoryRouter>
+        <SystemBar logoTo="/" items={[]} />
+      </MemoryRouter>,
+    )
+    const link = within(screen.getByRole('banner')).getByRole('link', { name: t.systemBar.avatarLabel })
+    expect(link).toHaveAttribute('href', '/about')
+    expect(link).toHaveClass('hidden', 'sm:inline-block')
+    const img = link.querySelector('img')
+    expect(img).toHaveAttribute('alt', '')
+    expect(img).toHaveAttribute('srcset', expect.stringMatching(/ 64w, .* 128w$/))
+    expect(img).toHaveAttribute('sizes', '28px')
+    expect(img).toHaveAttribute('width', '28')
+    expect(img).toHaveAttribute('height', '28')
+  })
+
   it('shows the section menu only on wide screens', () => {
     render(
       <MemoryRouter>
