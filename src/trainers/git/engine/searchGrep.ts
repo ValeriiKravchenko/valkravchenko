@@ -170,7 +170,7 @@ export function translateBrePattern(pattern: string): BreResult {
   return { ok: true, source: out }
 }
 
-/** Экранирует ВСЕ JS-метасимволы — для `-F` (буквальный поиск, target.md: «искать буквально»). */
+/** Экранирует ВСЕ JS-метасимволы — для `-F` (буквальный поиск, target.md, часть VIII, «Что входит», строка про особые символы шаблона). */
 export function escapeFixedString(pattern: string): string {
   let out = ''
   for (const c of pattern) out += JS_META.has(c) ? '\\' + c : c

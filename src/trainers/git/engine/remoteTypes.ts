@@ -108,7 +108,7 @@ export interface RemoteState {
   clock: number
   history: HistoryEntry[]
   serverNotes: string[]
-  /** Сколько раз нажали «Коллега пушит» — нужно для текста файла/сообщения (target.md, часть VII: «n-е… дописывает строку… №<n>»). */
+  /** Сколько раз нажали «Коллега пушит» — нужно для текста файла/сообщения (target.md, часть VII, подраздел про кнопку «Коллега пушит»). */
   colleaguePushCount: number
   /**
    * Побочный канал для миссии 4 (target.md, часть VII, «Миссии»: «commit до нажатия не
