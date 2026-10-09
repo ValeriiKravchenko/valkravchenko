@@ -5,6 +5,7 @@ import { Layout } from './layout/Layout'
 import { AutomationPage } from './pages/AutomationPage'
 import { ContactsPage } from './pages/ContactsPage'
 import { HomePage } from './pages/HomePage'
+import { LibraryPage } from './pages/LibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 
@@ -16,6 +17,7 @@ export const PAGES: PageMap = {
   home: HomePage,
   projects: ProjectsPage,
   automation: AutomationPage,
+  library: LibraryPage,
   contacts: ContactsPage,
 }
 

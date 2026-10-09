@@ -25,10 +25,7 @@ export const ru: Dictionary = {
     lead: 'Здесь будут мои проекты и заметки. Текст страницы появится позже.',
     primaryCta: { section: 'projects', label: 'Смотреть проекты' },
     secondaryCta: { section: 'contacts', label: 'Контакты' },
-    chips: [
-      { label: 'Проектов', count: '[число]' },
-      { label: 'Книг', count: '[число]' },
-    ],
+    chipLabels: { projects: 'Проектов', books: 'Книг' },
   },
   projects: {
     heading: 'Проекты',
@@ -109,6 +106,18 @@ export const ru: Dictionary = {
       },
     ],
     tools: 'Инструменты: Power Query (каждый день в работе), Python (pandas).',
+  },
+  library: {
+    heading: 'Библиотека',
+    windowTitle: 'Каталог книг',
+    intro: 'Каталог IT-книг: поиск по названию и фильтр по категориям.',
+    searchLabel: 'Поиск книги по названию',
+    searchPlaceholder: 'Поиск по названию…',
+    categoriesLabel: 'Категории',
+    reset: 'Сбросить фильтры',
+    shown: (shown, total) => `Показано ${shown} из ${total}`,
+    listLabel: 'Список книг',
+    empty: 'Ничего не найдено — попробуйте изменить запрос или фильтры.',
   },
   contacts: {
     heading: 'Контакты',

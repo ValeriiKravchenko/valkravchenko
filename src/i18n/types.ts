@@ -1,11 +1,6 @@
 import type { ProjectId, TagId } from '../data/projects'
 import type { SectionId } from '../data/sections'
 
-export interface ChipText {
-  label: string
-  count: string
-}
-
 /** Link to a section by registry id; hidden when the section is disabled. */
 export interface SectionLinkText {
   section: SectionId
@@ -35,7 +30,7 @@ export interface Dictionary {
     lead: string
     primaryCta: SectionLinkText
     secondaryCta: SectionLinkText
-    chips: ChipText[]
+    chipLabels: { projects: string; books: string }
   }
   projects: {
     heading: string
@@ -53,6 +48,18 @@ export interface Dictionary {
     tableHeaders: { stage: string; action: string }
     workflow: { stage: string; action: string }[]
     tools: string
+  }
+  library: {
+    heading: string
+    windowTitle: string
+    intro: string
+    searchLabel: string
+    searchPlaceholder: string
+    categoriesLabel: string
+    reset: string
+    shown: (shown: number, total: number) => string
+    listLabel: string
+    empty: string
   }
   contacts: {
     heading: string
