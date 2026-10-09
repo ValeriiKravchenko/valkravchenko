@@ -157,9 +157,25 @@ export const ru: Dictionary = {
     git: {
       title: 'Git: основы',
       windowTitle: 'sky-os — git: основы',
+      listName: 'Основы',
       description:
         'Терминал для отработки команд git: init, status, add, commit. Рядом три области Git, граф коммитов и миссии.',
     },
+    gitBranching: { title: 'Git: ветвление', windowTitle: 'sky-os — git: ветвление', listName: 'Ветвление' },
+    gitInspecting: {
+      title: 'Git: осмотритесь вокруг',
+      windowTitle: 'sky-os — git: осмотритесь вокруг',
+      listName: 'Осмотритесь вокруг',
+    },
+    gitUndoing: { title: 'Git: отмена действий', windowTitle: 'sky-os — git: отмена действий', listName: 'Отмена действий' },
+    gitCollaborating: {
+      title: 'Git: командная работа',
+      windowTitle: 'sky-os — git: командная работа',
+      listName: 'Командная работа',
+    },
+    gitSearching: { title: 'Git: поиск', windowTitle: 'sky-os — git: поиск', listName: 'Поиск' },
+    gitSectionsLabel: 'Разделы Git',
+    gitSectionLink: (number, name) => `Раздел ${number}: ${name}`,
     english: {
       title: 'Английский',
       windowTitle: 'sky-os — английский',

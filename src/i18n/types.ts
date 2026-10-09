@@ -2,6 +2,13 @@ import type { ProjectId, TagId } from '../data/projects'
 import type { SectionId } from '../data/sections'
 import type { Theme } from '../theme/resolveTheme'
 
+/** Tab title, window title and short list name of a Git trainer screen. */
+export interface GitScreenText {
+  title: string
+  windowTitle: string
+  listName: string
+}
+
 /** Link to a section by registry id; hidden when the section is disabled. */
 export interface SectionLinkText {
   section: SectionId
@@ -95,7 +102,16 @@ export interface Dictionary {
     loading: string
     cta: string
     ctaAriaLabel: (title: string) => string
-    git: { title: string; windowTitle: string; description: string }
+    git: { title: string; windowTitle: string; description: string; listName: string }
+    gitBranching: GitScreenText
+    gitInspecting: GitScreenText
+    gitUndoing: GitScreenText
+    gitCollaborating: GitScreenText
+    gitSearching: GitScreenText
+    /** Accessible name of the list of Git sections on the trainers page. */
+    gitSectionsLabel: string
+    /** Visible link text for a Git section: its number and name. */
+    gitSectionLink: (number: number, name: string) => string
     english: { title: string; windowTitle: string; description: string }
     /** Screen-reader prefix for a command that was refused or failed. */
     failedOutput: string
