@@ -10,7 +10,7 @@ export function TagList({ tags, ariaLabel }: TagListProps) {
       {tags.map((tag) => (
         <li
           key={tag}
-          className="inline-flex items-center rounded-chip border border-border bg-titlebar px-3 py-1 font-mono text-[15px] text-ink"
+          className="inline-flex items-center rounded-chip bg-accent-soft px-3 py-1 font-mono text-[15px] text-accent"
         >
           {tag}
         </li>

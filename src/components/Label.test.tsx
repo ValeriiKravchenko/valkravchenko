@@ -7,8 +7,8 @@ describe('Label', () => {
     expect(screen.getByText('[число]')).toHaveClass('font-mono')
   })
 
-  it('uses the pixel font when requested', () => {
-    render(<Label font="pixel">GITHUB</Label>)
-    expect(screen.getByText('GITHUB')).toHaveClass('font-pixel')
+  it('never uses the pixel font', () => {
+    render(<Label>GITHUB</Label>)
+    expect(screen.getByText('GITHUB')).not.toHaveClass('font-pixel')
   })
 })

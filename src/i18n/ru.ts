@@ -4,7 +4,7 @@ import type { Dictionary } from './types'
 export const ru: Dictionary = {
   siteTitle: 'Валерий Кравченко',
   skipLink: 'Перейти к содержимому',
-  logo: { text: 'VK', ariaLabel: 'Валерий Кравченко, на главную' },
+  logo: { text: 'sky-os', ariaLabel: 'sky-os, на главную' },
   nav: {
     ariaLabel: 'Основная навигация',
     labels: {
@@ -18,18 +18,43 @@ export const ru: Dictionary = {
       library: 'Библиотека',
     },
   },
+  systemBar: { language: 'RU', user: 'valerii@sky-os' },
+  theme: {
+    labels: { day: 'День', night: 'Ночь' },
+    ariaLabels: {
+      day: 'Тема: день. Переключить на «Ночь»',
+      night: 'Тема: ночь. Переключить на «День»',
+    },
+  },
+  dock: { ariaLabel: 'Док' },
+  windowMenu: ['file', 'edit', 'view', 'help'],
   footer: { text: '© Валерий Кравченко' },
   home: {
-    windowTitle: 'WELCOME',
+    windowTitle: 'sky-os — главная',
     heading: 'Привет, я Валерий',
     lead: 'Здесь будут мои проекты и заметки. Текст страницы появится позже.',
     primaryCta: { section: 'projects', label: 'Смотреть проекты' },
     secondaryCta: { section: 'contacts', label: 'Контакты' },
     chipLabels: { projects: 'Проектов', books: 'Книг' },
+    terminal: {
+      title: 'terminal — ~/projects',
+      host: 'valerii@sky-os',
+      listCommand: 'ls projects',
+      readCommand: 'cat studynotes/about',
+      about: 'Сервис заметок на Java: REST API, вход, импорт архива и полнотекстовый поиск.',
+      note: '# интерактивный терминал — скоро',
+    },
+    beforeAfter: {
+      title: 'автоматизация — до / после',
+      rows: [
+        { project: 'bank-statement-automation', before: 'несколько часов', after: '20–30 секунд' },
+        { project: 'payment-registry-automation', before: '[до]', after: '[после]' },
+      ],
+    },
   },
   projects: {
     heading: 'Проекты',
-    windowTitle: 'Список проектов',
+    windowTitle: 'sky-os — проекты',
     linkLabel: 'Код на GitHub',
     newTabNote: '(откроется в новой вкладке)',
     tagsLabel: 'Стек',
@@ -77,7 +102,9 @@ export const ru: Dictionary = {
   automation: {
     heading: 'Автоматизация',
     intro: 'Больше 10 лет автоматизирую обработку данных в Excel и Power Query.',
+    windowTitle: 'sky-os — автоматизация',
     workflowTitle: 'Как я работаю',
+    projectsTitle: 'Проекты',
     tableHeaders: { stage: 'Этап', action: 'Что делаю' },
     workflow: [
       {
@@ -109,7 +136,7 @@ export const ru: Dictionary = {
   },
   library: {
     heading: 'Библиотека',
-    windowTitle: 'Каталог книг',
+    windowTitle: 'sky-os — библиотека',
     intro: 'Каталог IT-книг: поиск по названию и фильтр по категориям.',
     searchLabel: 'Поиск книги по названию',
     searchPlaceholder: 'Поиск по названию…',
@@ -121,7 +148,7 @@ export const ru: Dictionary = {
   },
   contacts: {
     heading: 'Контакты',
-    windowTitle: 'Контакты',
+    windowTitle: 'sky-os — контакты',
     intro: 'Связаться со мной можно так.',
     items: [
       { label: 'GITHUB', value: '[github]' },
@@ -129,7 +156,7 @@ export const ru: Dictionary = {
     ],
   },
   notFound: {
-    windowTitle: '404',
+    windowTitle: 'sky-os — 404',
     heading: 'Страница не найдена',
     body: 'Такой страницы нет. Возможно, адрес набран с ошибкой.',
     homeLink: 'На главную',

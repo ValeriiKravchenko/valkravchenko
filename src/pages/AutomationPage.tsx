@@ -13,11 +13,14 @@ export function AutomationPage() {
   const { tableHeaders } = t.automation
 
   return (
-    <>
+    <Window title={t.automation.windowTitle} titleAs="p" className="mx-auto max-w-[960px]">
       <PageHeading>{t.automation.heading}</PageHeading>
       <p className="mt-4 max-w-[60ch]">{t.automation.intro}</p>
       <div className="mt-8 flex flex-col gap-11">
-        <Window title={t.automation.workflowTitle}>
+        <section aria-labelledby="automation-workflow">
+          <h2 id="automation-workflow" className="m-0 mb-4 text-xl font-semibold">
+            {t.automation.workflowTitle}
+          </h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-[15px]">
               <thead className="max-sm:sr-only">
@@ -48,11 +51,14 @@ export function AutomationPage() {
             </table>
           </div>
           <p className="m-0 mt-5 text-[15px]">{t.automation.tools}</p>
-        </Window>
-        <Window title={t.projects.windowTitle}>
+        </section>
+        <section aria-labelledby="automation-projects">
+          <h2 id="automation-projects" className="m-0 mb-4 text-xl font-semibold">
+            {t.automation.projectsTitle}
+          </h2>
           <ProjectList items={buildProjectItems(getProjectsByDirection('automation'), t)} />
-        </Window>
+        </section>
       </div>
-    </>
+    </Window>
   )
 }

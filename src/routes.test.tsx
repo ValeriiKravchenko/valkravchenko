@@ -41,16 +41,27 @@ describe('routes', () => {
     expect(() => buildRoutes(sections)).toThrow(/java/)
   })
 
+  it.each(['/', '/projects', '/automation', '/library', '/contacts', '/nope'])(
+    'has no striped windows at %s',
+    (path) => {
+      const { container } = renderAt(path)
+      expect(container.querySelectorAll('[data-variant="striped"]')).toHaveLength(0)
+      expect(container.querySelectorAll('.titlebar-striped')).toHaveLength(0)
+    },
+  )
+
   it.each([
-    ['/', 0],
-    ['/projects', 0],
-    ['/automation', 0],
-    ['/library', 0],
-    ['/contacts', 0],
-    ['/nope', 0],
-  ])('has the expected number of striped windows at %s', (path, count) => {
-    const { container } = renderAt(path)
-    expect(container.querySelectorAll('[data-variant="striped"]')).toHaveLength(count)
+    ['/', t.home.windowTitle],
+    ['/projects', t.projects.windowTitle],
+    ['/automation', t.automation.windowTitle],
+    ['/library', t.library.windowTitle],
+    ['/contacts', t.contacts.windowTitle],
+    ['/nope', t.notFound.windowTitle],
+  ])('wraps the page at %s in a window titled "%s" that holds the h1', (path, title) => {
+    renderAt(path)
+    const region = screen.getByRole('region', { name: title })
+    expect(region).toContainElement(h1())
+    expect(title).toMatch(/^sky-os — /)
   })
 
   it('shows contact placeholders only', () => {

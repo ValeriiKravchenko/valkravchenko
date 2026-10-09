@@ -12,13 +12,11 @@ export function ProjectsPage() {
   useDocumentTitle(pageTitle(t, t.projects.heading))
 
   return (
-    <>
+    <Window title={t.projects.windowTitle} titleAs="p" className="mx-auto max-w-[960px]">
       <PageHeading>{t.projects.heading}</PageHeading>
       <div className="mt-8">
-        <Window title={t.projects.windowTitle}>
-          <ProjectList items={buildProjectItems(PROJECTS, t)} />
-        </Window>
+        <ProjectList items={buildProjectItems(PROJECTS, t)} />
       </div>
-    </>
+    </Window>
   )
 }

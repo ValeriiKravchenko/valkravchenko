@@ -35,7 +35,7 @@ export function ProjectList({ items }: ProjectListProps) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={item.link.ariaLabel}
-              className="inline-flex min-h-11 items-center text-ink underline decoration-accent underline-offset-4"
+              className="inline-flex min-h-11 items-center text-accent underline decoration-teal-deco underline-offset-4 hover:text-accent-hover"
             >
               {item.link.label}
             </a>

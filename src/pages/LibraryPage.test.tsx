@@ -96,7 +96,7 @@ describe('LibraryPage', () => {
 
   it('has buttons at least 44px tall', () => {
     setup()
-    expect(catButton('Go')).toHaveClass('min-h-11')
-    expect(screen.getByRole('button', { name: t.library.reset })).toHaveClass('min-h-11')
+    expect(catButton('Go')).toHaveClass('min-h-12')
+    expect(screen.getByRole('button', { name: t.library.reset })).toHaveClass('min-h-12')
   })
 })
