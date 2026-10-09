@@ -11,7 +11,7 @@ import type { Commit, FileStatusEntry, FileTree, SectionState, StatusSnapshot } 
 import { Stage } from './types'
 import { commitHashCore, has } from './util'
 
-/** Имя репозитория раздела 1 — совпадает с source.html (`new GitRepo('site')`), используется в путях .git/. */
+/** Имя репозитория раздела 1 — совпадает с исходной версией тренажёра, используется в путях .git/. */
 export const REPO_NAME = 'site'
 /** Имя единственной ветки раздела 1 — детач HEAD и другие ветки он не поддерживает. */
 export const DEFAULT_BRANCH = 'master'
@@ -415,7 +415,7 @@ export interface CommitOutcome {
 /**
  * Создаёт коммит из ТЕКУЩЕГО индекса состояния (index уже должен быть подготовлен вызывающей
  * стороной — см. handleCommit в commands.ts, где -a/-am сначала считают «будущий» индекс;
- * `friendlyCommit` — имя соответствующей функции в docs/git-trainer/source.html, в этом модуле
+ * в исходной версии тренажёра эта функция называлась `friendlyCommit`, в этом модуле
  * она называется `handleCommit`). Буквальный вывод git, не переводится.
  */
 export function commitFromIndex(state: SectionState, message: string | null): CommitOutcome {

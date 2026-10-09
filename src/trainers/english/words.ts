@@ -14,7 +14,7 @@ export interface EnglishWord {
   /** заметка к слову (ложный друг, множественное число и т.п.) — может быть пустой строкой */
   note: string
   kind: WordKind
-  /** источник, из которого взято слово (например «git», «отчёт агента») */
+  /** источник, из которого взято слово (например «git») */
   source: string
   /** ранг в NGSL (New General Service List), если известен */
   ngslRank: number | null
@@ -1524,8 +1524,7 @@ export const englishWords: EnglishWord[] = [
 
   // ============================================================
   // Пополнение: 50 IT-слов из реального контекста репозитория
-  // (docs/git-trainer/reviews/*.md, docs/git-trainer/target.md, docs/git-trainer/spec.md,
-  // docs/agent-practices.md) и 50 общих слов по рангу NGSL.
+  // (target.md, spec.md) и 50 общих слов по рангу NGSL.
   // ============================================================
 
   {

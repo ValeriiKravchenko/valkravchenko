@@ -11,7 +11,7 @@
 //
 // Строки вида "fatal: …", "error: …", "HEAD is now at …", usage-блоки —
 // буквальный вывод настоящего git, сверенный напрямую запуском git 2.53.0 во
-// временном каталоге 26.09.2026 (см. отчёт о переносе раздела 4).
+// временном каталоге 26.09.2026.
 //
 // Диффстат после успешного commit/revert (" 1 file changed, N
 // insertion(s)(+)…") и строка "Date:" в выводе revert — то же сознательное
@@ -325,7 +325,7 @@ function ambiguousArgument(token: string): string {
 
 /**
  * Решает, что считать ссылкой, а что путями, из позиционных токенов ДО "--" (target.md, часть VI,
- * «Убрать файл из индекса»; сверено напрямую, git 2.53.0, 26.09.2026 — см. отчёт):
+ * «Убрать файл из индекса»; сверено напрямую, git 2.53.0, 26.09.2026):
  * - c явным "--": первый токен (если есть) ОБЯЗАН быть ссылкой, иначе "fatal: Failed to resolve
  *   '<x>' as a valid tree." (после "--" есть пути) или "… as a valid revision." (путей после "--"
  *   нет); остальное всегда пути, даже если ни один файл не существует.
@@ -425,7 +425,7 @@ function handleReset(state: UndoState, args: string[]): { state: UndoState; resu
 
 const REVERT_ALLOWED = 'git revert <коммит> [--no-edit]'
 
-/** Буквальный текст настоящего git (сверено напрямую, git 2.53.0, 26.09.2026) — те же роли, что и formatOverwriteError в branchCommands.ts, но verb здесь ВСЕГДА "merge": настоящий git печатает именно это слово даже для revert (сверено напрямую — сюрприз, задокументирован в отчёте). */
+/** Буквальный текст настоящего git (сверено напрямую, git 2.53.0, 26.09.2026) — те же роли, что и formatOverwriteError в branchCommands.ts, но verb здесь ВСЕГДА "merge": настоящий git печатает именно это слово даже для revert (сверено напрямую — неочевидное поведение). */
 function formatRevertOverwriteBlock(block: SafetyBlock): string {
   const parts: string[] = []
   if (block.modified.length) {
@@ -486,7 +486,7 @@ function handleRevert(state: UndoState, args: string[]): { state: UndoState; res
 
   // Широкая проверка (индекс отличается от HEAD ГДЕ УГОДНО) — раньше вычисления самого revert
   // (сверено напрямую: staged-правка в СОВСЕМ ДРУГОМ файле блокирует revert коротким сообщением,
-  // даже когда сам revert результата бы не менял вовсе — см. отчёт).
+  // даже когда сам revert результата бы не менял вовсе).
   if (indexDiffersFromHead(state).length > 0) {
     return fail(state, 'error: your local changes would be overwritten by revert.\nhint: commit your changes or stash them to proceed.\nfatal: revert failed')
   }
@@ -502,7 +502,7 @@ function handleRevert(state: UndoState, args: string[]): { state: UndoState; res
   if (sameTree(merged.tree, currentTree)) {
     // «Нечего отменять»: настоящий git в этом случае не печатает специальный текст про revert —
     // он просто идёт по тому же пути, что и обычный commit без изменений, и печатает статус
-    // (сверено напрямую, git 2.53.0, 26.09.2026 — см. отчёт; source.html и spec.md предполагали
+    // (сверено на git 2.53.0, 26.09.2026; исходная версия тренажёра и spec.md предполагали
     // отдельный текст «нечего отменять», которого реальный git не печатает).
     return fail(state, formatUndoStatus(state))
   }

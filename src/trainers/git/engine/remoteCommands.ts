@@ -11,8 +11,7 @@
 //
 // Строки вида "fatal: …", "error: …", usage-блоки — буквальный вывод,
 // сверенный напрямую запуском git 2.53.0 (LC_ALL=C, без глобального
-// конфига) во временном каталоге 26.09.2026, см. docs/git-trainer/reports/
-// section5-git-runs.txt — не по памяти. Диффстат НЕ печатается (то же
+// конфига) во временном каталоге 26.09.2026 — не по памяти. Диффстат НЕ печатается (то же
 // упрощение, что и в branchCommands.ts), но на pull после перемотки и слияния добавляется одна
 // строка тренажёра о пропуске (ru.remote.notes.pullStatOmitted, см. integrationResultText).
 // ============================================================
@@ -359,7 +358,7 @@ function handleBranch(state: RemoteState, args: string[]): { state: RemoteState;
   if ((args[0] === '-d' || args[0] === '-D' || args[0] === '--delete') && args.length === 2) {
     const name = args[1]
     if (name === local.head) return fail(state, BRANCH_DELETE_CURRENT_WORKTREE(name), null, 1)
-    // target.md, часть VII, опасное место 10: только этот буквальный случай сверен (см. отчёт) —
+    // target.md, часть VII, опасное место 10: только этот буквальный случай сверен —
     // удаление ЛЮБОЙ другой ветки (текущая копия не держит другого worktree) настоящим git
     // разрешено, но не проверялось прогоном этого раздела; честный отказ, а не угадывание.
     return fail(state, re.optionOutOfScope(`git branch -d ${name}`, BRANCH_ALLOWED))

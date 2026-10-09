@@ -3,7 +3,7 @@
 // терминала (revert/reset, плюс add/commit/status/log/branch) через
 // публичный вход undoSection.ts. Тексты и коды исходов сверены запуском
 // настоящего git 2.53.0 во временном каталоге 26.09.2026 — не по памяти
-// (см. отчёт о переносе).
+//.
 //
 // Ссылки вида S4-NN — проверки из spec.md, раздел 5, «Раздел 4 «Отмена
 // действий»» (S4-01…S4-33). Конфликт при revert (S4-04…S4-10) и справочные
@@ -11,7 +11,7 @@
 // часть VI, «Что НЕ входит»): для них проверяется честный отказ по правилу
 // области, а не имитация настоящего конфликта/поведения. S4-30 (сквозная
 // проверка ВСЕХ 8 разделов) и S4-33 (тексты теории/квиза страницы) — вне
-// этого движка, см. отчёт.
+// этого движка.
 // ============================================================
 import { describe, expect, it } from 'vitest'
 import { createUndoSection, runUndoCommand, getAllCommits, getOrphanCommits, editFile } from './undoSection'
@@ -28,7 +28,7 @@ function runAll(state: UndoState, ...inputs: string[]): UndoState {
   return inputs.reduce((s, line) => run(s, line).state, state)
 }
 
-/** Исходное состояние раздела 4 (target.md, часть VI, «Исходное состояние» — точный состав из source.html, ch4.seed): три коммита, ветка master. */
+/** Исходное состояние раздела 4 (target.md, часть VI, «Исходное состояние» — точный состав из исходной версии тренажёра): три коммита, ветка master. */
 function baseState(): UndoState {
   return createUndoSection({ commits: ru.undo.seed.commits })
 }
