@@ -1,8 +1,11 @@
+import { SECTIONS } from './sections'
+
 export const PROJECT_IDS = [
   'studynotes',
   'bank-statement-automation',
   'payment-registry-automation',
   'valkravchenko',
+  'git-trainer',
 ] as const
 
 export type ProjectId = (typeof PROJECT_IDS)[number]
@@ -33,8 +36,10 @@ export type TagId = (typeof TAG_IDS)[number]
 export interface Project {
   id: ProjectId
   direction: ProjectDirection
-  /** Repository URL. */
-  url: string
+  /** Repository URL. Set for projects that live in a repository. */
+  url?: string
+  /** In-site path. Set for projects shown on the site itself; used instead of `url`. */
+  path?: string
   /** Stack tags; labels live in the dictionary. */
   tags: readonly TagId[]
 }
@@ -72,6 +77,13 @@ export const PROJECTS: readonly Project[] = [
     direction: 'web',
     url: 'https://github.com/ValeriiKravchenko/valkravchenko',
     tags: ['react', 'typescript', 'tailwind', 'vite', 'vitest', 'github-actions'],
+  },
+  {
+    id: 'git-trainer',
+    direction: 'web',
+    // Opens the trainers page, taken from the section registry.
+    path: SECTIONS.find((section) => section.id === 'trainers')?.path,
+    tags: ['react', 'typescript', 'vitest'],
   },
 ]
 
