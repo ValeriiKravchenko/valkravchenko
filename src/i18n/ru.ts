@@ -36,7 +36,7 @@ export const ru: Dictionary = {
   home: {
     windowTitle: 'sky-os — главная',
     heading: 'Привет, я Валерий',
-    lead: 'Здесь будут мои проекты и заметки. Текст страницы появится позже.',
+    lead: 'Проекты на GitHub, тренажёры по Git и английскому, каталог книг.',
     primaryCta: { section: 'projects', label: 'Смотреть проекты' },
     secondaryCta: { section: 'contacts', label: 'Контакты' },
     chipLabels: { projects: 'Проектов', books: 'Книг' },
@@ -58,7 +58,6 @@ export const ru: Dictionary = {
       title: 'автоматизация — до / после',
       rows: [
         { project: 'bank-statement-automation', before: 'несколько часов', after: '20–30 секунд' },
-        { project: 'payment-registry-automation', before: '[до]', after: '[после]' },
       ],
     },
   },
@@ -224,8 +223,7 @@ export const ru: Dictionary = {
     windowTitle: 'sky-os — контакты',
     intro: 'Связаться со мной можно так.',
     items: [
-      { label: 'GITHUB', value: '[github]' },
-      { label: 'EMAIL', value: '[email]' },
+      { label: 'GITHUB', value: 'github.com/ValeriiKravchenko', href: 'https://github.com/ValeriiKravchenko' },
     ],
   },
   notFound: {

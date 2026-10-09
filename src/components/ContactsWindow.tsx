@@ -5,6 +5,8 @@ import { Window } from './Window'
 export interface ContactItem {
   label: string
   value: string
+  /** Optional external link target; when set, the value is rendered as a link. */
+  href?: string
 }
 
 export interface ContactsWindowProps {
@@ -27,7 +29,14 @@ export function ContactsWindow({ title, intro, items, heading, id }: ContactsWin
             <dt>
               <Label>{item.label}</Label>
             </dt>
-            <dd className="m-0 font-mono [overflow-wrap:anywhere]">{item.value}</dd>
+            <dd className="m-0 font-mono [overflow-wrap:anywhere]">{item.href ? (
+                <a href={item.href} target="_blank" rel="noopener noreferrer" className="underline">
+                  {item.value}
+                </a>
+              ) : (
+                item.value
+              )}
+            </dd>
           </div>
         ))}
       </dl>
