@@ -16,7 +16,7 @@ export interface EnglishWord {
   kind: WordKind
   /** источник, из которого взято слово (например «git») */
   source: string
-  /** ранг в NGSL (New General Service List), если известен */
+  /** ранг в NGSL (New General Service List), если известен; Browne, Culligan, Phillips; CC BY-SA 4.0, see public/third-party-notices.txt */
   ngslRank: number | null
 }
 
