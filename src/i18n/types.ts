@@ -65,6 +65,8 @@ export interface Dictionary {
     heading: string
     windowTitle: string
     linkLabel: string
+    /** Label of the link to a project that lives on this site. */
+    pathLinkLabel: string
     newTabNote: string
     tagsLabel: string
     texts: Record<ProjectId, ProjectText>

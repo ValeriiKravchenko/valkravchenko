@@ -56,6 +56,7 @@ export const ru: Dictionary = {
     heading: 'Проекты',
     windowTitle: 'sky-os — проекты',
     linkLabel: 'Код на GitHub',
+    pathLinkLabel: 'Открыть тренажёры',
     newTabNote: '(откроется в новой вкладке)',
     tagsLabel: 'Стек',
     texts: {
@@ -78,6 +79,11 @@ export const ru: Dictionary = {
         title: 'valkravchenko',
         description:
           'Этот сайт: React, TypeScript и Tailwind, разделы и маршруты из одного реестра, доступность с клавиатуры, проверки в CI.',
+      },
+      'git-trainer': {
+        title: 'Git-тренажёр',
+        description:
+          'Интерактивный терминал для отработки команд Git: восемь разделов плана, на сайте доступны шесть: основы, ветвление, осмотр, откаты, командная работа и поиск. Поведение команд описано в документации.',
       },
     },
     tags: {

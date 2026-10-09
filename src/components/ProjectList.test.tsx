@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { ProjectList, type ProjectItem } from './ProjectList'
 
 const make = (id: string, title: string): ProjectItem => ({
@@ -39,5 +40,22 @@ describe('ProjectList', () => {
     render(<ProjectList headingLevel={3} items={[items[0]]} />)
     const item = screen.getAllByRole('listitem')[0]
     expect(within(item).getByText('Code')).toBeInTheDocument()
+  })
+
+  it('renders an in-site link without new-tab attributes', () => {
+    const inner: ProjectItem = {
+      ...make('c', 'Gamma'),
+      link: { href: '/trainers', label: 'Open', ariaLabel: 'Open: Gamma', internal: true },
+    }
+    render(
+      <MemoryRouter>
+        <ProjectList headingLevel={2} items={[inner]} />
+      </MemoryRouter>,
+    )
+    const link = screen.getByRole('link', { name: 'Open: Gamma' })
+    expect(link).toHaveAttribute('href', '/trainers')
+    expect(link).not.toHaveAttribute('target')
+    expect(link).not.toHaveAttribute('rel')
+    expect(link).toHaveClass('min-h-11')
   })
 })

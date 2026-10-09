@@ -1,12 +1,23 @@
 import { dictionary as t } from '../i18n'
+import { SECTIONS } from './sections'
 import { PROJECT_IDS, PROJECTS, TAG_IDS, getProjectsByDirection } from './projects'
 
 describe('projects data', () => {
-  it('has unique ids and a GitHub URL for each project', () => {
+  it('has unique ids and a GitHub URL for each repository project', () => {
     expect(PROJECTS.map((p) => p.id)).toEqual([...PROJECT_IDS])
-    for (const p of PROJECTS) {
+    expect(new Set(PROJECT_IDS).size).toBe(PROJECT_IDS.length)
+    for (const p of PROJECTS.filter((project) => project.id !== 'git-trainer')) {
       expect(p.url).toMatch(/^https:\/\/github\.com\/ValeriiKravchenko\//)
+      expect(p.path).toBeUndefined()
     }
+  })
+
+  it('points the Git trainer card at the trainers section path from the registry', () => {
+    const trainers = SECTIONS.find((s) => s.id === 'trainers')
+    const card = PROJECTS.find((p) => p.id === 'git-trainer')
+    expect(card?.path).toBe(trainers?.path)
+    expect(card?.url).toBeUndefined()
+    expect(PROJECTS.map((p) => p.id)).not.toContain('english')
   })
 
   it('has a title and description in the dictionary for every project id', () => {
@@ -31,6 +42,6 @@ describe('projects data', () => {
       'payment-registry-automation',
     ])
     expect(getProjectsByDirection('java')).toHaveLength(1)
-    expect(getProjectsByDirection('web')).toHaveLength(1)
+    expect(getProjectsByDirection('web').map((p) => p.id)).toEqual(['valkravchenko', 'git-trainer'])
   })
 })

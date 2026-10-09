@@ -12,11 +12,18 @@ export function buildProjectItems(projects: readonly Project[], t: Dictionary): 
       description: text.description,
       tags: project.tags.map((tag) => t.projects.tags[tag]),
       tagsLabel: t.projects.tagsLabel,
-      link: {
-        href: project.url,
-        label: t.projects.linkLabel,
-        ariaLabel: `${t.projects.linkLabel}: ${text.title} ${t.projects.newTabNote}`,
-      },
+      link: project.path
+        ? {
+            href: project.path,
+            internal: true,
+            label: t.projects.pathLinkLabel,
+            ariaLabel: `${t.projects.pathLinkLabel}: ${text.title}`,
+          }
+        : {
+            href: project.url ?? '',
+            label: t.projects.linkLabel,
+            ariaLabel: `${t.projects.linkLabel}: ${text.title} ${t.projects.newTabNote}`,
+          },
     }
   })
 }
