@@ -15,7 +15,7 @@ export function ProjectsPage() {
     <Window title={t.projects.windowTitle} titleAs="p" className="mx-auto max-w-[960px]">
       <PageHeading>{t.projects.heading}</PageHeading>
       <div className="mt-8">
-        <ProjectList items={buildProjectItems(PROJECTS, t)} />
+        <ProjectList headingLevel={2} items={buildProjectItems(PROJECTS, t)} />
       </div>
     </Window>
   )

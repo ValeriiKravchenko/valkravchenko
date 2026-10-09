@@ -18,7 +18,12 @@ function writeStored(theme: Theme): void {
 }
 
 function systemMedia(): MediaQueryList | null {
-  return typeof window.matchMedia === 'function' ? window.matchMedia(DARK_QUERY) : null
+  try {
+    return typeof window.matchMedia === 'function' ? window.matchMedia(DARK_QUERY) : null
+  } catch {
+    // matchMedia is unavailable or throws: behave as without it (day theme).
+    return null
+  }
 }
 
 export interface UseTheme {

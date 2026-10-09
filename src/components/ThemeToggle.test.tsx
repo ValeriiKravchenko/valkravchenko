@@ -100,6 +100,16 @@ describe('ThemeToggle', () => {
     expect(root()).toHaveAttribute('data-theme', 'night')
   })
 
+  it('falls back to day when matchMedia throws', async () => {
+    window.matchMedia = vi.fn(() => {
+      throw new Error('matchMedia is blocked')
+    }) as unknown as typeof window.matchMedia
+    render(<ThemeToggle />)
+    expect(root()).toHaveAttribute('data-theme', 'day')
+    await userEvent.click(button(t.theme.ariaLabels.day))
+    expect(root()).toHaveAttribute('data-theme', 'night')
+  })
+
   it('follows the system theme until the visitor chooses', async () => {
     const system = mockSystemTheme(false)
     render(<ThemeToggle />)

@@ -16,9 +16,12 @@ export interface ProjectItem {
 
 export interface ProjectListProps {
   items: ProjectItem[]
+  /** Heading level of each project title: one below the surrounding heading. */
+  headingLevel: 2 | 3
 }
 
-export function ProjectList({ items }: ProjectListProps) {
+export function ProjectList({ items, headingLevel }: ProjectListProps) {
+  const Heading = `h${headingLevel}` as const
   return (
     <ul className="m-0 flex list-none flex-col p-0">
       {items.map((item) => (
@@ -26,7 +29,7 @@ export function ProjectList({ items }: ProjectListProps) {
           key={item.id}
           className="flex flex-col gap-3 border-b border-divider py-5 first:pt-0 last:border-b-0 last:pb-0"
         >
-          <h3 className="m-0 text-xl font-semibold [overflow-wrap:anywhere]">{item.title}</h3>
+          <Heading className="m-0 text-xl font-semibold [overflow-wrap:anywhere]">{item.title}</Heading>
           <p className="m-0 text-[15px] text-muted">{item.description}</p>
           <TagList tags={item.tags} ariaLabel={`${item.tagsLabel}: ${item.title}`} />
           <div>

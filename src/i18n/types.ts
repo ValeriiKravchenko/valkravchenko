@@ -26,7 +26,11 @@ export interface Dictionary {
   nav: { ariaLabel: string; labels: Record<SectionId, string> }
   systemBar: { language: string; user: string }
   theme: { labels: Record<Theme, string>; ariaLabels: Record<Theme, string> }
-  dock: { ariaLabel: string }
+  dock: {
+    ariaLabel: string
+    /** Shorter captions for the narrow phone dock; the full label stays in aria-label and title. */
+    shortLabels: Partial<Record<SectionId, string>>
+  }
   /** Decorative window menu (aria-hidden). */
   windowMenu: string[]
   footer: { text: string }
