@@ -16,6 +16,7 @@ describe('routes', () => {
     ['/', t.home.heading],
     ['/projects', t.projects.heading],
     ['/automation', t.automation.heading],
+    ['/library', t.library.heading],
     ['/contacts', t.contacts.heading],
   ])('opens %s with its own h1', (path, heading) => {
     renderAt(path)
@@ -44,6 +45,7 @@ describe('routes', () => {
     ['/', 0],
     ['/projects', 0],
     ['/automation', 0],
+    ['/library', 0],
     ['/contacts', 0],
     ['/nope', 0],
   ])('has the expected number of striped windows at %s', (path, count) => {
@@ -69,9 +71,10 @@ describe('menu and registry', () => {
       t.nav.labels.home,
       t.nav.labels.projects,
       t.nav.labels.automation,
+      t.nav.labels.library,
       t.nav.labels.contacts,
     ])
-    for (const id of ['java', 'basics', 'trainers', 'library'] as const) {
+    for (const id of ['java', 'basics', 'trainers'] as const) {
       expect(within(nav).queryByText(t.nav.labels[id])).toBeNull()
     }
   })
@@ -88,6 +91,12 @@ describe('menu and registry', () => {
     expect(navLink(t.nav.labels.projects)).not.toHaveAttribute('aria-current')
   })
 
+  it('has «Библиотека» in the menu, marked current on its page', () => {
+    renderAt('/library')
+    expect(navLink('Библиотека')).toHaveAttribute('aria-current', 'page')
+    expect(navLink(t.nav.labels.automation)).not.toHaveAttribute('aria-current')
+  })
+
   it('shows a newly enabled section in the menu and routes (registry drives both)', () => {
     const sections = SECTIONS.map((s) => (s.id === 'java' ? { ...s, enabled: true } : s))
     const Java = () => <h1>Java page</h1>
@@ -95,6 +104,7 @@ describe('menu and registry', () => {
       home: () => <h1>Home</h1>,
       projects: () => <h1>P</h1>,
       automation: () => <h1>A</h1>,
+      library: () => <h1>L</h1>,
       contacts: () => <h1>C</h1>,
       java: Java,
     })
@@ -108,6 +118,7 @@ describe('menu and registry', () => {
     const routes = buildRoutes(sections, {
       home: HomePage,
       automation: () => <h1>A</h1>,
+      library: () => <h1>L</h1>,
       contacts: () => <h1>C</h1>,
     })
     renderAt('/', routes)
@@ -142,6 +153,7 @@ describe('navigation behaviour', () => {
       home: HomePage,
       projects: () => <p>No heading here</p>,
       automation: () => <h1>A</h1>,
+      library: () => <h1>L</h1>,
       contacts: () => <h1>C</h1>,
     })
     renderAt('/', routes)

@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { books } from '../data/library'
 import { PROJECTS } from '../data/projects'
 import { dictionary as t } from '../i18n'
 import { pageTitle } from '../i18n/pageTitle'
@@ -53,6 +54,15 @@ describe('pages', () => {
     expect(titles).toEqual(['bank-statement-automation', 'payment-registry-automation'])
     expect(screen.getAllByRole('link')).toHaveLength(2)
     expect(document.title).toBe('Автоматизация — Валерий Кравченко')
+  })
+
+  it('HomePage chips count projects and books from the data', () => {
+    wrap(<HomePage />)
+    const projects = screen.getByText(t.home.chipLabels.projects).parentElement!
+    const booksChip = screen.getByText(t.home.chipLabels.books).parentElement!
+    expect(within(projects).getByText(String(PROJECTS.length))).toBeInTheDocument()
+    expect(within(booksChip).getByText(String(books.length))).toBeInTheDocument()
+    expect(screen.queryByText('[число]')).toBeNull()
   })
 
   it('ContactsPage shows placeholder contacts only', () => {

@@ -2,6 +2,8 @@ import { Chip } from '../components/Chip'
 import { LinkButton } from '../components/LinkButton'
 import { PageHeading } from '../components/PageHeading'
 import { Window } from '../components/Window'
+import { books } from '../data/library'
+import { PROJECTS } from '../data/projects'
 import { getSectionPath, SECTIONS, type Section } from '../data/sections'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { pageTitle } from '../i18n/pageTitle'
@@ -19,6 +21,11 @@ export function HomePage({ sections = SECTIONS }: { sections?: readonly Section[
     return to ? [{ to, label: cta.label, variant }] : []
   })
 
+  const chips = [
+    { label: t.home.chipLabels.projects, count: String(PROJECTS.length) },
+    { label: t.home.chipLabels.books, count: String(books.length) },
+  ]
+
   return (
     <Window title={t.home.windowTitle} titleAs="p" pixelTitle>
       <PageHeading>{t.home.heading}</PageHeading>
@@ -31,7 +38,7 @@ export function HomePage({ sections = SECTIONS }: { sections?: readonly Section[
         ))}
       </div>
       <div className="mt-6 flex flex-wrap gap-2">
-        {t.home.chips.map((chip) => (
+        {chips.map((chip) => (
           <Chip key={chip.label} {...chip} />
         ))}
       </div>
