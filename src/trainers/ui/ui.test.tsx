@@ -3,8 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
 import { MemoryRouter } from 'react-router'
 import { dictionary as t } from '../../i18n'
+import { CommitList } from './CommitList'
+import { FileAreasPanel } from './FileAreas'
+import { TerminalHistory } from './TerminalHistory'
 import { TerminalInput, TerminalLog, TerminalPanel } from './TerminalPanel'
 import { TrainerButton } from './TrainerButton'
+import { TrainerMissions } from './TrainerMissions'
 import { TrainerPanel } from './TrainerPanel'
 import { TrainerWindow } from './TrainerWindow'
 
@@ -105,5 +109,117 @@ describe('TrainerWindow', () => {
     expect(within(win).getByRole('button', { name: 'Сброс' })).toBeInTheDocument()
     expect(within(win).getByText('содержимое')).toBeInTheDocument()
     expect(within(win).getByRole('link', { name: t.trainers.backLabel })).toHaveAttribute('href', '/trainers')
+  })
+})
+
+describe('TerminalHistory', () => {
+  it('shows the hint while the history is empty', () => {
+    render(<TerminalHistory entries={[]} prompt="$" emptyText="введи команду" />)
+    expect(screen.getByText('# введи команду')).toBeInTheDocument()
+  })
+
+  it('shows commands, notes and the explanation', () => {
+    render(
+      <TerminalHistory
+        prompt="(main) $"
+        emptyText="пусто"
+        entries={[
+          { kind: 'command', input: 'git status', ok: true, output: 'чисто', explanation: 'пояснение' },
+          { kind: 'note', text: 'заметка' },
+        ]}
+      />,
+    )
+    expect(screen.getByText('git status')).toBeInTheDocument()
+    expect(screen.getByText('(main) $')).toBeInTheDocument()
+    expect(screen.getByText('чисто')).toBeInTheDocument()
+    expect(screen.getByText(/пояснение/)).toBeInTheDocument()
+    expect(screen.getByText('# заметка')).toBeInTheDocument()
+    expect(screen.queryByText('# пусто')).toBeNull()
+  })
+
+  it('marks a failed command with a hidden prefix for screen readers, not by colour alone', () => {
+    render(
+      <TerminalHistory
+        prompt="$"
+        emptyText=""
+        entries={[{ kind: 'command', input: 'ls', ok: false, output: 'нет такой команды', explanation: null }]}
+      />,
+    )
+    const output = screen.getByText('нет такой команды', { exact: false })
+    expect(within(output).getByText(t.trainers.failedOutput, { exact: false })).toHaveClass('sr-only')
+    expect(output.className).toContain('border-l-2')
+  })
+})
+
+describe('TrainerMissions', () => {
+  it('names the state of each mission in text', () => {
+    render(
+      <TrainerMissions
+        title="Что попробовать"
+        missions={[
+          { id: 'a', text: 'Первая', hint: 'git a', done: true },
+          { id: 'b', text: 'Вторая', hint: 'git b', done: false },
+        ]}
+      />,
+    )
+    expect(screen.getByRole('region', { name: 'Что попробовать' })).toBeInTheDocument()
+    const done = screen.getByText('Первая', { exact: false }).closest('li')!
+    const todo = screen.getByText('Вторая', { exact: false }).closest('li')!
+    expect(done).toHaveAttribute('data-done', 'true')
+    expect(within(done).getByText(t.trainers.missionDone, { exact: false })).toHaveClass('sr-only')
+    expect(todo).toHaveAttribute('data-done', 'false')
+    expect(within(todo).getByText(t.trainers.missionTodo, { exact: false })).toHaveClass('sr-only')
+  })
+})
+
+describe('FileAreasPanel', () => {
+  it('shows the lines, a column per area, the empty text and the summary', () => {
+    render(
+      <FileAreasPanel
+        title="Статус"
+        lines={['Текущая ветка: main']}
+        columns={[
+          { label: 'Рабочее дерево', files: ['a.txt', 'b.txt'] },
+          { label: 'Индекс', files: [] },
+        ]}
+        emptyText="пусто"
+        summary="Есть расхождения"
+        hint="Подробности в git status"
+      />,
+    )
+    const panel = screen.getByRole('region', { name: 'Статус' })
+    expect(within(panel).getByText('Текущая ветка: main')).toBeInTheDocument()
+    expect(within(panel).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['a.txt', 'b.txt'])
+    expect(within(panel).getByText('пусто')).toBeInTheDocument()
+    expect(within(panel).getByText('Есть расхождения')).toBeInTheDocument()
+    expect(within(panel).getByText('Подробности в git status')).toBeInTheDocument()
+  })
+})
+
+describe('CommitList', () => {
+  it('writes every fact of a commit as text', () => {
+    render(
+      <CommitList
+        commits={[
+          { id: 'abc1234', message: 'Слияние', tags: ['HEAD → main', 'dev'], parents: 'родители: a + b' },
+        ]}
+      />,
+    )
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveTextContent('abc1234')
+    expect(item).toHaveTextContent('Слияние')
+    expect(item).toHaveTextContent('родители: a + b')
+    expect(within(item).getByText('HEAD → main')).toBeInTheDocument()
+    expect(within(item).getByText('dev')).toBeInTheDocument()
+    expect(item).not.toHaveAttribute('data-faded')
+  })
+
+  it('marks an unreachable commit with a dashed border and a remark, not by dimming alone', () => {
+    render(<CommitList commits={[{ id: 'f00', message: 'Потерян', tags: [], faded: true, note: 'Ни одна ветка не ведёт сюда' }]} />)
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveAttribute('data-faded', 'true')
+    expect(item.className).toContain('border-dashed')
+    expect(item.className).not.toContain('opacity')
+    expect(within(item).getByText(/Ни одна ветка не ведёт сюда/)).toBeInTheDocument()
   })
 })

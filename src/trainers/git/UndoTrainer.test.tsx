@@ -1,0 +1,121 @@
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
+import { dictionary as site } from '../../i18n'
+import UndoTrainer from './UndoTrainer'
+import { createUndoSection, getAllCommits, getUndoMissions } from './engine/undoSection'
+import { ru } from './locales/ru'
+
+const ui = ru.undo.ui
+
+const renderScreen = () =>
+  render(
+    <MemoryRouter>
+      <UndoTrainer />
+    </MemoryRouter>,
+  )
+
+const terminalInput = () => screen.getByRole('textbox', { name: ui.terminal.inputAriaLabel })
+const log = () => screen.getByRole('log', { name: ui.terminal.title })
+
+/** The first mission, taken from the engine data for the initial state of the section. */
+const missions = () => getUndoMissions(createUndoSection(ru.undo.seed))
+const firstMission = () => missions()[0]
+/** The command that completes the first mission ("find the bad commit in the history"). */
+const FIRST_COMMAND = 'git log --oneline'
+
+describe('UndoTrainer', () => {
+  it('renders inside a sky-os window with the page heading and a link back to the trainers', () => {
+    renderScreen()
+    const win = screen.getByRole('region', { name: site.trainers.gitUndoing.windowTitle })
+    expect(within(win).getByRole('heading', { level: 1 })).toHaveTextContent(ui.heading)
+    expect(within(win).getByText(ui.subheading)).toBeInTheDocument()
+    expect(within(win).getByRole('link', { name: site.trainers.backLabel })).toHaveAttribute('href', '/trainers')
+  })
+
+  it('labels the command input', () => {
+    renderScreen()
+    expect(terminalInput()).toHaveAttribute('aria-label', ui.terminal.inputAriaLabel)
+  })
+
+  it('puts the command output in a polite log region', () => {
+    renderScreen()
+    expect(log()).toHaveAttribute('aria-live', 'polite')
+    expect(within(log()).getByText(`# ${ui.terminal.emptyHistory}`)).toBeInTheDocument()
+  })
+
+  it('completes the first mission with its command and marks it done', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    const mission = firstMission()
+    const item = () => screen.getByText(mission.text).closest('li')!
+    expect(item()).toHaveAttribute('data-done', 'false')
+    expect(within(item()).getByText(site.trainers.missionTodo, { exact: false })).toBeInTheDocument()
+
+    await user.type(terminalInput(), `${FIRST_COMMAND}{Enter}`)
+
+    expect(within(log()).getByText(FIRST_COMMAND)).toBeInTheDocument()
+    expect(item()).toHaveAttribute('data-done', 'true')
+    expect(within(item()).getByText(site.trainers.missionDone, { exact: false })).toBeInTheDocument()
+    expect(terminalInput()).toHaveValue('')
+  })
+
+  it('answers an unknown command with the trainer refusal text', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await user.type(terminalInput(), 'ls{Enter}')
+    expect(within(log()).getByText(ru.errors.bashCommandNotFound('ls'), { exact: false })).toBeInTheDocument()
+    expect(within(log()).getByText(site.trainers.failedOutput, { exact: false })).toBeInTheDocument()
+    for (const m of missions()) {
+      expect(screen.getByText(m.text).closest('li')).toHaveAttribute('data-done', 'false')
+    }
+  })
+
+  it('brings the previous command back with the arrow up key', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await user.type(terminalInput(), 'git status{Enter}')
+    await user.keyboard('{ArrowUp}')
+    expect(terminalInput()).toHaveValue('git status')
+  })
+
+  it('shows the commit graph as text: every seed commit with its message and the HEAD label', () => {
+    renderScreen()
+    const graph = screen.getByRole('region', { name: ui.commitGraph.title })
+    const state = createUndoSection(ru.undo.seed)
+    const items = within(graph).getAllByRole('listitem')
+    expect(items).toHaveLength(getAllCommits(state).length)
+    for (const c of getAllCommits(state)) {
+      expect(within(graph).getByText(c.message)).toBeInTheDocument()
+    }
+    expect(within(graph).getAllByText(/^HEAD → /)).toHaveLength(1)
+  })
+
+  it('marks a commit that no branch reaches with text, not only with a dashed border', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    const graph = () => screen.getByRole('region', { name: ui.commitGraph.title })
+    expect(graph().querySelector('[data-faded]')).toBeNull()
+    await user.type(terminalInput(), 'git reset --hard HEAD~1{Enter}')
+    const faded = graph().querySelector('[data-faded]') as HTMLElement
+    expect(faded).not.toBeNull()
+    expect(within(faded).getByText(/💡/)).toBeInTheDocument()
+  })
+
+  it('starts the section over with the reset button', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await user.type(terminalInput(), `${FIRST_COMMAND}{Enter}`)
+    await user.click(screen.getByRole('button', { name: ui.resetButton }))
+    expect(screen.getByText(firstMission().text).closest('li')).toHaveAttribute('data-done', 'false')
+    expect(within(log()).getByText(`# ${ui.terminal.emptyHistory}`)).toBeInTheDocument()
+  })
+
+  it('gives every file action a name that includes the file', () => {
+    renderScreen()
+    const edit = screen.getAllByRole('button', { name: new RegExp(ui.files.editButton) })
+    expect(edit.length).toBeGreaterThan(0)
+    edit.forEach((button) => expect(button.getAttribute('aria-label')).toContain(':'))
+    expect(screen.getAllByRole('button', { name: new RegExp(ui.files.deleteButton) }).length).toBeGreaterThan(0)
+  })
+})

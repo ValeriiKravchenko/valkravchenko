@@ -6,6 +6,11 @@ import { AutomationPage } from './pages/AutomationPage'
 import { ContactsPage } from './pages/ContactsPage'
 import { EnglishPage } from './pages/EnglishPage'
 import { GitBasicsPage } from './pages/GitBasicsPage'
+import { GitBranchingPage } from './pages/GitBranchingPage'
+import { GitCollaboratingPage } from './pages/GitCollaboratingPage'
+import { GitInspectingPage } from './pages/GitInspectingPage'
+import { GitSearchingPage } from './pages/GitSearchingPage'
+import { GitUndoingPage } from './pages/GitUndoingPage'
 import { HomePage } from './pages/HomePage'
 import { LibraryPage } from './pages/LibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -47,6 +52,11 @@ export function buildRoutes(
   if (trainers) {
     children.push(
       { path: 'trainers/git/basics', element: <GitBasicsPage /> },
+      { path: 'trainers/git/branching', element: <GitBranchingPage /> },
+      { path: 'trainers/git/inspecting', element: <GitInspectingPage /> },
+      { path: 'trainers/git/undoing', element: <GitUndoingPage /> },
+      { path: 'trainers/git/collaborating', element: <GitCollaboratingPage /> },
+      { path: 'trainers/git/searching', element: <GitSearchingPage /> },
       { path: 'trainers/english', element: <EnglishPage /> },
     )
   }
