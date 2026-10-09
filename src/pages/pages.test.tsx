@@ -23,7 +23,7 @@ describe('pages', () => {
 
   it('ProjectsPage lists four projects with external links and no striped window', () => {
     const { container } = wrap(<ProjectsPage />)
-    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(PROJECTS.length)
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(PROJECTS.length)
     expect(PROJECTS).toHaveLength(4)
     for (const project of PROJECTS) {
       const title = t.projects.texts[project.id].title

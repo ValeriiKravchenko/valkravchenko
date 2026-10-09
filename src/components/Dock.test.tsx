@@ -26,6 +26,18 @@ describe('Dock', () => {
     links.forEach((a) => expect(a.querySelector('svg')).not.toBeNull())
   })
 
+  it('shows a short caption on the phone but keeps the full name in aria-label and title', () => {
+    render(
+      <MemoryRouter>
+        <Dock items={[{ id: 'automation', to: '/automation', label: 'Автоматизация', shortLabel: 'Автомат.' }]} />
+      </MemoryRouter>,
+    )
+    const link = screen.getByRole('link', { name: 'Автоматизация' })
+    expect(link).toHaveAttribute('title', 'Автоматизация')
+    expect(link).toHaveTextContent('Автомат.')
+    expect(link).not.toHaveTextContent('Автоматизация')
+  })
+
   it('marks only the current page', () => {
     renderDock('/projects')
     expect(screen.getByRole('link', { name: 'Проекты' })).toHaveAttribute('aria-current', 'page')

@@ -26,7 +26,7 @@ export const ru: Dictionary = {
       night: 'Тема: ночь. Переключить на «День»',
     },
   },
-  dock: { ariaLabel: 'Док' },
+  dock: { ariaLabel: 'Док', shortLabels: { automation: 'Автомат.' } },
   windowMenu: ['file', 'edit', 'view', 'help'],
   footer: { text: '© Валерий Кравченко' },
   home: {

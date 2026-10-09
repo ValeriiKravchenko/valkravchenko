@@ -19,8 +19,12 @@ export function Button(props: ButtonProps) {
   const classes = buttonClasses(variant, className)
 
   if (props.href !== undefined) {
-    const { variant: _v, className: _c, ...anchor } = props
-    return <a {...anchor} className={classes} />
+    const { variant: _v, className: _c, children, ...anchor } = props
+    return (
+      <a {...anchor} className={classes}>
+        {children}
+      </a>
+    )
   }
   const { variant: _v, className: _c, type = 'button', ...button } = props
   return <button {...button} type={type} className={classes} />

@@ -12,11 +12,12 @@ Sections are listed in the registry `src/data/sections.ts`. Menu and routes are 
 |---|---|---|
 | home | `/` | enabled |
 | projects | `/projects` | enabled |
+| automation | `/automation` | enabled |
+| library | `/library` | enabled |
 | contacts | `/contacts` | enabled |
 | java | `/java` | disabled |
 | basics | `/basics` | disabled |
 | trainers | `/trainers` | disabled |
-| library | `/library` | disabled |
 
 A disabled section has no menu item, no route (its path shows the 404 page) and no link on the home page. A section is published only when it has real content.
 
@@ -30,7 +31,7 @@ A disabled section has no menu item, no route (its path shows the 404 page) and 
 
 ## Stack
 
-Vite, React, React Router 7 (`createBrowserRouter`), TypeScript (strict), Tailwind CSS 4, Vitest and Testing Library. Fonts (IBM Plex Sans, IBM Plex Mono, Silkscreen) are bundled locally through `@fontsource`.
+Vite, React, React Router 7 (`createBrowserRouter`), TypeScript (strict), Tailwind CSS 4, Vitest and Testing Library. Fonts (IBM Plex Sans, IBM Plex Mono) are bundled locally through `@fontsource`.
 
 ## Run
 

@@ -7,6 +7,8 @@ export interface DockItem {
   id: SectionId
   to: string
   label: string
+  /** Caption under the icon on the phone layout; defaults to `label`. */
+  shortLabel?: string
 }
 
 export interface DockProps {
@@ -33,13 +35,13 @@ export function Dock({ items }: DockProps) {
               end
               aria-label={item.label}
               title={item.label}
-              className="group flex min-h-14 min-w-11 flex-col items-center justify-center gap-1 px-1 text-[12px] leading-tight font-semibold text-bar-ink no-underline lg:min-h-0 lg:gap-1.5"
+              className="group flex min-h-14 min-w-11 flex-col items-center justify-center gap-1 px-0 text-[12px] leading-tight font-semibold text-bar-ink no-underline lg:min-h-0 lg:gap-1.5"
             >
               <span className="grid size-9 place-items-center rounded-button border border-tile-line bg-tile text-accent group-aria-[current=page]:border-accent group-aria-[current=page]:bg-accent group-aria-[current=page]:text-on-accent lg:size-12 lg:rounded-tile">
                 <SectionIcon id={item.id} />
               </span>
               <span className="max-w-full truncate group-aria-[current=page]:underline lg:hidden">
-                {item.label}
+                {item.shortLabel ?? item.label}
               </span>
               <span
                 aria-hidden="true"

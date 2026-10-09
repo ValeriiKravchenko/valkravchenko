@@ -75,8 +75,9 @@
   --logo: #7ef0e2;
   --toggle: #102c45;
   --toggle-line: #2a5478;
-  --dock: rgba(255, 255, 255, 0.14);
-  --dock-line: rgba(255, 255, 255, 0.22);
+  /* Opaque: the dock must not show a white window through it (focus ring and dot stay 3:1). */
+  --dock: #0d2b45;
+  --dock-line: #2a5478;
   --window-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
   --focus-outer: #7ef0e2;
 }

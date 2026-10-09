@@ -56,7 +56,7 @@ export function AutomationPage() {
           <h2 id="automation-projects" className="m-0 mb-4 text-xl font-semibold">
             {t.automation.projectsTitle}
           </h2>
-          <ProjectList items={buildProjectItems(getProjectsByDirection('automation'), t)} />
+          <ProjectList headingLevel={3} items={buildProjectItems(getProjectsByDirection('automation'), t)} />
         </section>
       </div>
     </Window>

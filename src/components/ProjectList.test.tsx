@@ -14,14 +14,20 @@ const items = [make('a', 'Alpha'), make('b', 'Beta')]
 
 describe('ProjectList', () => {
   it('renders title, description and tags for each project', () => {
-    render(<ProjectList items={items} />)
+    render(<ProjectList headingLevel={3} items={items} />)
     expect(screen.getByRole('heading', { level: 3, name: 'Alpha' })).toBeInTheDocument()
     expect(screen.getByText('About Beta')).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Stack: Alpha' })).toBeInTheDocument()
   })
 
+  it('uses the heading level it is given', () => {
+    render(<ProjectList headingLevel={2} items={items} />)
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Alpha', 'Beta'])
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull()
+  })
+
   it('renders an external link with safe attributes and a full accessible name', () => {
-    render(<ProjectList items={items} />)
+    render(<ProjectList headingLevel={3} items={items} />)
     const link = screen.getByRole('link', { name: 'Code Beta (new tab)' })
     expect(link).toHaveAttribute('href', 'https://example.test/b')
     expect(link).toHaveAttribute('target', '_blank')
@@ -30,7 +36,7 @@ describe('ProjectList', () => {
   })
 
   it('keeps the visible link label', () => {
-    render(<ProjectList items={[items[0]]} />)
+    render(<ProjectList headingLevel={3} items={[items[0]]} />)
     const item = screen.getAllByRole('listitem')[0]
     expect(within(item).getByText('Code')).toBeInTheDocument()
   })

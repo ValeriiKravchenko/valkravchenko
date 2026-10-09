@@ -34,6 +34,7 @@ export function Layout({ sections = SECTIONS }: LayoutProps) {
     id: section.id,
     to: section.path,
     label: t.nav.labels[section.id],
+    shortLabel: t.dock.shortLabels[section.id],
   }))
 
   return (

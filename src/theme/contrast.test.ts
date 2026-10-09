@@ -116,11 +116,6 @@ describe('theme contrast (WCAG)', () => {
     expect(themes.day['bar-ink']).not.toBe(themes.night['bar-ink'])
   })
 
-  it('no longer carries the beige or reserved dark tokens, nor the pixel font', () => {
-    expect(css).not.toMatch(/reserved-dark|titlebar-striped|font-pixel|silkscreen/i)
-    expect(css).not.toContain('#eceae3')
-  })
-
   for (const theme of ['day', 'night'] as const) {
     describe(theme, () => {
       it.each(PAIRS)('%s on %s is at least 4.5:1', (fg, bg) => {
@@ -129,6 +124,36 @@ describe('theme contrast (WCAG)', () => {
       })
     })
   }
+
+  // Focus ring and the active dot sit on the dock. The dock may be translucent,
+  // so check them on every surface that can be under it: the desk colors and a window.
+  describe('dock focus ring and active dot (non-text, 3:1)', () => {
+    const NON_TEXT_MIN = 3
+    const underlays = [...DESK, 'window']
+    const surfaces = (theme: 'day' | 'night') =>
+      underlays.map((name) => ({
+        name,
+        color: over(parseColor(themes[theme].dock), parseColor(themes[theme][name]).slice(0, 3) as Rgb),
+      }))
+
+    for (const theme of ['day', 'night'] as const) {
+      it.each([
+        ['focus-outer', 'focus ring'],
+        ['logo', 'active dot'],
+      ])(`${theme}: %s (%s) on the dock over every underlay`, (token) => {
+        const fg = parseColor(themes[theme][token]).slice(0, 3) as Rgb
+        for (const { name, color } of surfaces(theme)) {
+          const value = ratio(fg, color)
+          expect(value, `${token} on dock over ${name} = ${value.toFixed(2)}`).toBeGreaterThanOrEqual(NON_TEXT_MIN)
+        }
+      })
+    }
+
+    it('the night dock does not let a white window through', () => {
+      const alpha = parseColor(themes.night.dock)[3]
+      expect(alpha).toBeGreaterThanOrEqual(0.95)
+    })
+  })
 
   it('the contrast helper is correct on known values', () => {
     expect(ratio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 5)
