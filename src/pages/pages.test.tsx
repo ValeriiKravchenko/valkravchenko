@@ -94,6 +94,16 @@ describe('pages', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
+  it('HomePage has the About card with the photo, name and a link to /about, above the terminal', () => {
+    wrap(<HomePage />)
+    const card = screen.getByRole('region', { name: t.home.aboutCard.windowTitle })
+    expect(within(card).getByRole('heading', { level: 2, name: t.home.aboutCard.name })).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: t.about.photoAlt })).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: t.home.aboutCard.button })).toHaveAttribute('href', '/about')
+    const terminal = screen.getByRole('region', { name: t.home.terminal.title })
+    expect(card.compareDocumentPosition(terminal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('HomePage terminal lists every project from PROJECTS', () => {
     wrap(<HomePage />)
     const terminal = screen.getByRole('region', { name: t.home.terminal.title })

@@ -59,6 +59,13 @@ export const HouseIcon = (props: IconProps) => (
   </Icon>
 )
 
+export const PersonIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20a8 8 0 0 1 16 0" />
+  </Icon>
+)
+
 export const WindowIcon = (props: IconProps) => (
   <Icon {...props}>
     <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -97,6 +104,7 @@ export const LogoIcon = (props: IconProps) => (
 
 const sectionIcons: Record<SectionId, (props: IconProps) => ReactNode> = {
   home: HouseIcon,
+  about: PersonIcon,
   projects: FolderIcon,
   automation: TableIcon,
   library: BookIcon,

@@ -43,7 +43,7 @@ export function SystemBar({ logoTo, items }: SystemBarProps) {
           <Link
             to={ABOUT_PATH}
             aria-label={t.systemBar.avatarLabel}
-            className="hidden size-7 shrink-0 rounded-full sm:inline-block"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full"
           >
             <img
               src={avatar64}
