@@ -50,6 +50,7 @@ export interface Dictionary {
     primaryCta: SectionLinkText
     secondaryCta: SectionLinkText
     chipLabels: { projects: string; books: string }
+    aboutCard: { windowTitle: string; name: string; summary: string; button: string }
     terminal: {
       title: string
       host: string

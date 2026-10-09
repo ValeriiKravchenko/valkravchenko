@@ -9,6 +9,7 @@ export const ru: Dictionary = {
     ariaLabel: 'Основная навигация',
     labels: {
       home: 'Главная',
+      about: 'Обо мне',
       projects: 'Проекты',
       automation: 'Автоматизация',
       contacts: 'Контакты',
@@ -39,6 +40,12 @@ export const ru: Dictionary = {
     primaryCta: { section: 'projects', label: 'Смотреть проекты' },
     secondaryCta: { section: 'contacts', label: 'Контакты' },
     chipLabels: { projects: 'Проектов', books: 'Книг' },
+    aboutCard: {
+      windowTitle: 'about — me',
+      name: 'Валерий Кравченко',
+      summary: 'Экономист, больше 10 лет автоматизирую рутину через Power Query и pandas, перехожу в Java.',
+      button: 'Подробнее',
+    },
     terminal: {
       title: 'terminal — ~/projects',
       host: 'valerii@sky-os',

@@ -1,5 +1,8 @@
+import { ABOUT_PATH } from './aboutPaths'
+
 export const SECTION_IDS = [
   'home',
+  'about',
   'projects',
   'automation',
   'contacts',
@@ -25,6 +28,7 @@ export interface Section {
  */
 export const SECTIONS: readonly Section[] = [
   { id: 'home', path: '/', enabled: true },
+  { id: 'about', path: ABOUT_PATH, enabled: true },
   { id: 'projects', path: '/projects', enabled: true },
   { id: 'automation', path: '/automation', enabled: true },
   { id: 'library', path: '/library', enabled: true },

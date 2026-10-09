@@ -84,6 +84,7 @@ describe('menu and registry', () => {
       .map((a) => a.textContent)
     expect(labels).toEqual([
       t.nav.labels.home,
+      t.nav.labels.about,
       t.nav.labels.projects,
       t.nav.labels.automation,
       t.nav.labels.library,
@@ -93,6 +94,12 @@ describe('menu and registry', () => {
     for (const id of ['java', 'basics'] as const) {
       expect(within(nav).queryByText(t.nav.labels[id])).toBeNull()
     }
+  })
+
+  it('routes /about from the registry and marks it current', () => {
+    renderAt('/about')
+    expect(h1()).toHaveTextContent(t.about.heading)
+    expect(navLink(t.nav.labels.about)).toHaveAttribute('aria-current', 'page')
   })
 
   it('marks the active item with aria-current="page"', () => {
@@ -118,6 +125,7 @@ describe('menu and registry', () => {
     const Java = () => <h1>Java page</h1>
     const routes = buildRoutes(sections, {
       home: () => <h1>Home</h1>,
+      about: () => <h1>About</h1>,
       projects: () => <h1>P</h1>,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,
@@ -134,6 +142,7 @@ describe('menu and registry', () => {
     const sections = SECTIONS.map((s) => (s.id === 'projects' ? { ...s, enabled: false } : s))
     const routes = buildRoutes(sections, {
       home: HomePage,
+      about: () => <h1>About</h1>,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,
       trainers: () => <h1>T</h1>,
@@ -169,6 +178,7 @@ describe('navigation behaviour', () => {
   it('moves focus to main when the page has no h1', async () => {
     const routes = buildRoutes(SECTIONS, {
       home: HomePage,
+      about: () => <h1>About</h1>,
       projects: () => <p>No heading here</p>,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,

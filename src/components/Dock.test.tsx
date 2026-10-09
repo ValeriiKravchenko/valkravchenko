@@ -5,6 +5,7 @@ import { Dock, type DockItem } from './Dock'
 
 const items: DockItem[] = [
   { id: 'home', to: '/', label: 'Главная' },
+  { id: 'about', to: '/about', label: 'Обо мне' },
   { id: 'projects', to: '/projects', label: 'Проекты' },
 ]
 
@@ -21,8 +22,8 @@ describe('Dock', () => {
     renderDock()
     const nav = screen.getByRole('navigation', { name: t.dock.ariaLabel })
     const links = within(nav).getAllByRole('link')
-    expect(links.map((a) => a.getAttribute('aria-label'))).toEqual(['Главная', 'Проекты'])
-    expect(links.map((a) => a.getAttribute('title'))).toEqual(['Главная', 'Проекты'])
+    expect(links.map((a) => a.getAttribute('aria-label'))).toEqual(['Главная', 'Обо мне', 'Проекты'])
+    expect(links.map((a) => a.getAttribute('title'))).toEqual(['Главная', 'Обо мне', 'Проекты'])
     links.forEach((a) => expect(a.querySelector('svg')).not.toBeNull())
   })
 
@@ -41,6 +42,12 @@ describe('Dock', () => {
   it('marks only the current page', () => {
     renderDock('/projects')
     expect(screen.getByRole('link', { name: 'Проекты' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Главная' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks the About item on /about', () => {
+    renderDock('/about')
+    expect(screen.getByRole('link', { name: 'Обо мне' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Главная' })).not.toHaveAttribute('aria-current')
   })
 

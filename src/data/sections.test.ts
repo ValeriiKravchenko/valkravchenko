@@ -1,9 +1,10 @@
 import { SECTIONS, getEnabledSections, getSectionPath } from './sections'
+import { ABOUT_PATH } from './aboutPaths'
 import { dictionary } from '../i18n'
 
 describe('section registry', () => {
-  it('enables home, projects, automation, library, trainers and contacts only, in menu order', () => {
-    expect(getEnabledSections().map((s) => s.id)).toEqual(['home', 'projects', 'automation', 'library', 'trainers', 'contacts'])
+  it('enables home, about, projects, automation, library, trainers and contacts only, in menu order', () => {
+    expect(getEnabledSections().map((s) => s.id)).toEqual(['home', 'about', 'projects', 'automation', 'library', 'trainers', 'contacts'])
   })
 
   it('keeps java and basics disabled', () => {
@@ -11,6 +12,11 @@ describe('section registry', () => {
       expect(SECTIONS.find((s) => s.id === id)?.enabled).toBe(false)
       expect(getSectionPath(id as 'java')).toBeUndefined()
     }
+  })
+
+  it('publishes about at the About path as the second section', () => {
+    expect(getSectionPath('about')).toBe(ABOUT_PATH)
+    expect(getEnabledSections()[1].id).toBe('about')
   })
 
   it('publishes trainers at /trainers', () => {

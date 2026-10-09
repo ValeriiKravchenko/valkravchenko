@@ -1,3 +1,4 @@
+import { AboutCard } from '../components/AboutCard'
 import { BeforeAfterWindow } from '../components/BeforeAfterWindow'
 import { Chip } from '../components/Chip'
 import { LinkButton } from '../components/LinkButton'
@@ -47,6 +48,7 @@ export function HomePage({ sections = SECTIONS }: { sections?: readonly Section[
         </div>
       </Window>
       <div className="flex min-w-0 flex-col gap-6">
+        <AboutCard />
         <TerminalWindow />
         <BeforeAfterWindow />
       </div>

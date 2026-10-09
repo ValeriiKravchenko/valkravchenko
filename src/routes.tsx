@@ -1,6 +1,5 @@
 import type { ComponentType } from 'react'
 import type { RouteObject } from 'react-router'
-import { ABOUT_PATH } from './data/aboutPaths'
 import { SECTIONS, getEnabledSections, type SectionId, type Section } from './data/sections'
 import { Layout } from './layout/Layout'
 import { AboutPage } from './pages/AboutPage'
@@ -25,6 +24,7 @@ export type PageMap = Partial<Record<SectionId, ComponentType<PageProps>>>
 /** Page component per section id. Only sections that have a page are listed. */
 export const PAGES: PageMap = {
   home: HomePage,
+  about: AboutPage,
   projects: ProjectsPage,
   automation: AutomationPage,
   library: LibraryPage,
@@ -62,8 +62,6 @@ export function buildRoutes(
       { path: 'trainers/english', element: <EnglishPage /> },
     )
   }
-  // About page: routed outside the registry, so it has no dock or menu entry.
-  children.push({ path: ABOUT_PATH.replace(/^\//, ''), element: <AboutPage sections={sections} /> })
   children.push({ path: '*', element: <NotFoundPage /> })
 
   return [{ path: '/', element: <Layout sections={sections} />, children }]

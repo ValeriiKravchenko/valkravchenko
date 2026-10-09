@@ -26,19 +26,23 @@ describe('AboutPage', () => {
     expect(document.title).toBe(pageTitle(t, t.about.heading))
   })
 
-  it('has no current item in the dock or the top menu', () => {
+  it('marks only "Обо мне" as current in the dock and the top menu', () => {
     renderAt('/about')
     const nav = screen.getByRole('navigation', { name: t.nav.ariaLabel })
     const dock = screen.getByRole('navigation', { name: t.dock.ariaLabel })
-    expect(nav.querySelector('[aria-current]')).toBeNull()
-    expect(dock.querySelector('[aria-current]')).toBeNull()
+    for (const list of [nav, dock]) {
+      const current = list.querySelectorAll('[aria-current]')
+      expect(current).toHaveLength(1)
+      expect(current[0]).toHaveAttribute('aria-current', 'page')
+      expect(current[0]).toHaveAccessibleName('Обо мне')
+    }
   })
 
-  it('does not add About to the dock or the top menu', () => {
+  it('adds About to the dock and the top menu, linking to /about', () => {
     renderAt('/about')
     const dock = screen.getByRole('navigation', { name: t.dock.ariaLabel })
-    expect(within(dock).queryByRole('link', { name: 'Обо мне' })).toBeNull()
+    expect(within(dock).getByRole('link', { name: 'Обо мне' })).toHaveAttribute('href', '/about')
     const nav = screen.getByRole('navigation', { name: t.nav.ariaLabel })
-    expect(within(nav).queryByRole('link', { name: 'Обо мне' })).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Обо мне' })).toHaveAttribute('href', '/about')
   })
 })

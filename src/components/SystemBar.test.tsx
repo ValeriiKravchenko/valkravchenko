@@ -21,7 +21,7 @@ describe('SystemBar', () => {
     expect(within(banner).getByText(t.systemBar.user)).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('has an avatar link to the About page, hidden below 640 px, with an empty alt', () => {
+  it('has an avatar link to the About page, visible on every width, with an empty alt', () => {
     render(
       <MemoryRouter>
         <SystemBar logoTo="/" items={[]} />
@@ -29,7 +29,8 @@ describe('SystemBar', () => {
     )
     const link = within(screen.getByRole('banner')).getByRole('link', { name: t.systemBar.avatarLabel })
     expect(link).toHaveAttribute('href', '/about')
-    expect(link).toHaveClass('hidden', 'sm:inline-block')
+    expect(link).not.toHaveClass('hidden')
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'items-center', 'justify-center')
     const img = link.querySelector('img')
     expect(img).toHaveAttribute('alt', '')
     expect(img).toHaveAttribute('srcset', expect.stringMatching(/ 64w, .* 128w$/))

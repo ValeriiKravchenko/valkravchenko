@@ -1,4 +1,4 @@
-/** The "About me" page is routed outside the section registry, so it has no dock entry. */
+/** Path of the "About me" page: a regular section of the registry (dock, menu, routes). */
 export const ABOUT_PATH = '/about'
 
 /** Public profile link shown on the About page. */
