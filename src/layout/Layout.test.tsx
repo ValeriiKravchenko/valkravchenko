@@ -59,6 +59,7 @@ describe('Layout', () => {
     ['/projects', 'projects'],
     ['/automation', 'automation'],
     ['/library', 'library'],
+    ['/trainers', 'trainers'],
     ['/contacts', 'contacts'],
     ['/', 'home'],
   ] as const)('marks the current page with aria-current in menu and dock at %s', (path, id) => {

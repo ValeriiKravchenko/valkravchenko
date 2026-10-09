@@ -20,7 +20,7 @@ export function Menu({ items, ariaLabel, className }: MenuProps) {
           <li key={item.to}>
             <NavLink
               to={item.to}
-              end
+              end={item.to === '/'}
               className="flex min-h-11 min-w-11 items-center rounded-button px-3 text-[15px] font-semibold text-bar-ink no-underline underline-offset-4 hover:underline aria-[current=page]:underline aria-[current=page]:decoration-logo aria-[current=page]:decoration-2"
             >
               {item.label}

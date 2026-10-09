@@ -32,10 +32,10 @@ export function Dock({ items }: DockProps) {
           <li key={item.id} className="min-w-0 flex-1 lg:flex-none">
             <NavLink
               to={item.to}
-              end
+              end={item.to === '/'}
               aria-label={item.label}
               title={item.label}
-              className="group flex min-h-14 min-w-11 flex-col items-center justify-center gap-1 px-0 text-[12px] leading-tight font-semibold text-bar-ink no-underline lg:min-h-0 lg:gap-1.5"
+              className="group flex min-h-14 min-w-11 flex-col items-center justify-center gap-1 px-0 text-[12px] max-[359px]:text-[11px] leading-tight font-semibold text-bar-ink no-underline lg:min-h-0 lg:gap-1.5"
             >
               <span className="grid size-9 place-items-center rounded-button border border-tile-line bg-tile text-accent group-aria-[current=page]:border-accent group-aria-[current=page]:bg-accent group-aria-[current=page]:text-on-accent lg:size-12 lg:rounded-tile">
                 <SectionIcon id={item.id} />

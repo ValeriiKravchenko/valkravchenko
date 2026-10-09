@@ -172,6 +172,12 @@
     outline-color: var(--focus-window);
   }
 
+  /* Dark terminal areas inside windows: light outline drawn inside the edge (the panel clips outside). */
+  .window .term-focus:focus-visible {
+    outline-color: var(--term-prompt);
+    outline-offset: -2px;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     html {
       scroll-behavior: smooth;

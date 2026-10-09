@@ -26,7 +26,7 @@ export const ru: Dictionary = {
       night: 'Тема: ночь. Переключить на «День»',
     },
   },
-  dock: { ariaLabel: 'Док', shortLabels: { automation: 'Автомат.' } },
+  dock: { ariaLabel: 'Док', shortLabels: { automation: 'Автомат.', library: 'Библиот.', trainers: 'Тренаж.' } },
   windowMenu: ['file', 'edit', 'view', 'help'],
   footer: { text: '© Валерий Кравченко' },
   home: {
@@ -145,6 +145,30 @@ export const ru: Dictionary = {
     shown: (shown, total) => `Показано ${shown} из ${total}`,
     listLabel: 'Список книг',
     empty: 'Ничего не найдено — попробуйте изменить запрос или фильтры.',
+  },
+  trainers: {
+    heading: 'Тренажёры',
+    windowTitle: 'sky-os — тренажёры',
+    intro: 'Два тренажёра, которые работают прямо в браузере. Выберите один.',
+    backLabel: '← К тренажёрам',
+    loading: 'Загрузка тренажёра…',
+    cta: 'Открыть',
+    ctaAriaLabel: (title) => `Открыть: ${title}`,
+    git: {
+      title: 'Git: основы',
+      windowTitle: 'sky-os — git: основы',
+      description:
+        'Терминал для отработки команд git: init, status, add, commit. Рядом три области Git, граф коммитов и миссии.',
+    },
+    english: {
+      title: 'Английский',
+      windowTitle: 'sky-os — английский',
+      description:
+        'Карточки со словами из рабочей практики и интервальное повторение. Прогресс хранится в вашем браузере.',
+    },
+    failedOutput: 'Команда не выполнена:',
+    missionDone: 'выполнено:',
+    missionTodo: 'не выполнено:',
   },
   contacts: {
     heading: 'Контакты',

@@ -4,10 +4,13 @@ import { SECTIONS, getEnabledSections, type SectionId, type Section } from './da
 import { Layout } from './layout/Layout'
 import { AutomationPage } from './pages/AutomationPage'
 import { ContactsPage } from './pages/ContactsPage'
+import { EnglishPage } from './pages/EnglishPage'
+import { GitBasicsPage } from './pages/GitBasicsPage'
 import { HomePage } from './pages/HomePage'
 import { LibraryPage } from './pages/LibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProjectsPage } from './pages/ProjectsPage'
+import { TrainersPage } from './pages/TrainersPage'
 
 export type PageProps = { sections?: readonly Section[] }
 export type PageMap = Partial<Record<SectionId, ComponentType<PageProps>>>
@@ -18,6 +21,7 @@ export const PAGES: PageMap = {
   projects: ProjectsPage,
   automation: AutomationPage,
   library: LibraryPage,
+  trainers: TrainersPage,
   contacts: ContactsPage,
 }
 
@@ -38,6 +42,14 @@ export function buildRoutes(
       ? { index: true, element: <Page sections={sections} /> }
       : { path: section.path.replace(/^\//, ''), element: <Page sections={sections} /> }
   })
+  // Trainer screens sit under the trainers section: routed only while it is enabled.
+  const trainers = getEnabledSections(sections).find((section) => section.id === 'trainers')
+  if (trainers) {
+    children.push(
+      { path: 'trainers/git/basics', element: <GitBasicsPage /> },
+      { path: 'trainers/english', element: <EnglishPage /> },
+    )
+  }
   children.push({ path: '*', element: <NotFoundPage /> })
 
   return [{ path: '/', element: <Layout sections={sections} />, children }]

@@ -66,6 +66,14 @@ export const WindowIcon = (props: IconProps) => (
   </Icon>
 )
 
+/** Terminal prompt: a window with `>_`. */
+export const TerminalIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="m7 9 3 3-3 3M13 15h4" />
+  </Icon>
+)
+
 export const SunIcon = (props: IconProps) => (
   <Icon {...props}>
     <circle cx="12" cy="12" r="4" />
@@ -95,7 +103,7 @@ const sectionIcons: Record<SectionId, (props: IconProps) => ReactNode> = {
   contacts: EnvelopeIcon,
   java: WindowIcon,
   basics: WindowIcon,
-  trainers: WindowIcon,
+  trainers: TerminalIcon,
 }
 
 export function SectionIcon({ id, ...rest }: IconProps & { id: SectionId }) {

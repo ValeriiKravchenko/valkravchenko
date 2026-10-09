@@ -7,7 +7,7 @@ function headingLevels(): number[] {
 }
 
 describe('heading order', () => {
-  it.each(['/', '/projects', '/automation', '/library', '/contacts', '/nope'])(
+  it.each(['/', '/projects', '/automation', '/library', '/trainers', '/contacts', '/nope'])(
     'at %s: one h1 first, and no level is skipped',
     (path) => {
       renderAt(path)
