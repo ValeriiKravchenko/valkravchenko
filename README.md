@@ -36,6 +36,12 @@ A disabled section has no menu item, no route (its path shows the 404 page) and 
 
 Vite, React, React Router 8 (`createBrowserRouter`), TypeScript (strict), Tailwind CSS 4, Vitest and Testing Library. Fonts (IBM Plex Sans, IBM Plex Mono) are bundled locally through `@fontsource`.
 
+## Credits and licenses
+
+- NGSL (New General Service List) by Charles Browne, Brent Culligan and Joseph Phillips, licensed under CC BY-SA 4.0. Only rank numbers of selected words are used (`ngslRank` in the English trainer's word data).
+- IBM Plex Sans and IBM Plex Mono, licensed under the SIL Open Font License 1.1.
+- Authors, license links and license text: [public/third-party-notices.txt](public/third-party-notices.txt).
+
 ## Run
 
 ```sh
