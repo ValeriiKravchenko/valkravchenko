@@ -17,6 +17,7 @@ describe('routes', () => {
     ['/projects', t.projects.heading],
     ['/automation', t.automation.heading],
     ['/library', t.library.heading],
+    ['/trainers', t.trainers.heading],
     ['/contacts', t.contacts.heading],
   ])('opens %s with its own h1', (path, heading) => {
     renderAt(path)
@@ -41,7 +42,7 @@ describe('routes', () => {
     expect(() => buildRoutes(sections)).toThrow(/java/)
   })
 
-  it.each(['/', '/projects', '/automation', '/library', '/contacts', '/nope'])(
+  it.each(['/', '/projects', '/automation', '/library', '/trainers', '/contacts', '/nope'])(
     'has no striped windows at %s',
     (path) => {
       const { container } = renderAt(path)
@@ -55,6 +56,7 @@ describe('routes', () => {
     ['/projects', t.projects.windowTitle],
     ['/automation', t.automation.windowTitle],
     ['/library', t.library.windowTitle],
+    ['/trainers', t.trainers.windowTitle],
     ['/contacts', t.contacts.windowTitle],
     ['/nope', t.notFound.windowTitle],
   ])('wraps the page at %s in a window titled "%s" that holds the h1', (path, title) => {
@@ -83,9 +85,10 @@ describe('menu and registry', () => {
       t.nav.labels.projects,
       t.nav.labels.automation,
       t.nav.labels.library,
+      t.nav.labels.trainers,
       t.nav.labels.contacts,
     ])
-    for (const id of ['java', 'basics', 'trainers'] as const) {
+    for (const id of ['java', 'basics'] as const) {
       expect(within(nav).queryByText(t.nav.labels[id])).toBeNull()
     }
   })
@@ -116,6 +119,7 @@ describe('menu and registry', () => {
       projects: () => <h1>P</h1>,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,
+      trainers: () => <h1>T</h1>,
       contacts: () => <h1>C</h1>,
       java: Java,
     })
@@ -130,6 +134,7 @@ describe('menu and registry', () => {
       home: HomePage,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,
+      trainers: () => <h1>T</h1>,
       contacts: () => <h1>C</h1>,
     })
     renderAt('/', routes)
@@ -165,6 +170,7 @@ describe('navigation behaviour', () => {
       projects: () => <p>No heading here</p>,
       automation: () => <h1>A</h1>,
       library: () => <h1>L</h1>,
+      trainers: () => <h1>T</h1>,
       contacts: () => <h1>C</h1>,
     })
     renderAt('/', routes)

@@ -28,10 +28,10 @@ export const SECTIONS: readonly Section[] = [
   { id: 'projects', path: '/projects', enabled: true },
   { id: 'automation', path: '/automation', enabled: true },
   { id: 'library', path: '/library', enabled: true },
+  { id: 'trainers', path: '/trainers', enabled: true },
   { id: 'contacts', path: '/contacts', enabled: true },
   { id: 'java', path: '/java', enabled: false },
   { id: 'basics', path: '/basics', enabled: false },
-  { id: 'trainers', path: '/trainers', enabled: false },
 ]
 
 export function getEnabledSections(sections: readonly Section[] = SECTIONS): Section[] {

@@ -85,6 +85,24 @@ export interface Dictionary {
     listLabel: string
     empty: string
   }
+  trainers: {
+    heading: string
+    windowTitle: string
+    intro: string
+    /** Link back from a trainer window to the trainers page. */
+    backLabel: string
+    /** Shown while a trainer screen is loading. */
+    loading: string
+    cta: string
+    ctaAriaLabel: (title: string) => string
+    git: { title: string; windowTitle: string; description: string }
+    english: { title: string; windowTitle: string; description: string }
+    /** Screen-reader prefix for a command that was refused or failed. */
+    failedOutput: string
+    /** Screen-reader state words for a mission in the list. */
+    missionDone: string
+    missionTodo: string
+  }
   contacts: {
     heading: string
     windowTitle: string
