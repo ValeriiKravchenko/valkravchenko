@@ -7,72 +7,168 @@
 @import '@fontsource/ibm-plex-mono/latin-600.css';
 @import '@fontsource/ibm-plex-mono/cyrillic-400.css';
 @import '@fontsource/ibm-plex-mono/cyrillic-600.css';
-/* Silkscreen has no Cyrillic: Latin only. */
-@import '@fontsource/silkscreen/latin-400.css';
-@import '@fontsource/silkscreen/latin-700.css';
 
-@theme {
-  /* Colors, light theme */
-  --color-desk: #eceae3;
-  --color-window: #ffffff;
-  --color-titlebar: #f3f2ec;
-  --color-divider: #e2e0d6;
-  --color-border: #cfcdc2;
-  --color-ink: #1b1b1b;
-  --color-muted: #5a5a55;
-  --color-accent: #c8372d;
-  --color-dot-red: #d9553f;
-  --color-dot-yellow: #e0a93a;
-  --color-dot-green: #5a9e5e;
+/* Tokens shared by both themes (design brief v1, sky-os). */
+:root {
+  --window: #ffffff;
+  --window-border: #b8d7ee;
+  --title-from: #d6eaff;
+  --title-to: #eef6ff;
+  --title-line: #c4dcef;
+  --title-ink: #10263a;
+  --window-menu: #4f6779;
+  --dot-red: #ff4d5e;
+  --dot-yellow: #ff9f1a;
+  --dot-green: #22c55e;
+  --ink: #0f2a3d;
+  --muted: #3f5f73;
+  --accent: #0b5fa5;
+  --accent-hover: #08467a;
+  --on-accent: #ffffff;
+  --accent-soft: #e2f1fa;
+  --chip: #eef7fd;
+  --chip-line: #c7e3f3;
+  --teal: #0f7a70;
+  --teal-deco: #14968a;
+  --term: #0d2b45;
+  --term-line: #23517a;
+  --term-ink: #d6ecf7;
+  --term-prompt: #7ef0e2;
+  --term-dim: #8fb6d1;
+  --tile: #ffffff;
+  --tile-line: #a9cfe6;
+  --label-bg: rgba(255, 255, 255, 0.88);
+  --label-ink: #0f2a3d;
+  --focus-window: #0b2f4c;
+}
+
+/* Theme "Day". Also the fallback while no theme attribute is set. */
+:root[data-theme="day"],
+:root:not([data-theme]) {
+  color-scheme: light;
+  --desk-1: #bfe0f7;
+  --desk-2: #e3f2fc;
+  --desk-3: #f4faff;
+  --bar: rgba(255, 255, 255, 0.86);
+  --bar-line: #b8d7ee;
+  --bar-ink: #0f2a3d;
+  --bar-muted: #24506c;
+  --logo: #0b5fa5;
+  --toggle: #ffffff;
+  --toggle-line: #a9cfe6;
+  --dock: rgba(255, 255, 255, 0.78);
+  --dock-line: #b8d7ee;
+  --window-shadow: 0 24px 60px rgba(11, 60, 110, 0.2);
+  --focus-outer: #0b2f4c;
+}
+
+/* Theme "Night". */
+:root[data-theme="night"] {
+  color-scheme: dark;
+  --desk-1: #0a2238;
+  --desk-2: #123c5f;
+  --desk-3: #1d5d8c;
+  --bar: #081c2e;
+  --bar-line: #1d3d5c;
+  --bar-ink: #e3f1fa;
+  --bar-muted: #a9c9de;
+  --logo: #7ef0e2;
+  --toggle: #102c45;
+  --toggle-line: #2a5478;
+  --dock: rgba(255, 255, 255, 0.14);
+  --dock-line: rgba(255, 255, 255, 0.22);
+  --window-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+  --focus-outer: #7ef0e2;
+}
+
+@theme inline {
+  /* Colors: utilities follow the active theme through the variables above. */
+  --color-window: var(--window);
+  --color-border: var(--window-border);
+  --color-divider: var(--title-line);
+  --color-title-from: var(--title-from);
+  --color-title-to: var(--title-to);
+  --color-title-ink: var(--title-ink);
+  --color-window-menu: var(--window-menu);
+  --color-dot-red: var(--dot-red);
+  --color-dot-yellow: var(--dot-yellow);
+  --color-dot-green: var(--dot-green);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-chip: var(--chip);
+  --color-chip-line: var(--chip-line);
+  --color-teal: var(--teal);
+  --color-teal-deco: var(--teal-deco);
+  --color-term: var(--term);
+  --color-term-line: var(--term-line);
+  --color-term-ink: var(--term-ink);
+  --color-term-prompt: var(--term-prompt);
+  --color-term-dim: var(--term-dim);
+  --color-tile: var(--tile);
+  --color-tile-line: var(--tile-line);
+  --color-label-bg: var(--label-bg);
+  --color-label-ink: var(--label-ink);
+  --color-bar: var(--bar);
+  --color-bar-line: var(--bar-line);
+  --color-bar-ink: var(--bar-ink);
+  --color-bar-muted: var(--bar-muted);
+  --color-logo: var(--logo);
+  --color-toggle: var(--toggle);
+  --color-toggle-line: var(--toggle-line);
+  --color-dock: var(--dock);
+  --color-dock-line: var(--dock-line);
 
   /* Fonts */
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-pixel: 'Silkscreen', ui-monospace, monospace;
 
   /* Radii */
-  --radius-window: 12px;
-  --radius-button: 8px;
+  --radius-window: 14px;
+  --radius-button: 12px;
   --radius-chip: 10px;
+  --radius-tile: 16px;
 
   /* Shadows */
-  --shadow-window: 0 10px 30px rgba(27, 27, 27, 0.08);
-  --shadow-hard: 3px 3px 0 #1b1b1b;
+  --shadow-window: var(--window-shadow);
 
-  /* Breakpoints (mobile first: base < 640, sm >= 640, lg >= 1024) */
+  /* Breakpoints (mobile first: base < 640, sm >= 640, lg >= 1024, xl >= 1280) */
   --breakpoint-sm: 640px;
   --breakpoint-lg: 1024px;
-}
-
-/* Dark theme is reserved, not applied yet. */
-:root {
-  --reserved-dark-desk: #17120e;
-  --reserved-dark-window: #211b15;
-  --reserved-dark-ink: #efe3c8;
-  --reserved-dark-muted: #b8a98a;
-  --reserved-dark-accent: #f0b24b;
+  --breakpoint-xl: 1280px;
 }
 
 @layer base {
   html {
-    background-color: var(--color-desk);
+    background-color: var(--desk-2);
     -webkit-text-size-adjust: 100%;
   }
 
   body {
     margin: 0;
     min-width: 320px;
-    background-color: var(--color-desk);
-    color: var(--color-ink);
+    min-height: 100vh;
+    background-color: var(--desk-2);
+    background-image: linear-gradient(to bottom, var(--desk-1), var(--desk-2) 55%, var(--desk-3));
+    background-attachment: fixed;
+    color: var(--ink);
     font-family: var(--font-sans);
     font-size: 17px;
     line-height: 1.55;
   }
 
-  /* Visible focus: 2 px ink outline, 2 px offset. */
+  /* Visible focus outside windows: theme outline, 2 px offset. */
   :focus-visible {
-    outline: 2px solid var(--color-ink);
+    outline: 2px solid var(--focus-outer);
     outline-offset: 2px;
+  }
+
+  /* Inside windows: fixed dark outline in both themes. */
+  .window :focus-visible {
+    outline-color: var(--focus-window);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -94,20 +190,24 @@
 }
 
 @layer components {
-  /* Striped title bar: the single "special window" device. */
-  .titlebar-striped {
-    background-color: var(--color-titlebar);
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--color-titlebar) 0 6px,
-      var(--color-divider) 6px 12px
-    );
+  /* Terminal block cursor; blinks only when motion is allowed. */
+  .term-cursor {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.1em;
+    vertical-align: text-bottom;
+    background-color: var(--term-prompt);
   }
 
-  /* Primary button focus: dark outer outline (global) plus a light inner ring. */
-  .btn-primary:focus-visible {
-    box-shadow:
-      var(--shadow-hard),
-      inset 0 0 0 2px #ffffff;
+  @media (prefers-reduced-motion: no-preference) {
+    .term-cursor {
+      animation: term-blink 1.1s steps(1) infinite;
+    }
+  }
+
+  @keyframes term-blink {
+    50% {
+      opacity: 0;
+    }
   }
 }

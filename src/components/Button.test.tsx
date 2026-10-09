@@ -20,14 +20,18 @@ describe('Button', () => {
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '#projects')
   })
 
-  it('primary has the hard-shadow style and is at least 44px tall', () => {
+  it('primary is the accent button, 48px tall, without a hard shadow', () => {
     render(<Button variant="primary">Go</Button>)
     const el = screen.getByRole('button', { name: 'Go' })
-    expect(el).toHaveClass('btn-primary', 'border-2', 'shadow-hard', 'min-h-11')
+    expect(el).toHaveClass('bg-accent', 'text-on-accent', 'min-h-12', 'rounded-button')
+    expect(el).not.toHaveClass('shadow-hard')
+    expect(el).not.toHaveClass('btn-primary')
   })
 
-  it('secondary has no hard shadow', () => {
+  it('secondary is the soft accent button without a hard shadow', () => {
     render(<Button>Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).not.toHaveClass('shadow-hard')
+    const el = screen.getByRole('button', { name: 'Go' })
+    expect(el).toHaveClass('bg-accent-soft', 'text-accent')
+    expect(el).not.toHaveClass('shadow-hard')
   })
 })

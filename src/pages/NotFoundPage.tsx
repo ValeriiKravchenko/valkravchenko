@@ -10,7 +10,7 @@ export function NotFoundPage() {
   useDocumentTitle(pageTitle(t, t.notFound.heading))
 
   return (
-    <Window title={t.notFound.windowTitle} titleAs="p" pixelTitle>
+    <Window title={t.notFound.windowTitle} titleAs="p" className="mx-auto max-w-[960px]">
       <PageHeading>{t.notFound.heading}</PageHeading>
       <p className="mt-4 mb-6 max-w-[60ch]">{t.notFound.body}</p>
       <LinkButton to="/" variant="primary">

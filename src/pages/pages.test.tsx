@@ -65,6 +65,45 @@ describe('pages', () => {
     expect(screen.queryByText('[число]')).toBeNull()
   })
 
+  it('HomePage has the welcome, terminal and before/after windows', () => {
+    wrap(<HomePage />)
+    expect(screen.getByRole('region', { name: 'sky-os — главная' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: t.home.terminal.title })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'автоматизация — до / после' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+
+  it('HomePage terminal lists every project from PROJECTS', () => {
+    wrap(<HomePage />)
+    const terminal = screen.getByRole('region', { name: t.home.terminal.title })
+    const list = within(terminal).getByRole('list', { name: t.home.terminal.listCommand })
+    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(
+      PROJECTS.map((project) => project.id),
+    )
+    expect(terminal).toHaveTextContent(`${t.home.terminal.host}:~$ ${t.home.terminal.listCommand}`)
+    expect(terminal).toHaveTextContent(`${t.home.terminal.host}:~$ ${t.home.terminal.readCommand}`)
+    expect(within(terminal).getByText(t.home.terminal.note)).toBeInTheDocument()
+  })
+
+  it('HomePage before/after window shows the automation results', () => {
+    wrap(<HomePage />)
+    const win = screen.getByRole('region', { name: t.home.beforeAfter.title })
+    expect(win).toHaveTextContent('bank-statement-automation')
+    expect(win).toHaveTextContent('несколько часов')
+    expect(win).toHaveTextContent('20–30 секунд')
+    expect(win).toHaveTextContent('payment-registry-automation')
+    expect(win).toHaveTextContent('[до]')
+    expect(win).toHaveTextContent('[после]')
+  })
+
+  it('every page window is titled "sky-os — <section>"', () => {
+    expect(t.home.windowTitle).toBe('sky-os — главная')
+    expect(t.projects.windowTitle).toBe('sky-os — проекты')
+    expect(t.automation.windowTitle).toBe('sky-os — автоматизация')
+    expect(t.library.windowTitle).toBe('sky-os — библиотека')
+    expect(t.contacts.windowTitle).toBe('sky-os — контакты')
+  })
+
   it('ContactsPage shows placeholder contacts only', () => {
     wrap(<ContactsPage />)
     expect(screen.getByText('[email]')).toBeInTheDocument()

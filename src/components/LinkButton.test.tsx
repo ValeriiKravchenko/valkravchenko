@@ -13,6 +13,6 @@ describe('LinkButton', () => {
     )
     const link = screen.getByRole('link', { name: 'Go' })
     expect(link).toHaveAttribute('href', '/projects')
-    expect(link).toHaveClass('btn-primary', 'min-h-11')
+    expect(link).toHaveClass('bg-accent', 'min-h-12')
   })
 })

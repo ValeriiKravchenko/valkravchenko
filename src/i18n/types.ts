@@ -1,5 +1,6 @@
 import type { ProjectId, TagId } from '../data/projects'
 import type { SectionId } from '../data/sections'
+import type { Theme } from '../theme/resolveTheme'
 
 /** Link to a section by registry id; hidden when the section is disabled. */
 export interface SectionLinkText {
@@ -23,6 +24,11 @@ export interface Dictionary {
   skipLink: string
   logo: { text: string; ariaLabel: string }
   nav: { ariaLabel: string; labels: Record<SectionId, string> }
+  systemBar: { language: string; user: string }
+  theme: { labels: Record<Theme, string>; ariaLabels: Record<Theme, string> }
+  dock: { ariaLabel: string }
+  /** Decorative window menu (aria-hidden). */
+  windowMenu: string[]
   footer: { text: string }
   home: {
     windowTitle: string
@@ -31,6 +37,18 @@ export interface Dictionary {
     primaryCta: SectionLinkText
     secondaryCta: SectionLinkText
     chipLabels: { projects: string; books: string }
+    terminal: {
+      title: string
+      host: string
+      listCommand: string
+      readCommand: string
+      about: string
+      note: string
+    }
+    beforeAfter: {
+      title: string
+      rows: { project: ProjectId; before: string; after: string }[]
+    }
   }
   projects: {
     heading: string
@@ -43,8 +61,10 @@ export interface Dictionary {
   }
   automation: {
     heading: string
+    windowTitle: string
     intro: string
     workflowTitle: string
+    projectsTitle: string
     tableHeaders: { stage: string; action: string }
     workflow: { stage: string; action: string }[]
     tools: string

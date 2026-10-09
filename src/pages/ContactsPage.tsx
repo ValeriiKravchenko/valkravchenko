@@ -9,15 +9,13 @@ export function ContactsPage() {
   useDocumentTitle(pageTitle(t, t.contacts.heading))
 
   return (
-    <>
-      <PageHeading>{t.contacts.heading}</PageHeading>
-      <div className="mt-8">
-        <ContactsWindow
-          title={t.contacts.windowTitle}
-          intro={t.contacts.intro}
-          items={t.contacts.items}
-        />
-      </div>
-    </>
+    <div className="mx-auto max-w-[960px]">
+      <ContactsWindow
+        title={t.contacts.windowTitle}
+        heading={<PageHeading>{t.contacts.heading}</PageHeading>}
+        intro={t.contacts.intro}
+        items={t.contacts.items}
+      />
+    </div>
   )
 }
