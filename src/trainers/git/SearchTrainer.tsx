@@ -9,7 +9,7 @@
 // index and HEAD are always one snapshot, and there is a single branch. Step B
 // (git bisect) is not in the engine, so there is no second terminal here.
 // ============================================================
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useDictionary } from '../../i18n'
 import { TerminalHistory } from '../ui/TerminalHistory'
 import { TerminalInput, TerminalLog, TerminalPanel } from '../ui/TerminalPanel'
@@ -17,8 +17,9 @@ import { TrainerButton } from '../ui/TrainerButton'
 import { TrainerMissions } from '../ui/TrainerMissions'
 import { TrainerPanel } from '../ui/TrainerPanel'
 import { TrainerWindow } from '../ui/TrainerWindow'
+import { useCommandHistory } from '../ui/useCommandHistory'
 import { createSearchSection, getHeadTree, getSearchMissions, runSearchCommand } from './engine/searchSection'
-import type { HistoryEntry, SearchState } from './engine/searchSection'
+import type { SearchState } from './engine/searchSection'
 import { ru } from './locales/ru'
 
 const rs = ru.searching
@@ -28,53 +29,10 @@ function createInitialState(): SearchState {
   return createSearchSection(rs.seed)
 }
 
-function isCommandEntry(h: HistoryEntry): h is Extract<HistoryEntry, { kind: 'command' }> {
-  return h.kind === 'command'
-}
-
 // ---------- Terminal ----------
 
 function Terminal({ state, onRun }: { state: SearchState; onRun: (input: string) => void }) {
-  const [draft, setDraft] = useState('')
-  const [pendingDraft, setPendingDraft] = useState<string | null>(null)
-  const [historyIndex, setHistoryIndex] = useState<number | null>(null)
-  const outputRef = useRef<HTMLDivElement>(null)
-
-  const commandHistory = state.history.filter(isCommandEntry)
-
-  useEffect(() => {
-    const el = outputRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [state.history.length])
-
-  function submit() {
-    if (!draft.trim()) return
-    onRun(draft)
-    setDraft('')
-    setHistoryIndex(null)
-    setPendingDraft(null)
-  }
-
-  function navigateHistory(direction: -1 | 1) {
-    if (!commandHistory.length) return
-    if (historyIndex === null) {
-      if (direction === 1) return
-      setPendingDraft(draft)
-      setHistoryIndex(commandHistory.length - 1)
-      setDraft(commandHistory[commandHistory.length - 1].input)
-      return
-    }
-    const next = historyIndex + direction
-    if (next < 0) return
-    if (next >= commandHistory.length) {
-      setHistoryIndex(null)
-      setDraft(pendingDraft ?? '')
-      setPendingDraft(null)
-      return
-    }
-    setHistoryIndex(next)
-    setDraft(commandHistory[next].input)
-  }
+  const { draft, setDraft, outputRef, onKeyDown } = useCommandHistory(state.history, onRun)
 
   const prompt = ui.terminal.prompt(state.head)
 
@@ -88,16 +46,7 @@ function Terminal({ state, onRun }: { state: SearchState; onRun: (input: string)
           prompt={prompt}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') submit()
-            else if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              navigateHistory(-1)
-            } else if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              navigateHistory(1)
-            }
-          }}
+          onKeyDown={onKeyDown}
           placeholder={ui.terminal.placeholder}
         />
       }
