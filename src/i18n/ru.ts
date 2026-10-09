@@ -27,7 +27,10 @@ export const ru: Dictionary = {
     },
   },
   dock: { ariaLabel: 'Док', shortLabels: { automation: 'Автомат.', library: 'Библиот.', trainers: 'Тренаж.' } },
-  windowMenu: ['file', 'edit', 'view', 'help'],
+  windowMenu: {
+    view: { button: 'view', listLabel: 'Вид', themeDay: 'Тема: День', themeNight: 'Тема: Ночь' },
+    help: { button: 'help', listLabel: 'Справка', about: 'Обо мне' },
+  },
   footer: { text: '© Валерий Кравченко' },
   home: {
     windowTitle: 'sky-os — главная',

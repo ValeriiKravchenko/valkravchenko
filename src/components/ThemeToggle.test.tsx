@@ -139,3 +139,18 @@ describe('ThemeToggle', () => {
     expect(system.listenerCount()).toBe(0)
   })
 })
+
+describe('ThemeToggle shares one theme with other components', () => {
+  it('two toggles stay in sync', async () => {
+    mockSystemTheme(false)
+    render(
+      <>
+        <ThemeToggle />
+        <ThemeToggle />
+      </>,
+    )
+    await userEvent.click(screen.getAllByRole('button', { name: t.theme.ariaLabels.day })[0])
+    expect(screen.getAllByRole('button', { name: t.theme.ariaLabels.night })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: t.theme.ariaLabels.day })).not.toBeInTheDocument()
+  })
+})

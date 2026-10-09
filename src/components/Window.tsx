@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { useDictionary } from '../i18n'
+import { WindowMenu } from './WindowMenu'
 
 export type WindowTitleTag = 'h2' | 'h3' | 'p'
 
@@ -25,7 +25,6 @@ export function Window({
   id,
   className = '',
 }: WindowProps) {
-  const t = useDictionary()
   const titleId = useId()
 
   return (
@@ -48,14 +47,7 @@ export function Window({
         >
           {title}
         </Title>
-        <span
-          aria-hidden="true"
-          className="ml-auto hidden shrink-0 gap-4 font-mono text-[13px] text-window-menu sm:flex"
-        >
-          {t.windowMenu.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </span>
+        <WindowMenu />
       </div>
       <div className={bodyClassName}>{children}</div>
     </section>
