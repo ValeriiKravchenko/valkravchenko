@@ -31,7 +31,7 @@ A disabled section has no menu item, no route (its path shows the 404 page) and 
 
 ## Stack
 
-Vite, React, React Router 7 (`createBrowserRouter`), TypeScript (strict), Tailwind CSS 4, Vitest and Testing Library. Fonts (IBM Plex Sans, IBM Plex Mono) are bundled locally through `@fontsource`.
+Vite, React, React Router 8 (`createBrowserRouter`), TypeScript (strict), Tailwind CSS 4, Vitest and Testing Library. Fonts (IBM Plex Sans, IBM Plex Mono) are bundled locally through `@fontsource`.
 
 ## Run
 

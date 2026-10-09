@@ -49,7 +49,7 @@ export function LibraryPage() {
           />
         </div>
 
-        <div role="group" aria-label={t.library.categoriesLabel} className="flex flex-wrap gap-2">
+        <fieldset aria-label={t.library.categoriesLabel} className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
           {bookCategories.map((category) => {
             const pressed = selected.has(category.id)
             return (
@@ -68,7 +68,7 @@ export function LibraryPage() {
           <Button type="button" variant="secondary" onClick={reset} className="!px-4">
             {t.library.reset}
           </Button>
-        </div>
+        </fieldset>
 
         <p aria-live="polite" className="m-0 font-mono text-[15px] text-muted">
           {t.library.shown(visible.length, books.length)}

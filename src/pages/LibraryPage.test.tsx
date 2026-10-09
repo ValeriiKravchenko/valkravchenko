@@ -54,6 +54,21 @@ describe('LibraryPage', () => {
     expect(status()).toHaveTextContent(`Показано ${expected} из ${books.length}`)
   })
 
+  it('finds a book by a word from its full title', async () => {
+    const user = setup()
+    await user.type(search(), 'событийно-ориентированная')
+    const items = within(list()).getAllByRole('listitem')
+    expect(items).toHaveLength(1)
+    expect(items[0]).toHaveTextContent('Паттерны разработки на Python. TDD, DDD и событийно-ориентированная архитектура')
+  })
+
+  it('exposes the category buttons as a named group', () => {
+    setup()
+    const group = screen.getByRole('group', { name: t.library.categoriesLabel })
+    expect(group.tagName).toBe('FIELDSET')
+    expect(within(group).getAllByRole('button')).toHaveLength(bookCategories.length + 1)
+  })
+
   it('toggles aria-pressed on category buttons and supports several', async () => {
     const user = setup()
     const go = catButton('Go')
