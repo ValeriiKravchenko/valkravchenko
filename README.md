@@ -71,3 +71,15 @@ Routes are client-side, so a static host must serve `index.html` for unknown pat
 - `src/trainers-app/` the separate trainers page (`/trainers-app/`) with its own routes.
 - `src/i18n/` text dictionaries (`ru.ts`; add `en.ts` with the same `Dictionary` shape).
 - `src/index.css` design tokens (`@theme`), fonts, focus and reduced-motion rules.
+
+## License
+
+The code is licensed under the MIT License, see [LICENSE](LICENSE).
+
+**Not covered by the MIT license, all rights reserved:** the site texts, the photographs, and the About page content.
+
+- Site texts: `src/i18n/ru.ts`
+- Photographs: `src/assets/about/about-440x550.webp`, `src/assets/about/about-760x950.webp`, `src/assets/about/avatar-64.webp`, `src/assets/about/avatar-128.webp`
+- About page: `src/pages/AboutPage.tsx` (its text lives in the `about` block of `src/i18n/ru.ts`)
+
+Third-party materials (NGSL word ranks, IBM Plex fonts) keep their own licenses, see `public/third-party-notices.txt`.
