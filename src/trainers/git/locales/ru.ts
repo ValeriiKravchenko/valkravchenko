@@ -1429,14 +1429,10 @@ export const ru = {
       statusNoUntracked: `${TRAINER_MARKER} сейчас правила игнорируют все файлы, и вывод git status без единого неотслеживаемого файла в этом разделе не разбирается. Поправь .gitignore, чтобы часть файлов осталась видна.`,
       statusLayout: `${TRAINER_MARKER} каталог с игнорируемыми и неигнорируемыми файлами на нескольких уровнях вложенности в этом разделе не разбирается. Добавь ключ -uall: git status --short --ignored -uall.`,
       checkIgnoreForm: (arg: string) =>
-        `${TRAINER_MARKER} git check-ignore ${arg} — эта форма в разделе не разбирается. Здесь поддерживается: git check-ignore -v <путь>…, git check-ignore -v --non-matching <путь>….`,
-      checkIgnoreNoVerbose: `${TRAINER_MARKER} git check-ignore без -v в разделе не разбирается: с -v git называет правило, которое совпало. Здесь поддерживается: git check-ignore -v [--non-matching] <файл>….`,
+        `${TRAINER_MARKER} git check-ignore ${arg} — эта форма в разделе не разбирается. Здесь поддерживается: git check-ignore <путь>…, git check-ignore -v <путь>…, git check-ignore -v --non-matching <путь>….`,
       checkIgnoreNoPath: `${TRAINER_MARKER} git check-ignore с ключами, но без пути в разделе не разбирается. Назови файл: git check-ignore -v --non-matching <файл>.`,
       checkIgnoreTracked: (path: string) =>
         `${TRAINER_MARKER} «${path}» уже отслеживается (после git add -f), и git check-ignore для отслеживаемого файла в этом разделе не разбирается: правила .gitignore на такие файлы не действуют.`,
-      checkIgnoreNegatedNeedsNonMatching: (path: string) =>
-        `${TRAINER_MARKER} для «${path}» совпало только правило со знаком «!»; git check-ignore -v без --non-matching для такого пути в разделе не разбирается. Используй git check-ignore -v --non-matching ${path} или git status --short --ignored.`,
-      checkIgnoreNegatedOnlyExit: `${TRAINER_MARKER} ни один из названных путей не игнорируется, а у части совпало правило со знаком «!»: код возврата git check-ignore в такой ситуации в разделе не разбирается. Добавь в команду путь, который игнорируется, или посмотри git status --short --ignored.`,
       pathNotFile: (cmd: string, path: string) =>
         `${TRAINER_MARKER} git ${cmd} ${path} — в этом разделе путь должен быть файлом рабочего каталога из панели файлов (полный путь, например build/bundle.js). Каталоги, несуществующие пути и маски не разбираются.`,
       addForm: (form: string) =>
@@ -1449,8 +1445,10 @@ export const ru = {
     explain: {
       negatedRule: (source: string) =>
         `Правило «${source}» со знаком «!» — исключение: оно снимает игнорирование. Строка в выводе git check-ignore -v значит лишь «это правило совпало», а файл при этом не игнорируется.`,
-      negationInsideIgnoredDir: (source: string, dir: string) =>
-        `Правило «${source}» не сработало: каталог «${dir}» игнорируется целиком, и вернуть файл из него исключением нельзя — игнорируй не каталог, а его содержимое (например build/*).`,
+      negationInsideIgnoredDir: (source: string, dir: string, dirRule: string) =>
+        dirRule.endsWith('/*')
+          ? `Правило «${source}» не сработало: каталог «${dir}» игнорируется правилом «${dirRule}», а вернуть файл из игнорируемого каталога исключением нельзя. Верни сам каталог правилом «!${dir}/» (после «${dirRule}»); если игнорировать нужно только часть его содержимого, добавь после этого «${dir}/*» и исключение для файла.`
+          : `Правило «${source}» не сработало: каталог «${dir}» игнорируется целиком (правило «${dirRule}»), и вернуть файл из него исключением нельзя — игнорируй не каталог, а его содержимое (например build/*).`,
       addRefused: 'git add отказал: файл игнорируется правилом из .gitignore. Если файл всё-таки нужен в индексе, добавь его с ключом -f: git add -f <файл>.',
       addForced: (path: string) => `С ключом -f файл «${path}» попал в индекс: теперь он отслеживается, а правила .gitignore на отслеживаемые файлы не действуют.`,
     },

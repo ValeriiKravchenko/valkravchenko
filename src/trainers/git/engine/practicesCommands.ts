@@ -98,7 +98,7 @@ function handleStatus(state: PracticesState, args: readonly string[]): Outcome {
     return refuse(state, pe.statusLayout)
   }
   const blocked = entries.map((e) => ignoreVerdict(state, e.path)).find((v) => v.negationBlockedBy !== null)
-  const explanation = blocked && blocked.negationBlockedBy && blocked.ignoredPath ? px.negationInsideIgnoredDir(blocked.negationBlockedBy.source, blocked.ignoredPath) : null
+  const explanation = blocked && blocked.negationBlockedBy && blocked.ignoredPath && blocked.rule ? px.negationInsideIgnoredDir(blocked.negationBlockedBy.source, blocked.ignoredPath, blocked.rule.source) : null
   return exited(state, formatted.output, 0, explanation)
 }
 
@@ -124,38 +124,39 @@ function handleCheckIgnore(state: PracticesState, args: readonly string[]): Outc
       paths.push(arg)
     }
   }
-  if (!verbose) return refuse(state, pe.checkIgnoreNoVerbose)
   if (paths.length === 0) return refuse(state, pe.checkIgnoreNoPath)
+  // П7.52: `git check-ignore --non-matching app.js` без -v — fatal, код 128.
+  if (nonMatching && !verbose) return exited(state, 'fatal: --non-matching is only valid with --verbose', 128)
   for (const path of paths) {
     if (!has(state.working, path)) return refuse(state, pe.pathNotFile('check-ignore', path))
     if (isTracked(state, path)) return refuse(state, pe.checkIgnoreTracked(path))
   }
 
   const verdicts = paths.map((path) => ({ path, verdict: ignoreVerdict(state, path) }))
-  if (!nonMatching) {
-    const negatedOnly = verdicts.find((v) => v.verdict.rule !== null && v.verdict.rule.negated)
-    if (negatedOnly) return refuse(state, pe.checkIgnoreNegatedNeedsNonMatching(negatedOnly.path))
-  }
-  // Код возврата, когда игнорируемых путей нет, а правило с `!` совпало, прогонами не сверен (П7.6 — с игнорируемыми путями).
+  // Код возврата (П7.51): с -v — 0, если у какого-либо пути совпало любое правило, включая «!»;
+  // без -v — 0, только если игнорируется какой-либо путь.
   const anyIgnored = verdicts.some((v) => v.verdict.ignored)
-  const anyNegated = verdicts.some((v) => v.verdict.rule !== null && v.verdict.rule.negated)
-  if (!anyIgnored && anyNegated) return refuse(state, pe.checkIgnoreNegatedOnlyExit)
+  const anyMatched = verdicts.some((v) => v.verdict.rule !== null)
+  const exitCode = (verbose ? anyMatched : anyIgnored) ? 0 : 1
 
   const lines: string[] = []
   for (const { path, verdict } of verdicts) {
-    if (verdict.rule !== null) lines.push(`${GITIGNORE_FILE}:${verdict.rule.line}:${verdict.rule.source}\t${path}`)
+    // П7.51, П7.52: без -v git печатает только сами игнорируемые пути.
+    if (!verbose) {
+      if (verdict.ignored) lines.push(path)
+    } else if (verdict.rule !== null) lines.push(`${GITIGNORE_FILE}:${verdict.rule.line}:${verdict.rule.source}\t${path}`)
     else if (nonMatching) lines.push(`::\t${path}`)
   }
 
   const negated = verdicts.find((v) => v.verdict.rule !== null && v.verdict.rule.negated)
   const blocked = verdicts.find((v) => v.verdict.negationBlockedBy !== null)
   let explanation: string | null = null
-  if (blocked && blocked.verdict.negationBlockedBy && blocked.verdict.ignoredPath) {
-    explanation = px.negationInsideIgnoredDir(blocked.verdict.negationBlockedBy.source, blocked.verdict.ignoredPath)
-  } else if (negated && negated.verdict.rule) {
+  if (blocked && blocked.verdict.negationBlockedBy && blocked.verdict.ignoredPath && blocked.verdict.rule) {
+    explanation = px.negationInsideIgnoredDir(blocked.verdict.negationBlockedBy.source, blocked.verdict.ignoredPath, blocked.verdict.rule.source)
+  } else if (verbose && negated && negated.verdict.rule) {
     explanation = px.negatedRule(negated.verdict.rule.source)
   }
-  return exited(state, lines.join('\n'), anyIgnored ? 0 : 1, explanation)
+  return exited(state, lines.join('\n'), exitCode, explanation)
 }
 
 // ---------- git add ----------
