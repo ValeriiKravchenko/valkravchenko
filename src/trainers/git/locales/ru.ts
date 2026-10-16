@@ -1418,9 +1418,9 @@ export const ru = {
       gitignoreSavedNote: 'Файл .gitignore сохранён. Правила действуют сразу, коммит для этого не нужен.',
     },
     errors: {
-      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage и завершается отказом. Здесь работают: git status, git check-ignore, git add.`,
+      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage и завершается отказом. Здесь работают: git status, git check-ignore, git add, git config (ключи alias.*), git help <алиас>, git log, git commit -m и вызов алиасов.`,
       commandOutOfScope: (sub: string) =>
-        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, git check-ignore, git add.`,
+        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, git check-ignore, git add, git config (ключи alias.*), git help <алиас>, git log, git commit -m и вызов алиасов.`,
       statusForm: (form: string) =>
         `${TRAINER_MARKER} git status ${form} — эта форма в разделе не разбирается. Здесь поддерживается: git status, git status -s (или --short), git status --short --ignored, git status --short --ignored -uall (ключи в любом порядке, каждый один раз).`,
       statusPathspec: (paths: readonly string[]) =>
@@ -1451,6 +1451,80 @@ export const ru = {
           : `Правило «${source}» не сработало: каталог «${dir}» игнорируется целиком (правило «${dirRule}»), и вернуть файл из него исключением нельзя — игнорируй не каталог, а его содержимое (например build/*).`,
       addRefused: 'git add отказал: файл игнорируется правилом из .gitignore. Если файл всё-таки нужен в индексе, добавь его с ключом -f: git add -f <файл>.',
       addForced: (path: string) => `С ключом -f файл «${path}» попал в индекс: теперь он отслеживается, а правила .gitignore на отслеживаемые файлы не действуют.`,
+      /** Алиас сработал: git о раскрытии молчит (П7.25), поэтому говорит тренажёр. */
+      aliasExpanded: (name: string, command: string) => `Алиас «${name}» раскрылся в «${command}»: git при этом ничего не печатает, а тренажёр говорит, во что раскрылся алиас.`,
+      writtenGlobal: (key: string) => `Запись «${key}» лежит в ~/.gitconfig (global): алиас действует в любом репозитории пользователя.`,
+      writtenLocal: (key: string) => `Запись «${key}» лежит в .git/config этого репозитория, в секции [alias] после [core]: алиас действует только здесь.`,
+      shadowsCommand: (name: string) => `Имя «${name}» совпадает с настоящей командой git. Git такой алиас принимает, но не применяет: у настоящих команд приоритет, поэтому git ${name} выполнит саму команду.`,
+      shellAlias: (name: string) => `Значение начинается с «!»: при вызове git отдаст его оболочке. Оболочку тренажёр не моделирует, поэтому git ${name} здесь не выполнится.`,
+      emptyAlias: (name: string) => `Git принял пустое значение: ошибка появится при вызове (git ${name}), а не при записи.`,
+      unset: (key: string) => `Запись «${key}» удалена из ~/.gitconfig.`,
+    },
+    /** `git config` (target.md, часть IX, места 13–17). Начинаются с TRAINER_MARKER: это отказ, а не вывод git. */
+    config: {
+      formRefused: (form: string) =>
+        `${TRAINER_MARKER} git config ${form} — эта форма в разделе не разбирается. Здесь поддерживается: git config [--global] alias.<имя> "<команда>", git config set --global alias.<имя> "<команда>", git config --global alias.<имя> (или --get, или git config get --global), --get-regexp <шаблон>, --list (-l), git config list --global, --unset (или git config unset --global).`,
+      scopeRequired: (form: string) =>
+        `${TRAINER_MARKER} git config ${form} — чтение, список и удаление без --global в разделе не разбираются: записи без --global лежат в .git/config, а читать и удалять здесь можно только ~/.gitconfig. Добавь --global.`,
+      keyOutOfScope: (key: string) =>
+        `${TRAINER_MARKER} ключ «${key}» — git это умеет, но в разделе разбираются только ключи alias.<имя> (имя из строчных латинских букв, цифр и дефиса, начинается с буквы).`,
+      keyReadForm: (key: string) =>
+        `${TRAINER_MARKER} чтение и удаление ключа «${key}» в разделе не разбираются: ответ git на такое имя прогонами не сверен. Ошибку «invalid key» git печатает при записи.`,
+      extraWords: (words: readonly string[]) =>
+        `${TRAINER_MARKER} git получил слова: ${words.join(' ')}. Значение алиаса из нескольких слов шелл разбивает на отдельные аргументы, и что git сделает с лишними, раздел не разбирает. Значение бери в кавычки: git config --global alias.lg "log --oneline --graph".`,
+      valueForm: (value: string) =>
+        `${TRAINER_MARKER} значение «${value}» содержит кавычки или обратную косую черту: такие значения в разделе не разбираются.`,
+      absentKeyForm: (sub: string) =>
+        `${TRAINER_MARKER} git config ${sub} для отсутствующего ключа в разделе не разбирается. Чтобы увидеть ответ git, используй --global alias.<имя> или --global --unset alias.<имя>.`,
+      invalidKeyNote: 'Имя алиаса должно начинаться с буквы и не содержать пробелов и «!»; дефис допустим (st-short).',
+    },
+    /** Вызов алиаса и `git help <алиас>` (места 12, 17–20). */
+    alias: {
+      inBothConfigs: (name: string) => `${TRAINER_MARKER} алиас «${name}» записан и в ~/.gitconfig, и в .git/config: одинаковое имя в двух конфигах в разделе не разбирается.`,
+      shellAlias: (name: string, command: string) =>
+        `${TRAINER_MARKER} git передал бы оболочке «${command}» (алиас «${name}» начинается с «!»). Команды оболочки тренажёр не выполняет.`,
+      emptyWithArgs: (name: string) => `${TRAINER_MARKER} алиас «${name}» пуст, и вызов с аргументами в разделе не разбирается. Вызови без аргументов: git ${name}.`,
+      emptyAliasCall: (name: string) => `Алиас «${name}» записан с пустым значением: git принял запись, но при вызове раскрывать нечего, и он отвечает ошибкой.`,
+      recursive: (name: string) => `Алиас «${name}» раскрывается в самого себя, и git замечает рекурсию.`,
+      selfReference: (name: string) => `${TRAINER_MARKER} алиас «${name}» ссылается на самого себя в значении с другими словами или с аргументами при вызове: это в разделе не разбирается.`,
+      startsWithAlias: (name: string, other: string) =>
+        `${TRAINER_MARKER} значение алиаса «${name}» начинается с другого алиаса «${other}»: такая цепочка в разделе не разбирается.`,
+      unknownTarget: (name: string, target: string) =>
+        `${TRAINER_MARKER} алиас «${name}» раскрылся в команду «${target}», которой нет среди настоящих команд git. Что git ответит на такую запись, прогонами не сверено, поэтому раздел это не показывает.`,
+      helpForm: (form: string) =>
+        `${TRAINER_MARKER} git help ${form} — эта форма в разделе не разбирается (страницы справки здесь нет). Сверена одна форма: git help <алиас> для алиаса с обычным значением.`,
+      helpAliased: (name: string, value: string) => `Так git отвечает на git help для алиаса: «${name}» — это «${value}».`,
+    },
+    /** `git commit -m` (место 11). Коммиты в разделе не создаются. */
+    commit: {
+      form: (form: string) => `${TRAINER_MARKER} git commit ${form} — эта форма в разделе не разбирается. Сверена одна: git commit -m "<сообщение>" с пустым сообщением.`,
+      noCommitsInSection: `${TRAINER_MARKER} git commit -m с непустым сообщением создал бы коммит, а коммиты в этом разделе не создаются: здесь изучают игнорирование и алиасы. Сообщения коммитов разбирают разделы 1–2.`,
+      emptyMessageNoIndex: `${TRAINER_MARKER} в индексе ничего нет, и ответ git на пустое сообщение в таком случае в разделе не разбирается. Добавь файл в индекс (git add -f <файл>) и повтори.`,
+      emptyMessage: 'Git не создаёт коммит с пустым сообщением (и с сообщением из одних пробелов) и отвечает именно так. Непустое сообщение он примет любое: стиль сообщения git не проверяет.',
+    },
+    /** `git log` (место 12). */
+    log: {
+      form: (form: string) => `${TRAINER_MARKER} git log ${form} — эта форма в разделе не разбирается. Здесь поддерживается: git log, git log --oneline, git log --oneline --graph.`,
+      noCommits: 'Коммитов ещё нет, поэтому git log отвечает ошибкой. Так же отвечает и алиас на log: алиас сработал, это ответ самой команды.',
+    },
+    /** Миссии «Что попробовать» (target.md, часть IX, «Миссии»). */
+    missions: {
+      envExample: {
+        text: 'Сделай так, чтобы .env игнорировался, а .env.example — нет: добавь исключение со знаком «!».',
+        hint: 'git check-ignore -v --non-matching .env .env.example',
+      },
+      importantLog: {
+        text: 'Пусть все .log игнорируются, но important.log — нет.',
+        hint: 'git status --short --ignored',
+      },
+      buildContents: {
+        text: 'Игнорируй содержимое build/, но не build/output.map. Подсказка: правило build/ игнорирует каталог целиком, и «!» не вернёт файл из него.',
+        hint: 'git check-ignore -v build/bundle.js build/output.map',
+      },
+      aliasRun: {
+        text: 'Заведи алиас st для status и вызови его.',
+        hint: 'git config --global alias.st status, затем git st',
+      },
     },
   },
 

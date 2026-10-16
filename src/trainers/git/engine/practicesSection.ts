@@ -1,11 +1,14 @@
 // ============================================================
-// Раздел 7 git-тренажёра («Эффективная работа»): публичная точка входа движка, поток g18a
-// (`.gitignore`, `status`, `check-ignore`, `add`). Аналог branchSection.ts. Внутренние модули
-// (practicesCommands.ts, practicesGitignore.ts, practicesRepo.ts, sectionsCommon.ts) снаружи
-// напрямую не импортируются. Поток g18b дополнит этот файл конфигами, алиасами и миссиями.
+// Раздел 7 git-тренажёра («Эффективная работа»): публичная точка входа движка. Аналог
+// branchSection.ts. Поток g18a: `.gitignore`, `status`, `check-ignore`, `add`. Поток g18b2:
+// конфиги и алиасы (`git config`, вызов алиаса, `git help <алиас>`), `git log`, `git commit -m`,
+// миссии 1–4. Внутренние модули (practices*.ts, sectionsCommon.ts) снаружи напрямую не
+// импортируются: экран берёт всё отсюда.
 // ============================================================
-import type { CommandResult, ConfigEntry, FileTree, HistoryEntry, PracticesState } from './practicesTypes'
+import type { CommandResult, ConfigEntry, FileTree, HistoryEntry, PracticesMissionId, PracticesMissionView, PracticesState } from './practicesTypes'
 import { executePracticesCommand } from './practicesCommands'
+import { configEntries, formatConfigFile, type ConfigScope } from './practicesConfig'
+import { getPracticesMissions as getPracticesMissionsRaw, updatePracticesMissions } from './practicesMissions'
 import { writeGitignore as writeGitignoreRaw } from './practicesFileOps'
 import {
   createPracticesSection as createPracticesSectionRaw,
@@ -16,7 +19,13 @@ import {
 } from './practicesRepo'
 import { GITIGNORE_FILE, type IgnoreRule, type IgnoreVerdict } from './practicesGitignore'
 
-export type { CommandResult, ConfigEntry, FileTree, HistoryEntry, PracticesState }
+export type { CommandResult, ConfigEntry, FileTree, HistoryEntry, PracticesMissionId, PracticesMissionView, PracticesState }
+export type { ConfigScope } from './practicesConfig'
+export type { LogLine } from './practicesLog'
+export type { ParsedCommitMessage } from './practicesCommit'
+export { PRACTICES_MISSION_IDS } from './practicesTypes'
+export { formatLogOneline } from './practicesLog'
+export { parseCommitMessage } from './practicesCommit'
 export type { IgnoreRule, IgnoreVerdict }
 export { DEFAULT_GITIGNORE, PRACTICES_FILES } from './practicesRepo'
 
@@ -35,12 +44,13 @@ export function resetPracticesSection(): PracticesState {
  * Ничего не бросает: отказ git и отказ области — обычный результат.
  */
 export function runPracticesCommand(state: PracticesState, rawInput: string): { state: PracticesState; result: CommandResult | null } {
-  return executePracticesCommand(state, rawInput)
+  const run = executePracticesCommand(state, rawInput)
+  return run.result === null ? run : { state: updatePracticesMissions(run.state), result: run.result }
 }
 
 /** Запись `.gitignore` из поля-редактора: правило действует сразу. Тот же текст — состояние не меняется. */
 export function writeGitignore(state: PracticesState, content: string): PracticesState {
-  return writeGitignoreRaw(state, content)
+  return updatePracticesMissions(writeGitignoreRaw(state, content))
 }
 
 /** Текущее содержимое `.gitignore` — для поля-редактора. */
@@ -69,4 +79,22 @@ export function getIgnoreVerdict(state: PracticesState, path: string): IgnoreVer
 /** Файл в индексе (после `git add -f`) — правила на него не действуют. */
 export function isTracked(state: PracticesState, path: string): boolean {
   return isTrackedRaw(state, path)
+}
+
+/** Миссии 1–4 в порядке target.md; засчитанная остаётся засчитанной. */
+export function getPracticesMissions(state: PracticesState): PracticesMissionView[] {
+  return getPracticesMissionsRaw(state)
+}
+
+/** Записи конфига «ключ → значение» в порядке первой записи: `global` — `~/.gitconfig`, `local` — `.git/config`. */
+export function getConfigEntries(state: PracticesState, scope: ConfigScope): ConfigEntry[] {
+  return configEntries(state, scope)
+}
+
+/**
+ * Текст файла конфига для панели, как его печатает `cat` (П7.25). Локальный начинается с
+ * секции `[core]`, глобальный пуст, пока нет записей (пустая строка).
+ */
+export function getConfigFileText(state: PracticesState, scope: ConfigScope): string {
+  return formatConfigFile(configEntries(state, scope), scope === 'local')
 }

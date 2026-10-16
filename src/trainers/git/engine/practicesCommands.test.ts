@@ -68,9 +68,10 @@ describe('диспетчер', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('настоящая команда вне потока g18a — отказ области, а не «is not a git command»', () => {
-    expectRefusal(fresh(), 'git log --oneline', 'git log')
-    expectRefusal(fresh(), 'git config --global alias.st status')
+  it('настоящая команда вне области раздела — отказ области, а не «is not a git command»', () => {
+    // g18b2: log, config, commit -m, help теперь в области (practicesConfig.test.ts, practicesLog.test.ts и др.)
+    expectRefusal(fresh(), 'git branch', 'git branch')
+    expectRefusal(fresh(), 'git stash')
     expectRefusal(fresh(), 'git commit -m "x"')
   })
 
