@@ -155,6 +155,29 @@ describe('git status: формы и отказы', () => {
   })
 })
 
+describe('речь тренажёра: совет при «!» внутри игнорируемого каталога', () => {
+  // П7.53: при build/* каталог build/sub игнорируется правилом build/*, совет build/* ничего не меняет
+  it('П7.53: build/* + !build/sub/x — совет называет правило каталога и «!build/sub/», а не build/*', () => {
+    const state = withRules('build/*\n!build/sub/x\n')
+    const files = { ...state.working, 'build/sub/x': 'x', 'build/sub/y': 'y' }
+    const withSub = { ...state, working: files }
+    const { result } = run(withSub, 'git check-ignore -v build/sub/x')
+    expect(result.output).toBe('.gitignore:1:build/*\tbuild/sub/x')
+    expect(result.exitCode).toBe(0)
+    expect(result.explanation).toContain('игнорируется правилом «build/*»')
+    expect(result.explanation).toContain('!build/sub/')
+    expect(result.explanation).not.toContain('например build/*')
+    const status = run(withSub, 'git status --short --ignored -uall').result
+    expect(status.explanation).toContain('!build/sub/')
+  })
+
+  it('П7.8: build/ + !build/output.map — совет прежний: игнорировать содержимое, build/*', () => {
+    const { result } = run(withRules('build/\n!build/output.map\n'), 'git check-ignore -v build/output.map')
+    expect(result.explanation).toContain('например build/*')
+    expect(result.explanation).toContain('правило «build/»')
+  })
+})
+
 describe('git check-ignore: формы, коды возврата, отказы', () => {
   it('П7.16/П7.18/П7.20: код 1, если ничего не игнорируется; вывод --non-matching остаётся', () => {
     const { result } = run(withRules(''), 'git check-ignore -v --non-matching app.js')
@@ -202,9 +225,8 @@ describe('git check-ignore: формы, коды возврата, отказы'
     expect(result.exitCode).toBe(128)
   })
 
-  it('отказ области: без -v, ключи вне формы, с ключами без пути, -n, -q, --stdin, --no-index, -- и справка', () => {
+  it('отказ области: ключи вне формы, с ключами без пути, -n, -q, --stdin, --no-index, -- и справка', () => {
     for (const line of [
-      'git check-ignore debug.log',
       'git check-ignore -v',
       'git check-ignore -v --non-matching',
       'git check-ignore -n debug.log',
@@ -229,15 +251,72 @@ describe('git check-ignore: формы, коды возврата, отказы'
     expectRefusal(fresh(), 'git check-ignore -v *.log')
   })
 
-  it('отказ области: только правило с «!» без --non-matching (target.md:1508)', () => {
-    expectRefusal(withRules('*.log\n!important.log\n'), 'git check-ignore -v important.log', 'important.log')
-    // а с игнорируемым путём в списке без --non-matching тоже отказ: путь с «!» один из аргументов
-    expectRefusal(withRules('*.log\n!important.log\n'), 'git check-ignore -v debug.log important.log')
+  // П7.51 (section7-gitignore-fixes-git-runs.txt): правило с «!» и коды возврата
+  it('П7.51: -v с совпавшим правилом «!» — строка правила и код 0', () => {
+    const { result } = run(withRules('*.log\n!important.log\n'), 'git check-ignore -v important.log')
+    expect(result.output).toBe('.gitignore:2:!important.log\timportant.log')
+    expect(result.exitCode).toBe(0)
+    expect(result.explanation).toContain('!important.log')
   })
 
-  it('отказ области: ни один путь не игнорируется, но «!» совпало — код возврата в этом случае прогонами не сверен', () => {
-    expectRefusal(withRules('*.log\n!important.log\n'), 'git check-ignore -v --non-matching important.log', 'код возврата')
-    expectRefusal(withRules('!important.log\n'), 'git check-ignore -v --non-matching important.log app.js', 'код возврата')
+  it('П7.51: -v с игнорируемым путём и путём с «!» — строки правил 1 и 2, код 0', () => {
+    const { result } = run(withRules('*.log\n!important.log\n'), 'git check-ignore -v debug.log important.log')
+    expect(result.output).toBe('.gitignore:1:*.log\tdebug.log\n.gitignore:2:!important.log\timportant.log')
+    expect(result.exitCode).toBe(0)
+  })
+
+  it('П7.51: только правила «!», -v --non-matching — строка с «!» и «::», код 0', () => {
+    const { result } = run(withRules('!important.log\n'), 'git check-ignore -v --non-matching important.log build/bundle.js')
+    expect(result.output).toBe('.gitignore:1:!important.log\timportant.log\n::\tbuild/bundle.js')
+    expect(result.exitCode).toBe(0)
+    expect(run(withRules('*.log\n!important.log\n'), 'git check-ignore -v --non-matching important.log build/bundle.js').result.output).toBe(
+      '.gitignore:2:!important.log\timportant.log\n::\tbuild/bundle.js',
+    )
+  })
+
+  it('П7.51: только правила «!», -v без --non-matching — строка с «!», код 0; путь без правила — пусто, код 1', () => {
+    const state = withRules('!important.log\n')
+    const a = run(state, 'git check-ignore -v important.log')
+    expect(a.result.output).toBe('.gitignore:1:!important.log\timportant.log')
+    expect(a.result.exitCode).toBe(0)
+    const b = run(state, 'git check-ignore -v important.log debug.log')
+    expect(b.result.output).toBe('.gitignore:1:!important.log\timportant.log')
+    expect(b.result.exitCode).toBe(0)
+    const c = run(state, 'git check-ignore -v build/bundle.js')
+    expect(c.result.output).toBe('')
+    expect(c.result.exitCode).toBe(1)
+  })
+
+  it('П7.51: без -v путь с правилом «!» — пусто, код 1; игнорируемый путь печатается как есть, код 0', () => {
+    const state = withRules('*.log\n!important.log\n')
+    const a = run(state, 'git check-ignore important.log')
+    expect(a.result.output).toBe('')
+    expect(a.result.exitCode).toBe(1)
+    expect(a.result.explanation).toBeNull()
+    expect(run(state, 'git check-ignore debug.log').result.output).toBe('debug.log')
+    const b = run(state, 'git check-ignore debug.log important.log')
+    expect(b.result.output).toBe('debug.log')
+    expect(b.result.exitCode).toBe(0)
+    expect(run(withRules('!important.log\n'), 'git check-ignore important.log').result.exitCode).toBe(1)
+  })
+
+  it('П7.52: без -v файл в игнорируемом каталоге печатается своим путём; неигнорируемый — код 1', () => {
+    const state = withRules('build/\n*.log\n')
+    expect(run(state, 'git check-ignore build/bundle.js').result.output).toBe('build/bundle.js')
+    const r = run(state, 'git check-ignore app.js debug.log build/bundle.js').result
+    expect(r.output).toBe('debug.log\nbuild/bundle.js')
+    expect(r.exitCode).toBe(0)
+    expect(run(state, 'git check-ignore app.js').result.exitCode).toBe(1)
+  })
+
+  it('П7.52: --non-matching без -v — fatal, код 128 (слово git, не отказ области)', () => {
+    const { result } = run(fresh(), 'git check-ignore --non-matching app.js')
+    expect(result.output).toBe('fatal: --non-matching is only valid with --verbose')
+    expect(result.exitCode).toBe(128)
+  })
+
+  it('П7.52: --verbose без --non-matching печатает правило', () => {
+    expect(run(fresh(), 'git check-ignore --verbose debug.log').result.output).toBe('.gitignore:1:*.log\tdebug.log')
   })
 
   it('отслеживаемый файл (после add -f): отказ области', () => {

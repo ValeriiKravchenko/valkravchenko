@@ -163,3 +163,53 @@ describe('evaluatePath: последнее правило и каталоги (�
     expect(v.rule?.source).toBe('!.env.example')
   })
 })
+
+// Классы символов, поправки g18b1. Источник: section7-gitignore-fixes-git-runs.txt (П7.46–П7.50).
+describe('классы символов: расхождения с git 2.53.0', () => {
+  const matched = (rules: string, paths: string[]) => paths.filter((p) => verdict(rules, p).rule !== null)
+
+  it('П7.46: [c-a].txt — перевёрнутый диапазон засчитывает только «c»; правило не пропадает', () => {
+    expect(parseGitignore('[c-a].txt\n')[0].regex).not.toBeNull()
+    const v = verdict('[c-a].txt\n', 'c/c.txt')
+    expect(v.rule?.source).toBe('[c-a].txt')
+    expect(v.ignored).toBe(true)
+    expect(matched('[c-a].txt\n', ['a/a.txt', 'b/b.txt'])).toEqual([])
+  })
+
+  it('П7.47: [c-ab].txt совпадает с b и c, не с a и d', () => {
+    expect(matched('[c-ab].txt\n', ['a.txt', 'b.txt', 'c.txt', 'd.txt'])).toEqual(['b.txt', 'c.txt'])
+  })
+
+  it('П7.48: [z-a5].txt совпадает с z и 5, не с a и 6', () => {
+    expect(matched('[z-a5].txt\n', ['z.txt', 'a.txt', '5.txt', '6.txt'])).toEqual(['z.txt', '5.txt'])
+  })
+
+  it('П7.46: обычный диапазон по-прежнему работает, равный концам тоже', () => {
+    expect(matched('[a-c].txt\n', ['a.txt', 'b.txt', 'c.txt', 'd.txt'])).toEqual(['a.txt', 'b.txt', 'c.txt'])
+    expect(matched('[b-b].txt\n', ['a.txt', 'b.txt'])).toEqual(['b.txt'])
+  })
+
+  it('П7.49: *.log, [c-a], !*.txt — каталог c игнорируется правилом 2, !*.txt файлы не возвращает', () => {
+    const rules = '*.log\n[c-a]\n!*.txt\n'
+    const inDir = verdict(rules, 'c/c.txt')
+    expect(inDir.ignored).toBe(true)
+    expect(inDir.rule?.line).toBe(2)
+    expect(inDir.ignoredPath).toBe('c')
+    expect(verdict(rules, 'c/x.log').rule?.line).toBe(2)
+    const top = verdict(rules, 'a.txt')
+    expect(top.ignored).toBe(false)
+    expect(top.rule?.line).toBe(3)
+    expect(verdict(rules, 'debug.log').rule?.line).toBe(1)
+  })
+
+  it('П7.50: [[:al]x:]].txt — «[» обычный символ перечня, `:]` не найдено до первой `]`', () => {
+    const rules = '[[:al]x:]].txt\n'
+    expect(parseGitignore(rules)[0].regex).not.toBeNull()
+    expect(matched(rules, ['c/ax:]].txt', 'c/:x:]].txt', 'c/al.txt', 'c/x.txt'])).toEqual(['c/ax:]].txt', 'c/:x:]].txt'])
+  })
+
+  it('классы [[:alpha:]] по-прежнему работают; неизвестное имя класса — правило не разобрано (как прежде)', () => {
+    expect(matched('[[:digit:]].txt\n', ['1.txt', 'a.txt'])).toEqual(['1.txt'])
+    expect(parseGitignore('[[:nosuch:]].txt\n')[0].regex).toBeNull()
+  })
+})

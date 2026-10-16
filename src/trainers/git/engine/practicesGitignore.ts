@@ -22,9 +22,12 @@
 // Правило «к отслеживаемым файлам (есть в индексе) правила не применяются» (П7.23) относится к
 // состоянию репозитория, а не к правилам, поэтому здесь его нет: его проверяет вызывающий код.
 //
-// Классы символов: реализованы перечни, диапазоны, отрицание (`!` и `^`) и классы `[:alpha:]` …;
-// прогонами из них сверены только перечни (П7.13, П7.14) — остальное следует документации
-// wildmatch и в отчёте названо несверенным.
+// Классы символов: реализованы перечни, диапазоны, отрицание (`!` и `^`) и классы `[:alpha:]` ….
+// Сверены прогонами: перечни (П7.13, П7.14); перевёрнутый диапазон — git засчитывает первый
+// символ сам по себе, пустой диапазон ничего не добавляет (П7.46–П7.49 в
+// section7-gitignore-fixes-git-runs.txt); `[[:` без своего `:]` до первой `]` — обычный
+// перечень (П7.50). Остальное (отрицание, имена классов) следует документации wildmatch и
+// прогонами не сверено.
 // ============================================================
 
 /** Имя файла правил — так оно печатается в `git check-ignore -v` (П7.1: `.gitignore:1:*.log`). */
@@ -114,15 +117,20 @@ function parseBracket(pattern: string, start: number): { source: string; next: n
     }
     first = false
     if (c === '[' && pattern[i + 1] === ':') {
-      const close = pattern.indexOf(':]', i + 2)
-      if (close > 0) {
-        const name = pattern.slice(i + 2, close)
-        const set = POSIX_CLASSES[name]
+      // Как wildmatch: ищем первую `]`; класс — только если перед ней стоит `:` и между `[:` и
+      // этой `:` что-то есть. Иначе `[` — обычный символ перечня, разбор идёт с `:` (П7.50).
+      const close = pattern.indexOf(']', i + 2)
+      if (close < 0) return null
+      if (close >= i + 3 && pattern[close - 1] === ':') {
+        const set = POSIX_CLASSES[pattern.slice(i + 2, close - 1)]
         if (set === undefined) return null
         body += set
-        i = close + 2
+        i = close + 1
         continue
       }
+      body += '\\['
+      i++
+      continue
     }
     let lo = c
     if (c === '\\') {
@@ -139,7 +147,9 @@ function parseBracket(pattern: string, start: number): { source: string; next: n
         hi = pattern[i + 3]
         step = 4
       }
-      body += `${escapeInClass(lo)}-${escapeInClass(hi)}`
+      // первый символ засчитывается сам по себе; перевёрнутый диапазон пуст (П7.46–П7.48)
+      body += escapeInClass(lo)
+      if (lo <= hi) body += `-${escapeInClass(hi)}`
       i += step
       continue
     }
