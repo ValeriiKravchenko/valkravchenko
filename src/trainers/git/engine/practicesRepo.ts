@@ -6,6 +6,7 @@
 import type { PracticesState } from './practicesTypes'
 import { evaluatePath, GITIGNORE_FILE, parseGitignore, type IgnoreRule, type IgnoreVerdict } from './practicesGitignore'
 import { ru } from '../locales/ru'
+import { initialPracticesMissionsDone } from './practicesMissions'
 import { has } from './util'
 
 /**
@@ -38,7 +39,7 @@ export function createPracticesSection(): PracticesState {
   const working: Record<string, string> = {}
   for (const path of PRACTICES_FILES) working[path] = seed[path] ?? ''
   working[GITIGNORE_FILE] = DEFAULT_GITIGNORE
-  return { branch: 'master', working, index: {}, globalConfig: [], localConfig: [], history: [] }
+  return { branch: 'master', working, index: {}, globalConfig: [], localConfig: [], history: [], missionsDone: initialPracticesMissionsDone() }
 }
 
 /** Правила из текущего содержимого `.gitignore` (нет файла — нет правил). */

@@ -32,9 +32,28 @@ export interface PracticesState {
    * Файл из индекса отслеживаемый, правила `.gitignore` на него не действуют (П7.23).
    */
   index: FileTree
-  /** `~/.gitconfig`: упорядоченный список «ключ → значение». В `g18a` всегда пуст, заполняет `g18b`. */
+  /** `~/.gitconfig`: упорядоченный список «ключ → значение»; в разделе в него попадают только ключи `alias.<имя>`. */
   globalConfig: ConfigEntry[]
   /** `.git/config`: то же. В реальном файле перед записями алиасов стоит секция `[core]`, она в список не входит. */
   localConfig: ConfigEntry[]
   history: HistoryEntry[]
+  /**
+   * Засчитанные миссии (target.md, часть IX, «Миссии»). Значение, ставшее `true`, остаётся им
+   * (часть I, п. 2). Миссии 1–3 пересчитываются по `.gitignore`, миссия 4 ставится событием
+   * «алиас успешно выполнен».
+   */
+  missionsDone: Record<PracticesMissionId, boolean>
+}
+
+/** Четыре миссии раздела 7 в порядке target.md. */
+export type PracticesMissionId = 'envExample' | 'importantLog' | 'buildContents' | 'aliasRun'
+
+export const PRACTICES_MISSION_IDS: readonly PracticesMissionId[] = ['envExample', 'importantLog', 'buildContents', 'aliasRun']
+
+/** Миссия для показа: текст и подсказка из словаря, отметка выполнения. */
+export interface PracticesMissionView {
+  id: PracticesMissionId
+  text: string
+  hint: string
+  done: boolean
 }
