@@ -9,12 +9,17 @@
 // (часть III, правило 1) без кода возврата. Строки `error: …`, `usage: …` — буквальный вывод git
 // 2.53.0 из протокола, не переводятся (часть III, правило 2); речь тренажёра — в ru.practices.
 //
+// Поправки g18b3 (section7-config-alias-fixes-git-runs.txt, П7.60–П7.80): опции читаются только до первого слова,
+// остальные слова — значение и шаблон значения (POSIX ERE); имя алиаса без учёта регистра, имя в файле как набрано;
+// --get-regexp: шаблон в нижнем регистре, POSIX ERE; пустое значение читается как одна пустая строка; классы ключей
+// (`invalid key`, `key does not contain variable name`); удаление без --global — это .git/config.
+//
 // Формы:
-//   запись   git config [--global] alias.<имя> <значение>;  git config set --global alias.<имя> <значение>
-//   чтение   git config --global alias.<имя>;  --get;  git config get --global alias.<имя>
+//   запись   git config [--global] alias.<имя> <значение> [<шаблон значения>];  git config set --global alias.<имя> <значение>
+//   чтение   git config --global alias.<имя>;  --get [<шаблон значения>];  git config get --global alias.<имя>
 //   regexp   git config --global --get-regexp <шаблон>
 //   список   git config --global --list | -l;  git config list --global
-//   удаление git config --global --unset alias.<имя>;  git config unset --global alias.<имя>
+//   удаление git config [--global] --unset alias.<имя> [<шаблон значения>];  git config unset [--global] alias.<имя>
 // ============================================================
 import type { ConfigEntry, PracticesState } from './practicesTypes'
 import { exited, refuse, type Outcome } from './practicesOutcome'
@@ -26,8 +31,12 @@ const pcx = ru.practices.explain
 
 export type ConfigScope = 'global' | 'local'
 
-/** Имя алиаса, допустимое и сверенное прогонами: `st`, `lg`, `q`, `zz`, `st-short` (П7.25). Заглавные и другие знаки прогонами не проверялись. */
-const ALIAS_NAME = /^[a-z][a-z0-9-]*$/
+/**
+ * Имя алиаса, которое git принимает: латинская буква, затем буквы, цифры и дефис (`st`, `ST`, `st-short`, `x-`,
+ * `A-1`). Регистр не важен: имя в ключе читается без учёта регистра (П7.60 и далее, section7-config-alias-fixes-git-runs.txt:
+ * П7.67, П7.69, П7.80). Остальное git отвергает как `invalid key` (П7.79).
+ */
+const ALIAS_NAME = /^[A-Za-z][A-Za-z0-9-]*$/
 
 /** Буквальный usage git 2.53.0 на неизвестную длинную опцию (П7.25, `git config --global --foo`, section7-git-runs.txt:1232–1291). */
 const CONFIG_USAGE_LINES = [
@@ -118,9 +127,17 @@ function withEntries(state: PracticesState, scope: ConfigScope, entries: ConfigE
   return scope === 'global' ? { ...state, globalConfig: entries } : { ...state, localConfig: entries }
 }
 
-/** Запись ключа: новая — в конец, существующая — значение меняется на месте. */
+/** Один и тот же ключ: имя в ключе читается без учёта регистра (П7.67). */
+export function sameConfigKey(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase()
+}
+
+/**
+ * Запись ключа: новая — в конец, существующая — значение меняется на месте, а имя в файле становится таким,
+ * как набрано (П7.67: `alias.St log` заменила `st = status` на `St = log`; П7.69).
+ */
 export function setConfigEntry(entries: readonly ConfigEntry[], key: string, value: string): ConfigEntry[] {
-  return entries.some((e) => e.key === key) ? entries.map((e) => (e.key === key ? { key, value } : e)) : [...entries, { key, value }]
+  return entries.some((e) => sameConfigKey(e.key, key)) ? entries.map((e) => (sameConfigKey(e.key, key) ? { key, value } : e)) : [...entries, { key, value }]
 }
 
 /**
@@ -144,11 +161,11 @@ export function formatConfigFile(entries: readonly ConfigEntry[], withCore: bool
 
 export type AliasLookup = { kind: 'none' } | { kind: 'ambiguous' } | { kind: 'found'; value: string; scope: ConfigScope }
 
-/** Где записан алиас. Одно имя в обоих конфигах — отдельный случай: прогонами не сверен (target.md, «Что НЕ входит»). */
+/** Где записан алиас; имя ищется без учёта регистра (П7.68: `git ST` при `alias.st`). Одно имя в обоих конфигах — отдельный случай: прогонами не сверен (target.md, «Что НЕ входит»). */
 export function lookupAlias(state: PracticesState, name: string): AliasLookup {
   const key = `alias.${name}`
-  const inGlobal = state.globalConfig.find((e) => e.key === key)
-  const inLocal = state.localConfig.find((e) => e.key === key)
+  const inGlobal = state.globalConfig.find((e) => sameConfigKey(e.key, key))
+  const inLocal = state.localConfig.find((e) => sameConfigKey(e.key, key))
   if (inGlobal && inLocal) return { kind: 'ambiguous' }
   if (inGlobal) return { kind: 'found', value: inGlobal.value, scope: 'global' }
   if (inLocal) return { kind: 'found', value: inLocal.value, scope: 'local' }
@@ -157,18 +174,197 @@ export function lookupAlias(state: PracticesState, name: string): AliasLookup {
 
 // ---------- ключ ----------
 
-type KeyCheck = { kind: 'ok'; name: string } | { kind: 'invalid' } | { kind: 'other' }
+type KeyCheck =
+  | { kind: 'ok'; name: string }
+  | { kind: 'invalid' }
+  | { kind: 'noVariable' }
+  | { kind: 'subsection' }
+  | { kind: 'other' }
 
 /**
- * `ok` — имя сверено (`alias.st`); `invalid` — git отвечает `error: invalid key` (имя начинается с цифры или `_`
- * либо содержит пробел или `!`, П7.25); `other` — всё остальное: другие ключи, заглавные, точки в имени — отказ области.
+ * `ok` — `alias.<имя>`; `invalid` — git отвечает `error: invalid key` (П7.79: `_`, `@`, `/`, пробел, `!`, не-ASCII,
+ * цифра или дефис в начале); `noVariable` — `alias.` без имени (П7.79); `subsection` — точка в имени
+ * (`alias.a.b` это секция `[alias "a"]`, П7.80, в разделе не разбирается); `other` — любой другой ключ.
  */
 function checkAliasKey(key: string): KeyCheck {
   if (!key.startsWith('alias.')) return { kind: 'other' }
   const name = key.slice('alias.'.length)
-  if (ALIAS_NAME.test(name)) return { kind: 'ok', name }
-  if (name.length > 0 && (/^[0-9_]/.test(name) || /[ !]/.test(name))) return { kind: 'invalid' }
-  return { kind: 'other' }
+  if (name === '') return { kind: 'noVariable' }
+  if (name.includes('.')) return { kind: 'subsection' }
+  return ALIAS_NAME.test(name) ? { kind: 'ok', name } : { kind: 'invalid' }
+}
+
+/** Ответ git на плохой ключ или отказ области. `noVariableCode`: чтение 1, запись и удаление 2 (П7.79). */
+function keyProblem(state: PracticesState, key: string, check: Exclude<KeyCheck, { kind: 'ok' }>, noVariableCode: number): Outcome {
+  if (check.kind === 'invalid') return exited(state, `error: invalid key: ${key}`, 1, pc.invalidKeyNote)
+  if (check.kind === 'noVariable') return exited(state, `error: key does not contain variable name: ${key}`, noVariableCode, pc.noVariableNote)
+  return refuse(state, check.kind === 'subsection' ? pc.keySubsection(key) : pc.keyOutOfScope(key))
+}
+
+// ---------- POSIX ERE → RegExp ----------
+
+type PatternResult = { kind: 'ok'; regexp: RegExp } | { kind: 'invalid' } | { kind: 'unsupported' }
+
+class EreFailure extends Error {
+  failure: 'invalid' | 'unsupported'
+  constructor(failure: 'invalid' | 'unsupported') {
+    super(failure)
+    this.failure = failure
+  }
+}
+
+/** Классы `[[:имя:]]`, сверенные прогонами (П7.71). */
+const POSIX_CLASSES: Record<string, string> = {
+  alpha: 'a-zA-Z',
+  digit: '0-9',
+  alnum: 'a-zA-Z0-9',
+  lower: 'a-z',
+  upper: 'A-Z',
+  space: ' \\t\\n\\v\\f\\r',
+  punct: '!-\\/:-@\\[-`{-~',
+}
+const UNVERIFIED_CLASSES = ['blank', 'cntrl', 'graph', 'print', 'xdigit']
+const MAX_INTERVAL = 255
+
+const escapeLiteral = (c: string) => c.replace(/[\\^$.*+?()[\]{}|/-]/g, '\\$&')
+const escapeInClass = (c: string) => c.replace(/[\\\][^-]/g, '\\$&')
+
+/**
+ * Переводит POSIX ERE (glibc) в RegExp для проверки «есть ли совпадение». `invalid` — git отвечает ошибкой шаблона
+ * (П7.71: `*a`, `+a`, `?a`, `(`, `[`, `a{2`, `a{2,1}`, `a{}`, `[z-a]`, `^*`, `st\`); `unsupported` — конструкция, которой
+ * прогоны не покрывают (`\b`, `\<`, обратные ссылки, `[.x.]`, `[=x=]`, П7.72): честный отказ области.
+ */
+export function compileEre(pattern: string): PatternResult {
+  let i = 0
+  const n = pattern.length
+  const fail = (kind: 'invalid' | 'unsupported'): never => {
+    throw new EreFailure(kind)
+  }
+
+  function parseInterval(): string {
+    const m = /^\{(\d*)(,?)(\d*)\}/.exec(pattern.slice(i))
+    if (!m) return fail('invalid')
+    const [whole, lo, comma, hi] = m
+    if (lo === '' && comma === '') return fail('invalid')
+    const min = lo === '' ? 0 : Number(lo)
+    const max = hi === '' ? null : Number(hi)
+    if (min > MAX_INTERVAL || (max !== null && max > MAX_INTERVAL)) return fail('unsupported')
+    if (max !== null && min > max) return fail('invalid')
+    i += whole.length
+    if (comma === '') return `{${min}}`
+    return max === null ? `{${min},}` : `{${min},${max}}`
+  }
+
+  function parseBracket(): string {
+    let negate = false
+    if (pattern[i] === '^') {
+      negate = true
+      i++
+    }
+    const rangeFollows = () => pattern[i] === '-' && i + 1 < n && pattern[i + 1] !== ']'
+    let items = ''
+    let first = true
+    for (;;) {
+      if (i >= n) return fail('invalid')
+      const ch = pattern[i]
+      if (ch === ']' && !first) {
+        i++
+        break
+      }
+      first = false
+      if (ch === '[' && pattern[i + 1] === ':') {
+        const end = pattern.indexOf(':]', i + 2)
+        if (end < 0) return fail('invalid')
+        const name = pattern.slice(i + 2, end)
+        if (UNVERIFIED_CLASSES.includes(name)) return fail('unsupported')
+        if (!Object.hasOwn(POSIX_CLASSES, name)) return fail('invalid')
+        items += POSIX_CLASSES[name]
+        i = end + 2
+        if (rangeFollows()) return fail('invalid')
+        continue
+      }
+      if (ch === '[' && (pattern[i + 1] === '.' || pattern[i + 1] === '=')) return fail('unsupported')
+      i++
+      if (rangeFollows()) {
+        const hi = pattern[i + 1]
+        if (hi === '[' && /[:.=]/.test(pattern[i + 2] ?? '')) return fail('unsupported')
+        i += 2
+        if (hi < ch) return fail('invalid')
+        items += `${escapeInClass(ch)}-${escapeInClass(hi)}`
+        if (rangeFollows()) return fail('invalid')
+      } else {
+        items += escapeInClass(ch)
+      }
+    }
+    return `[${negate ? '^' : ''}${items}]`
+  }
+
+  interface Piece {
+    kind: 'atom' | 'caret' | 'dollar'
+    text: string
+  }
+
+  function parseBranch(depth: number): string {
+    const pieces: Piece[] = []
+    while (i < n) {
+      const c = pattern[i]
+      if (c === '|' || (c === ')' && depth > 0)) break
+      i++
+      if (c === '*' || c === '+' || c === '?' || c === '{') {
+        const last = pieces[pieces.length - 1]
+        if (last === undefined || last.kind === 'caret') return fail('invalid')
+        if (last.kind === 'dollar') return fail('unsupported')
+        let quantifier = c
+        if (c === '{') {
+          i--
+          quantifier = parseInterval()
+        }
+        last.text = `(?:${last.text})${quantifier}`
+      } else if (c === '^') pieces.push({ kind: 'caret', text: '^' })
+      else if (c === '$') pieces.push({ kind: 'dollar', text: '$' })
+      else if (c === '(') {
+        const inner = parseExpr(depth + 1)
+        if (pattern[i] !== ')') return fail('invalid')
+        i++
+        pieces.push({ kind: 'atom', text: `(?:${inner})` })
+      } else if (c === '.') pieces.push({ kind: 'atom', text: '.' })
+      else if (c === '[') pieces.push({ kind: 'atom', text: parseBracket() })
+      else if (c === '\\') {
+        if (i >= n) return fail('invalid')
+        const e = pattern[i++]
+        if (/[wWsS]/.test(e)) pieces.push({ kind: 'atom', text: `\\${e}` })
+        else if (/[0-9bB<>`']/.test(e)) return fail('unsupported')
+        else pieces.push({ kind: 'atom', text: escapeLiteral(e) })
+      } else if (c === '}') return fail('unsupported')
+      else pieces.push({ kind: 'atom', text: escapeLiteral(c) })
+    }
+    return pieces.map((p) => p.text).join('')
+  }
+
+  function parseExpr(depth: number): string {
+    const branches = [parseBranch(depth)]
+    while (pattern[i] === '|') {
+      i++
+      branches.push(parseBranch(depth))
+    }
+    return branches.join('|')
+  }
+
+  try {
+    return { kind: 'ok', regexp: new RegExp(parseExpr(0)) }
+  } catch (e) {
+    return e instanceof EreFailure ? { kind: e.failure } : { kind: 'unsupported' }
+  }
+}
+
+/** Шаблон значения (`--get`, `--unset`, третье слово записи): регистр важен; `!` в начале (отрицание) не разбирается. */
+function compileValuePattern(state: PracticesState, pattern: string): { ok: true; regexp: RegExp } | { ok: false; outcome: Outcome } {
+  if (pattern.startsWith('!')) return { ok: false, outcome: refuse(state, pc.valuePatternForm(pattern)) }
+  const compiled = compileEre(pattern)
+  // П7.65, П7.62: `error: invalid pattern: [`, код 6 (и при чтении, и при удалении, и при записи).
+  if (compiled.kind === 'invalid') return { ok: false, outcome: exited(state, `error: invalid pattern: ${pattern}`, 6) }
+  if (compiled.kind === 'unsupported') return { ok: false, outcome: refuse(state, pc.valuePatternForm(pattern)) }
+  return { ok: true, regexp: compiled.regexp }
 }
 
 // ---------- разбор команды ----------
@@ -180,8 +376,12 @@ interface ParsedConfig {
   positionals: string[]
 }
 
-type ParseResult = { kind: 'parsed'; parsed: ParsedConfig } | { kind: 'unknownOption'; option: string } | { kind: 'refused'; form: string; words?: readonly string[] }
+type ParseResult = { kind: 'parsed'; parsed: ParsedConfig } | { kind: 'unknownOption'; option: string } | { kind: 'refused'; form: string }
 
+/**
+ * Git читает опции только до первого слова, которое не опция; всё дальше — слова (П7.60, П7.61, П7.65:
+ * `alias.st --unset` пишет значение `--unset`). Это верно и после подкоманды (`set`, `get`, `unset`, `list`).
+ */
 function parseConfigArgs(args: readonly string[]): ParseResult {
   let rest = args
   let sub: Subcommand | null = null
@@ -196,13 +396,13 @@ function parseConfigArgs(args: readonly string[]): ParseResult {
   const positionals: string[] = []
   let unknownOption: string | null = null
   let refusedForm: string | null = null
-  let splitByShell = false
   const setAction = (next: NonNullable<ParsedConfig['action']>, arg: string) => {
     if (flags.action !== null) refusedForm ??= arg
     flags.action = next
   }
   for (const arg of rest) {
-    if (arg === '--global') {
+    if (positionals.length > 0) positionals.push(arg)
+    else if (arg === '--global') {
       if (flags.global) refusedForm ??= arg
       flags.global = true
     } else if (arg === '--get') setAction('get', arg)
@@ -213,13 +413,10 @@ function parseConfigArgs(args: readonly string[]): ParseResult {
     else if (arg.startsWith('--')) {
       // `--foo=bar` прогонами не сверен: форма с `=` всегда отказ.
       if (arg.includes('=') || isKnownLongOption(arg.slice(2))) refusedForm ??= arg
-      else if (positionals.length > 0) splitByShell = true
       else unknownOption ??= arg.slice(2)
     } else if (arg.startsWith('-') && arg.length > 1) refusedForm ??= arg
     else positionals.push(arg)
   }
-  // Слова значения, которые шелл разбил и которые похожи на опции (`log --oneline`): что git с ними сделает, прогоны не показывают (место 13).
-  if (splitByShell) return { kind: 'refused', form: args.join(' '), words: args }
   // Неизвестную длинную опцию git обнаруживает при разборе опций, раньше любого смысла команды.
   if (unknownOption !== null && sub === null) return { kind: 'unknownOption', option: unknownOption }
   if (unknownOption !== null) return { kind: 'refused', form: `--${unknownOption}` }
@@ -228,27 +425,27 @@ function parseConfigArgs(args: readonly string[]): ParseResult {
   return { kind: 'parsed', parsed: { sub, global: flags.global, action: flags.action, positionals } }
 }
 
-// ---------- обработчик ----------
+// ---------- обработчики ----------
 
 /** Значение, которое раздел записывает: без кавычек и обратной косой черты внутри (target.md, «Что НЕ входит»). */
 function valueSupported(value: string): boolean {
   return !/["'\\]/.test(value)
 }
 
-function readKey(state: PracticesState, key: string): { ok: true; name: string } | { ok: false; outcome: Outcome } {
+/** Запись; `pattern` — третье слово (шаблон значения, П7.62). */
+function handleWrite(state: PracticesState, scope: ConfigScope, key: string, value: string, pattern?: string): Outcome {
   const check = checkAliasKey(key)
-  if (check.kind === 'ok') return { ok: true, name: check.name }
-  return { ok: false, outcome: refuse(state, check.kind === 'invalid' ? pc.keyReadForm(key) : pc.keyOutOfScope(key)) }
-}
-
-function handleWrite(state: PracticesState, scope: ConfigScope, key: string, value: string, extra: readonly string[]): Outcome {
-  if (extra.length > 0) return refuse(state, pc.extraWords([key, value, ...extra]))
-  const check = checkAliasKey(key)
-  if (check.kind === 'invalid') return exited(state, `error: invalid key: ${key}`, 1, pc.invalidKeyNote)
-  if (check.kind === 'other') return refuse(state, pc.keyOutOfScope(key))
+  if (check.kind !== 'ok') return keyProblem(state, key, check, 2)
   if (!valueSupported(value)) return refuse(state, pc.valueForm(value))
+  if (pattern !== undefined) {
+    const compiled = compileValuePattern(state, pattern)
+    if (!compiled.ok) return compiled.outcome
+    // П7.63: при существующем ключе git дописывает второе значение или заменяет подходящее — в модели такого нет.
+    if (configEntries(state, scope).some((e) => sameConfigKey(e.key, key))) return refuse(state, pc.patternExisting(key))
+  }
   const next = withEntries(state, scope, setConfigEntry(configEntries(state, scope), key, value))
-  return exited(next, '', 0, writeExplanation(scope, key, check.name, value))
+  const note = pattern === undefined ? '' : ` ${pcx.valuePatternIgnored(pattern)}`
+  return exited(next, '', 0, `${writeExplanation(scope, key, check.name, value)}${note}`)
 }
 
 /** Речь тренажёра после записи: куда попала запись и что с ней будет при вызове (места 14, 15, 17, 18). */
@@ -260,38 +457,57 @@ function writeExplanation(scope: ConfigScope, key: string, name: string, value: 
   return parts.join(' ')
 }
 
-function handleRead(state: PracticesState, key: string, subForAbsent: Subcommand | null): Outcome {
-  const keyed = readKey(state, key)
-  if (!keyed.ok) return keyed.outcome
-  const entry = state.globalConfig.find((e) => e.key === key)
-  if (entry) return exited(state, entry.value, 0)
-  // П7.25: чтение отсутствующего ключа — пусто, код 1. Для `git config get` код прогонами не сверен.
-  if (subForAbsent !== null) return refuse(state, pc.absentKeyForm(subForAbsent))
-  return exited(state, '', 1)
+/** Чтение из ~/.gitconfig. П7.73: пустое значение — одна пустая строка (`\n`), код 0; нет ключа — код 1. */
+function handleRead(state: PracticesState, key: string, pattern?: string): Outcome {
+  const check = checkAliasKey(key)
+  if (check.kind !== 'ok') return keyProblem(state, key, check, 1)
+  let regexp: RegExp | null = null
+  if (pattern !== undefined) {
+    const compiled = compileValuePattern(state, pattern)
+    if (!compiled.ok) return compiled.outcome
+    regexp = compiled.regexp
+  }
+  const entry = state.globalConfig.find((e) => sameConfigKey(e.key, key))
+  if (!entry || (regexp !== null && !regexp.test(entry.value))) return exited(state, '', 1)
+  return exited(state, entry.value === '' ? '\n' : entry.value, 0)
+}
+
+/** Чтение без --global: git читает оба файла, раздел — нет; но плохой ключ git отвергает раньше (П7.66, П7.79). */
+function handleReadWithoutScope(state: PracticesState, key: string, form: string): Outcome {
+  const check = checkAliasKey(key)
+  if (check.kind === 'invalid' || check.kind === 'noVariable') return keyProblem(state, key, check, 1)
+  return refuse(state, pc.scopeRequired(form))
 }
 
 function handleGetRegexp(state: PracticesState, pattern: string): Outcome {
   if (pattern === '') return refuse(state, pc.formRefused('--get-regexp ""'))
-  let regexp: RegExp
-  try {
-    regexp = new RegExp(pattern)
-  } catch {
-    // П7.25: `--get-regexp "["` → `error: invalid key pattern: [`, код 6 (шаблон разбирается как JavaScript-regexp, упрощение).
-    return exited(state, `error: invalid key pattern: ${pattern}`, 6)
-  }
-  const lines = state.globalConfig.filter((e) => regexp.test(e.key)).map((e) => `${e.key} ${e.value}`)
+  // П7.71: git приводит шаблон к нижнему регистру и применяет POSIX ERE; ключи в выводе тоже в нижнем регистре.
+  const compiled = compileEre(pattern.toLowerCase())
+  if (compiled.kind === 'invalid') return exited(state, `error: invalid key pattern: ${pattern}`, 6)
+  if (compiled.kind === 'unsupported') return refuse(state, pc.keyPatternForm(pattern))
+  const lines = state.globalConfig.filter((e) => compiled.regexp.test(e.key.toLowerCase())).map((e) => `${e.key.toLowerCase()} ${e.value}`)
   return exited(state, lines.join('\n'), lines.length > 0 ? 0 : 1)
 }
 
-function handleUnset(state: PracticesState, key: string, subForAbsent: Subcommand | null): Outcome {
-  const keyed = readKey(state, key)
-  if (!keyed.ok) return keyed.outcome
-  if (!state.globalConfig.some((e) => e.key === key)) {
-    // П7.25: `--unset` отсутствующего ключа — пусто, код 5. Для `git config unset` код прогонами не сверен.
-    if (subForAbsent !== null) return refuse(state, pc.absentKeyForm(subForAbsent))
-    return exited(state, '', 5)
+/** Удаление; без --global — из .git/config (П7.65). Нет ключа или шаблон не подошёл — код 5. */
+function handleUnset(state: PracticesState, scope: ConfigScope, key: string, pattern?: string): Outcome {
+  const check = checkAliasKey(key)
+  if (check.kind !== 'ok') return keyProblem(state, key, check, 2)
+  let regexp: RegExp | null = null
+  if (pattern !== undefined) {
+    const compiled = compileValuePattern(state, pattern)
+    if (!compiled.ok) return compiled.outcome
+    regexp = compiled.regexp
   }
-  return exited({ ...state, globalConfig: state.globalConfig.filter((e) => e.key !== key) }, '', 0, pcx.unset(key))
+  const entries = configEntries(state, scope)
+  const entry = entries.find((e) => sameConfigKey(e.key, key))
+  if (!entry || (regexp !== null && !regexp.test(entry.value))) return exited(state, '', 5)
+  const next = withEntries(
+    state,
+    scope,
+    entries.filter((e) => e !== entry),
+  )
+  return exited(next, '', 0, scope === 'global' ? pcx.unset(entry.key) : pcx.unsetLocal(entry.key))
 }
 
 /** Выполняет `git config …`; `args` — слова после `config`. */
@@ -302,38 +518,43 @@ export function handleConfig(state: PracticesState, args: readonly string[]): Ou
     // П7.25: ``error: unknown option `foo'`` и полный usage, код 129.
     return exited(state, [`error: unknown option \`${result.option}'`, ...CONFIG_USAGE_LINES, ''].join('\n'), 129)
   }
-  if (result.kind === 'refused') return refuse(state, result.words ? pc.extraWords(result.words) : pc.formRefused(result.form))
+  if (result.kind === 'refused') return refuse(state, pc.formRefused(result.form))
   const { sub, global, action, positionals } = result.parsed
-  const need = (n: number) => positionals.length === n
-
-  // П7.25: `git config --global` без действия — `error: no action specified`, код 129.
-  if (sub === null && action === null && positionals.length === 0) {
-    return global ? exited(state, 'error: no action specified', 129) : refuse(state, pc.formRefused(form))
-  }
+  const n = positionals.length
+  const scope: ConfigScope = global ? 'global' : 'local'
 
   if (sub === 'set') {
-    if (!global || positionals.length < 2) return refuse(state, pc.formRefused(form))
-    return handleWrite(state, 'global', positionals[0], positionals[1], positionals.slice(2))
+    if (!global || n !== 2) return refuse(state, pc.formRefused(form))
+    return handleWrite(state, 'global', positionals[0], positionals[1])
   }
 
   if (sub === null && action === null) {
-    if (positionals.length === 1) return global ? handleRead(state, positionals[0], null) : refuse(state, pc.scopeRequired(form))
-    return handleWrite(state, global ? 'global' : 'local', positionals[0], positionals[1], positionals.slice(2))
+    // П7.25: `git config --global` без слов — `error: no action specified`, код 129.
+    if (n === 0) return global ? exited(state, 'error: no action specified', 129) : refuse(state, pc.formRefused(form))
+    // П7.64: четыре слова и больше — та же ошибка (шелл разбил значение на слова).
+    if (n >= 4) return exited(state, 'error: no action specified', 129, pc.splitValueNote)
+    if (n === 1) return global ? handleRead(state, positionals[0]) : handleReadWithoutScope(state, positionals[0], form)
+    return handleWrite(state, scope, positionals[0], positionals[1], positionals[2])
   }
 
-  // Чтение, список и удаление — только в ~/.gitconfig (--global); без него прогонов нет.
-  if (!global) return refuse(state, pc.scopeRequired(form))
   const act = sub === 'get' ? 'get' : sub === 'unset' ? 'unset' : sub === 'list' ? 'list' : action
-  const absent = sub // 'get' | 'unset' | null — для отказа по отсутствующему ключу
+  // Подкоманды `get` и `unset` принимают ровно одно слово; с `--get`/`--unset` второе слово — шаблон значения.
+  const maxWords = sub === null ? 2 : 1
+
+  if (act === 'unset') {
+    if (n < 1 || n > maxWords) return refuse(state, pc.formRefused(form))
+    return handleUnset(state, scope, positionals[0], positionals[1])
+  }
+
+  // Чтение, список и regexp — только в ~/.gitconfig (--global); без него git читает оба файла, раздел не разбирает.
+  if (!global) return act === 'get' && n >= 1 ? handleReadWithoutScope(state, positionals[0], form) : refuse(state, pc.scopeRequired(form))
   switch (act) {
     case 'get':
-      return need(1) ? handleRead(state, positionals[0], absent) : refuse(state, pc.formRefused(form))
-    case 'unset':
-      return need(1) ? handleUnset(state, positionals[0], absent) : refuse(state, pc.formRefused(form))
+      return n >= 1 && n <= maxWords ? handleRead(state, positionals[0], positionals[1]) : refuse(state, pc.formRefused(form))
     case 'getRegexp':
-      return need(1) ? handleGetRegexp(state, positionals[0]) : refuse(state, pc.formRefused(form))
+      return n === 1 ? handleGetRegexp(state, positionals[0]) : refuse(state, pc.formRefused(form))
     default:
-      // П7.25: `--list`, `-l`, `git config list --global` — `ключ=значение` по порядку записи.
-      return need(0) ? exited(state, state.globalConfig.map((e) => `${e.key}=${e.value}`).join('\n'), 0) : refuse(state, pc.formRefused(form))
+      // П7.25: `--list`, `-l`, `git config list --global` — `ключ=значение` по порядку записи, ключи в нижнем регистре (П7.67).
+      return n === 0 ? exited(state, state.globalConfig.map((e) => `${e.key.toLowerCase()}=${e.value}`).join('\n'), 0) : refuse(state, pc.formRefused(form))
   }
 }

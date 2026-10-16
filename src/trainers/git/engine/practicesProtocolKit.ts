@@ -5,6 +5,7 @@
 // импортируется.
 // ============================================================
 import protocol from '../../../../docs/git-trainer/reports/section7-git-runs.txt?raw'
+import configFixes from '../../../../docs/git-trainer/reports/section7-config-alias-fixes-git-runs.txt?raw'
 import { createPracticesSection, runPracticesCommand } from './practicesSection'
 import type { CommandResult, PracticesState } from './practicesSection'
 
@@ -17,7 +18,7 @@ export interface ProtocolEntry {
 }
 
 /** Блоки `===== П7.N.` → команды `$ …` с выводом до `[exit N]`. Строки `--- .gitignore:` пропускаются. */
-function readBlocks(text: string): Map<number, ProtocolEntry[]> {
+function readBlocks(text: string, blankIsNewline = false): Map<number, ProtocolEntry[]> {
   const lines = text.split('\n')
   const blocks = new Map<number, ProtocolEntry[]>()
   let current: ProtocolEntry[] | null = null
@@ -41,12 +42,15 @@ function readBlocks(text: string): Map<number, ProtocolEntry[]> {
       out.push(lines[i])
       i++
     }
-    current.push({ command, output: out.join('\n'), exitCode: Number(/\d+/.exec(lines[i] ?? '')?.[0] ?? -1), line: start })
+    // В файле g18b3 одна пустая строка между командой и [exit] это вывод «\n» (git печатает пустую строку), а не отсутствие вывода.
+    const output = blankIsNewline && out.length === 1 && out[0] === '' ? '\n' : out.join('\n')
+    current.push({ command, output, exitCode: Number(/\d+/.exec(lines[i] ?? '')?.[0] ?? -1), line: start })
   }
   return blocks
 }
 
 const blocks = readBlocks(protocol)
+const fixBlocks = readBlocks(configFixes, true)
 
 /** Команды блока П7.<id> в порядке протокола. */
 export function protocolBlock(id: number): ProtocolEntry[] {
@@ -59,6 +63,20 @@ export function protocolBlock(id: number): ProtocolEntry[] {
 export function protocolEntry(id: number, command: string, nth = 0): ProtocolEntry {
   const found = protocolBlock(id).filter((e) => e.command === command)[nth]
   if (!found) throw new Error(`в блоке П7.${id} нет команды «${command}» (${nth})`)
+  return found
+}
+
+/** Команды блока П7.<id> файла section7-config-alias-fixes-git-runs.txt (g18b3, П7.60 и далее). */
+export function fixBlock(id: number): ProtocolEntry[] {
+  const block = fixBlocks.get(id)
+  if (!block) throw new Error(`в файле прогонов g18b3 нет блока П7.${id}`)
+  return block
+}
+
+/** Команда блока g18b3 по точному тексту (n-е вхождение, с нуля). */
+export function fixEntry(id: number, command: string, nth = 0): ProtocolEntry {
+  const found = fixBlock(id).filter((e) => e.command === command)[nth]
+  if (!found) throw new Error(`в блоке П7.${id} (g18b3) нет команды «${command}» (${nth})`)
   return found
 }
 

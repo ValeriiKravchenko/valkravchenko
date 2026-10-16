@@ -120,8 +120,11 @@ describe('пустое значение, рекурсия (П7.25)', () => {
     expect(r.result.exitCode).toBe(1)
   })
 
-  it('пустое значение с аргументами прогоном не сверено — отказ области', () => {
-    refused(run(fresh(), 'git config --global alias.q ""').state, 'git q -s')
+  // g18b3: форма сверена (section7-config-alias-fixes-git-runs.txt, П7.74), теперь это ответ git, а не отказ области.
+  it('пустое значение с аргументами — та же ошибка, что без аргументов, код 1 (П7.74)', () => {
+    const r = run(run(fresh(), 'git config --global alias.q ""').state, 'git q -s').result
+    expect(r.output).toBe("expansion of alias 'q' failed; '' is not a git command")
+    expect(r.exitCode).toBe(1)
   })
 
   it('git loop при alias.loop loop → fatal: recursive alias: loop, код 128 (section7-git-runs.txt:1200–1202)', () => {
@@ -132,9 +135,13 @@ describe('пустое значение, рекурсия (П7.25)', () => {
     expect(r.result.ok).toBe(false)
   })
 
-  it('самоссылка в других формах прогоном не сверена — отказ области', () => {
-    refused(withAlias('loop', 'loop x'), 'git loop')
-    refused(withAlias('loop', 'loop'), 'git loop -s')
+  // g18b3: самоссылка с другими словами и аргументами сверена (П7.74), это ответ git.
+  it('самоссылка с другими словами и с аргументами → fatal: recursive alias, код 128 (П7.74)', () => {
+    for (const [value, line] of [['loop x', 'git loop'], ['loop', 'git loop -s']] as const) {
+      const r = run(withAlias('loop', value), line).result
+      expect(r.output, line).toBe('fatal: recursive alias: loop')
+      expect(r.exitCode, line).toBe(128)
+    }
   })
 })
 
@@ -150,8 +157,8 @@ describe('отказы области при вызове алиаса', () => {
     expect(refused(state, 'git s2').result.output).toContain('«st»')
   })
 
-  it('значение с несуществующей командой: ответ git прогоном не сверен', () => {
-    expect(refused(withAlias('x', 'foo'), 'git x').result.output).toContain('foo')
+  it('значение, начинающееся с «-» и не с global-опцией, прогоном не сверено — отказ области', () => {
+    expect(refused({ ...fresh(), globalConfig: [{ key: 'alias.x', value: '-zz' }] }, 'git x').result.output).toContain('-zz')
   })
 
   it('алиас раскрылся в настоящую команду вне области: отказ области, речь называет раскрытие (П7.25, section7-git-runs.txt:1115–1117)', () => {
@@ -195,13 +202,11 @@ describe('git help <алиас> (П7.25, section7-git-runs.txt:1156–1161)', ()
     expect(r.state.missionsDone.aliasRun).toBe(false)
   })
 
-  it('формы без прогона — отказ области: не алиас, настоящая команда, !-алиас, пустое значение, лишние слова, -h', () => {
+  it('формы без прогона — отказ области: не алиас, настоящая команда, лишние слова, -h', () => {
     refused(fresh(), 'git help co')
     refused(fresh(), 'git help')
     refused(fresh(), 'git help status')
     refused(withAlias('status', 'log'), 'git help status')
-    refused(withAlias('hi', '!echo'), 'git help hi')
-    refused(run(fresh(), 'git config --global alias.q ""').state, 'git help q')
     refused(withAlias('co', 'checkout'), 'git help co extra')
     refused(withAlias('co', 'checkout'), 'git help -a')
   })
