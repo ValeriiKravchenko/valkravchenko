@@ -237,7 +237,7 @@ describe('отказы области (target.md:1510–1513)', () => {
 
   it('чтение, список и удаление без --global', () => {
     const state = run(fresh(), 'git config alias.zz "log -1"').state
-    for (const line of ['git config alias.zz', 'git config --get alias.zz', 'git config --list', 'git config -l', 'git config --unset alias.zz', 'git config --get-regexp alias', 'git config get alias.zz', 'git config list', 'git config unset alias.zz']) {
+    for (const line of ['git config alias.zz', 'git config --get alias.zz', 'git config --list', 'git config -l', 'git config --get-regexp alias', 'git config get alias.zz', 'git config list']) {
       refused(line, state)
     }
   })
@@ -248,8 +248,10 @@ describe('отказы области (target.md:1510–1513)', () => {
   })
 
   it('значение из нескольких слов без кавычек: речь называет шелл (target.md, место 13)', () => {
+    // g18b3: после первого слова опции и слова — значение и шаблон значения (П7.62, П7.64); ответ даёт git, речь называет шелл.
     for (const line of ['git config --global alias.lg log --oneline --graph', 'git config --global alias.lg log extra', 'git config alias.lg log extra']) {
-      expect(refused(line)).toContain('шелл')
+      const r = run(fresh(), line).result
+      expect(`${r.output} ${r.explanation}`, line).toContain('шелл')
     }
   })
 
@@ -258,19 +260,11 @@ describe('отказы области (target.md:1510–1513)', () => {
     refused('git config --global alias.x "a\\\\b"')
   })
 
-  it('имя с заглавными буквами, с точкой, пустое', () => {
-    refused('git config --global alias.St status')
+  it('имя с точкой (секция [alias "a"]) — отказ области; заглавные и «alias.» теперь ответ git (g18b3)', () => {
     refused('git config --global alias.a.b status')
-    refused('git config --global alias. status')
-  })
-
-  it('get/unset через подкоманду для отсутствующего ключа: код не сверен (target.md:1513)', () => {
-    refused('git config get --global alias.zz')
-    refused('git config unset --global alias.zz')
   })
 
   it('чтение недопустимого имени, --get-regexp с двумя аргументами, пустой шаблон, повтор ключа', () => {
-    refused('git config --global alias.1x')
     refused('git config --global --get-regexp a b')
     refused('git config --global --get-regexp ""')
     refused('git config --global --global alias.st status')

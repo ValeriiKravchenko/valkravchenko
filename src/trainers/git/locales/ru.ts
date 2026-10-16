@@ -1459,34 +1459,43 @@ export const ru = {
       shellAlias: (name: string) => `Значение начинается с «!»: при вызове git отдаст его оболочке. Оболочку тренажёр не моделирует, поэтому git ${name} здесь не выполнится.`,
       emptyAlias: (name: string) => `Git принял пустое значение: ошибка появится при вызове (git ${name}), а не при записи.`,
       unset: (key: string) => `Запись «${key}» удалена из ~/.gitconfig.`,
+      unsetLocal: (key: string) => `Запись «${key}» удалена из .git/config этого репозитория. Без --global git удаляет из локального файла, ~/.gitconfig он не трогает.`,
+      valuePatternIgnored: (pattern: string) =>
+        `Третье слово «${pattern}» git принял за шаблон значения (так выбирают, какое из значений ключа заменить). Такого ключа ещё не было, поэтому git просто записал его, а слово не использовал. Если ты хотел значение из нескольких слов, его разбил на слова шелл: бери значение в кавычки: git config alias.lg "log --oneline".`,
     },
     /** `git config` (target.md, часть IX, места 13–17). Начинаются с TRAINER_MARKER: это отказ, а не вывод git. */
     config: {
       formRefused: (form: string) =>
-        `${TRAINER_MARKER} git config ${form} — эта форма в разделе не разбирается. Здесь поддерживается: git config [--global] alias.<имя> "<команда>", git config set --global alias.<имя> "<команда>", git config --global alias.<имя> (или --get, или git config get --global), --get-regexp <шаблон>, --list (-l), git config list --global, --unset (или git config unset --global).`,
+        `${TRAINER_MARKER} git config ${form} — эта форма в разделе не разбирается. Здесь поддерживается: git config [--global] alias.<имя> "<команда>", git config set --global alias.<имя> "<команда>", git config --global alias.<имя> (или --get, или git config get --global), --get-regexp <шаблон>, --list (-l), git config list --global, --unset (или git config unset; без --global удаление идёт в .git/config).`,
       scopeRequired: (form: string) =>
-        `${TRAINER_MARKER} git config ${form} — чтение, список и удаление без --global в разделе не разбираются: записи без --global лежат в .git/config, а читать и удалять здесь можно только ~/.gitconfig. Добавь --global.`,
+        `${TRAINER_MARKER} git config ${form} — чтение и список без --global в разделе не разбираются. Без --global git читает оба файла, ~/.gitconfig и .git/config, и при одинаковом имени побеждает запись из .git/config: git config alias.st напечатает значение из ~/.gitconfig, если в .git/config такого имени нет. Здесь читать можно только ~/.gitconfig: добавь --global.`,
       keyOutOfScope: (key: string) =>
-        `${TRAINER_MARKER} ключ «${key}» — git это умеет, но в разделе разбираются только ключи alias.<имя> (имя из строчных латинских букв, цифр и дефиса, начинается с буквы).`,
-      keyReadForm: (key: string) =>
-        `${TRAINER_MARKER} чтение и удаление ключа «${key}» в разделе не разбираются: ответ git на такое имя прогонами не сверен. Ошибку «invalid key» git печатает при записи.`,
-      extraWords: (words: readonly string[]) =>
-        `${TRAINER_MARKER} git получил слова: ${words.join(' ')}. Значение алиаса из нескольких слов шелл разбивает на отдельные аргументы, и что git сделает с лишними, раздел не разбирает. Значение бери в кавычки: git config --global alias.lg "log --oneline --graph".`,
+        `${TRAINER_MARKER} ключ «${key}» в разделе не разбирается: здесь только ключи alias.<имя>. Что git ответит на другой ключ, раздел не показывает.`,
+      keySubsection: (key: string) =>
+        `${TRAINER_MARKER} в ключе «${key}» после «alias.» есть точка. Git читает такой ключ как секцию с подсекцией ([alias "имя"]) и переменную после последней точки; в разделе такие ключи не разбираются, только alias.<имя>.`,
+      keyPatternForm: (pattern: string) =>
+        `${TRAINER_MARKER} шаблон «${pattern}» содержит конструкцию регулярных выражений, которую раздел не разбирает (границы слов \\b и \\<, обратные ссылки, классы [.x.] и [=x=]). Git читает шаблон как POSIX ERE в нижнем регистре.`,
+      valuePatternForm: (pattern: string) =>
+        `${TRAINER_MARKER} шаблон значения «${pattern}» в разделе не разбирается (отрицание «!» или редкая конструкция регулярных выражений). Git читает его как POSIX ERE, регистр важен.`,
+      patternExisting: (key: string) =>
+        `${TRAINER_MARKER} ключ «${key}» в этом файле уже есть, а с третьим словом (шаблоном значения) git заменил бы подходящее значение или дописал второе. Несколько значений одного ключа в разделе не разбираются.`,
+      splitValueNote:
+        'Значение из нескольких слов разбил на отдельные слова шелл, и git получил после ключа три слова и больше: значением он считает первое, второе принимает за шаблон значения, а на четырёх и больше отвечает «no action specified». Значение из нескольких слов бери в кавычки: git config --global alias.lg "log --oneline --graph".',
       valueForm: (value: string) =>
         `${TRAINER_MARKER} значение «${value}» содержит кавычки или обратную косую черту: такие значения в разделе не разбираются.`,
-      absentKeyForm: (sub: string) =>
-        `${TRAINER_MARKER} git config ${sub} для отсутствующего ключа в разделе не разбирается. Чтобы увидеть ответ git, используй --global alias.<имя> или --global --unset alias.<имя>.`,
-      invalidKeyNote: 'Имя алиаса должно начинаться с буквы и не содержать пробелов и «!»; дефис допустим (st-short).',
+      invalidKeyNote: 'Имя алиаса git принимает из латинских букв, цифр и дефиса, начиная с буквы: st, ST2, st-short. Подчёркивание, «@», «/», пробел, «!», не-латинские буквы, а также цифру или дефис в начале git отвергает как invalid key. Регистр имени не важен.',
+      noVariableNote: 'После «alias.» нет имени: git требует ключ вида alias.<имя>.',
     },
     /** Вызов алиаса и `git help <алиас>` (места 12, 17–20). */
     alias: {
       inBothConfigs: (name: string) => `${TRAINER_MARKER} алиас «${name}» записан и в ~/.gitconfig, и в .git/config: одинаковое имя в двух конфигах в разделе не разбирается.`,
       shellAlias: (name: string, command: string) =>
         `${TRAINER_MARKER} git передал бы оболочке «${command}» (алиас «${name}» начинается с «!»). Команды оболочки тренажёр не выполняет.`,
-      emptyWithArgs: (name: string) => `${TRAINER_MARKER} алиас «${name}» пуст, и вызов с аргументами в разделе не разбирается. Вызови без аргументов: git ${name}.`,
       emptyAliasCall: (name: string) => `Алиас «${name}» записан с пустым значением: git принял запись, но при вызове раскрывать нечего, и он отвечает ошибкой.`,
-      recursive: (name: string) => `Алиас «${name}» раскрывается в самого себя, и git замечает рекурсию.`,
-      selfReference: (name: string) => `${TRAINER_MARKER} алиас «${name}» ссылается на самого себя в значении с другими словами или с аргументами при вызове: это в разделе не разбирается.`,
+      recursive: (name: string) => `Алиас «${name}» раскрывается в самого себя (первое слово значения — он же), и git замечает рекурсию. Аргументы при вызове ничего не меняют.`,
+      loop: (name: string) => `Алиасы раскрываются друг в друга по кругу: «${name}» никогда не дойдёт до настоящей команды. Метка «<==» стоит на алиасе, к которому цепочка вернулась, «==>» — на последнем.`,
+      unknownCommand: (name: string, word: string) =>
+        `Алиас «${name}» раскрылся в «${word}», а такой команды у git нет (и алиаса с таким именем тоже). Значение алиаса должно начинаться с настоящей команды git: status, log, checkout. Аргументы при вызове ничего не меняют.`,
       startsWithAlias: (name: string, other: string) =>
         `${TRAINER_MARKER} значение алиаса «${name}» начинается с другого алиаса «${other}»: такая цепочка в разделе не разбирается.`,
       unknownTarget: (name: string, target: string) =>
