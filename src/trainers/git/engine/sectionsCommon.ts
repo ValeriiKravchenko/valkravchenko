@@ -1,7 +1,9 @@
 // ============================================================
 // Общий небольшой модуль новых разделов (7 и 8): решение владельца В1. Разделы 1–6 его не
-// используют и не меняются. Сейчас здесь только форматирование `git status` для репозитория
-// без коммитов; id коммита из 40 знаков и `checkSafety` добавят следующие потоки.
+// используют и не меняются. Здесь три части:
+// - форматирование `git status` для репозитория без коммитов;
+// - id коммита из 40 знаков и его короткая форма из 7 (в выводе git показываются 7);
+// - `checkSafety`: не затрёт ли переход несохранённые правки.
 //
 // Строки вывода git — английские литералы, не переводятся (target.md, часть III, правило 2;
 // решение В4). Каждая строка и порядок строк сверены с прогонами git 2.53.0
@@ -11,6 +13,7 @@
 // только «эту форму модуль не воспроизводит» (`ok: false` с причиной), и вызывающий раздел
 // отвечает честным отказом области, а не выдуманным выводом git.
 // ============================================================
+import type { FileTree } from './types'
 
 /** Состояние файла рабочего каталога для `git status` (отслеживаемых файлов в этих разделах нет). */
 export type StatusEntryKind = 'untracked' | 'ignored'
@@ -133,4 +136,123 @@ export function formatStatusNoCommits(branch: string, entries: readonly StatusEn
     'nothing added to commit but untracked files present (use "git add" to track)',
   ]
   return { ok: true, output: out.join('\n') }
+}
+
+// ---------- id коммита: 40 шестнадцатеричных знаков ----------
+//
+// Решение В2: разделы 1–5 хранят 7 знаков и не меняются; раздел 6 держит свой `searchCommitId`.
+// Коммиты раздела 8 рождаются по ходу игры, поэтому входы те же, что у `commitHashCore` (util.ts):
+// сообщение, дерево файлов, родители и логические часы. Функция независимая: FNV-1a (не
+// криптографическая, нужен только детерминизм), пять 32-битных раундов с разной солью,
+// 5 × 8 hex = 40 знаков.
+
+function fnv1a32(input: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return h >>> 0
+}
+
+function hex8(n: number): string {
+  return n.toString(16).padStart(8, '0')
+}
+
+/** Полный id коммита: 40 знаков `[0-9a-f]`; одинаковый вход даёт одинаковый id. */
+export function fullCommitId(message: string, tree: FileTree, parents: readonly string[], clock: number): string {
+  const filesPart = Object.keys(tree)
+    .sort()
+    .map((f) => `${f}\0${tree[f]}`)
+    .join('\n')
+  const base = `${parents.join(',')}\n${message}\n${filesPart}\n${clock}`
+  let out = ''
+  for (let round = 0; round < 5; round++) out += hex8(fnv1a32(`${round}:${base}`))
+  return out
+}
+
+/** Короткая форма, как её показывает git: первые 7 знаков полного id. */
+export function shortCommitId(id: string): string {
+  return id.slice(0, 7)
+}
+
+// ---------- checkSafety: «было бы затёрто» ----------
+
+function has(obj: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
+/** Файлы, у которых HEAD, индекс и рабочее дерево не совпадают. */
+function localChangeFiles(head: FileTree, index: FileTree, working: FileTree): Set<string> {
+  const files = new Set<string>([...Object.keys(head), ...Object.keys(index), ...Object.keys(working)])
+  const dirty = new Set<string>()
+  files.forEach((f) => {
+    const h = has(head, f) ? head[f] : undefined
+    const idx = has(index, f) ? index[f] : undefined
+    const w = has(working, f) ? working[f] : undefined
+    if (idx !== h || w !== idx) dirty.add(f)
+  })
+  return dirty
+}
+
+export interface SafetyBlock {
+  /** Отслеживаемые файлы с несохранённой правкой, которую переход затёр бы («would be overwritten by checkout»). */
+  modified: string[]
+  /** Неотслеживаемые файлы, на место которых переход положил бы файл с тем же именем. */
+  untracked: string[]
+}
+
+/**
+ * Проверка «переход затрёт несохранённые правки» для checkout, switch и им подобных переходов.
+ * `resultTree` — дерево, к которому приводит переход (для перехода на ветку или коммит — дерево
+ * цели). Сигнатура и поведение те же, что у `checkSafety` в remoteRepo.ts (раздел 5): HEAD,
+ * индекс и рабочее дерево передаются отдельными деревьями.
+ *
+ * Правило: две разные проверки git (unpack-trees.c, twoway_merge()), а не одна общая.
+ *
+ * Первое: путь трогают, только если переход меняет его содержимое относительно HEAD
+ * (head !== target). Если у цели путь такой же, как в HEAD, git его не касается и никогда не
+ * блокирует, какая бы правка ни была.
+ *
+ * Второе: если путь трогать надо, проверок две.
+ * а) Застейдженная правка (index !== head). git сравнивает индекс с целью: если индекс уже равен
+ *    цели, отказа нет, даже когда поверх лежит ещё и незастейдженная правка. Если индекс с
+ *    целью не совпал, отказ.
+ * б) Незастейдженная правка (working !== index, индекс не менялся). Работает verify_uptodate():
+ *    рабочее дерево сравнивается с индексом, а не с целью. Раз индекс равен HEAD и отличается от
+ *    цели, git обязан переписать путь, и отказывает, даже если итог случайно совпал бы с целью.
+ * Обе половины сводятся к одной формуле: путь блокируется, если head !== target (переход путь
+ * трогает) и index !== target (индекс ещё не на месте цели).
+ *
+ * Частный случай: файл удалён из рабочего дерева напрямую (без `git rm`), индекс не тронут.
+ * verify_uptodate() делает lstat() и, если файла на диске нет, считает путь свежим: отказа нет
+ * никогда, и файл создаётся заново с содержимым цели. Если удаление застейджено (`git rm`),
+ * это случай (а), и отказ остаётся.
+ *
+ * Неотслеживаемые файлы (нет ни в HEAD, ни в индексе) проверяются отдельно и иначе:
+ * блокируют только если у цели есть файл с тем же именем. Остальные неотслеживаемые файлы
+ * переходят как есть. В `untracked` попадают только такие совпавшие по имени файлы.
+ *
+ * Правило сверено в разделах 2 и 5; для переходов с ветки на коммит и обратно его подтверждают
+ * прогоны О7, О16 и О24 (docs/git-trainer/reports/detached-head-git-runs.txt).
+ */
+export function checkSafety(head: FileTree, index: FileTree, working: FileTree, resultTree: FileTree): SafetyBlock {
+  const dirty = localChangeFiles(head, index, working)
+  const modified: string[] = []
+  const untracked: string[] = []
+  dirty.forEach((f) => {
+    const oldVal = has(head, f) ? head[f] : undefined
+    const newVal = has(resultTree, f) ? resultTree[f] : undefined
+    const knownToGit = has(head, f) || has(index, f)
+    if (!knownToGit) {
+      if (newVal !== undefined) untracked.push(f)
+      return
+    }
+    const idxVal = has(index, f) ? index[f] : undefined
+    const notStaged = idxVal === oldVal
+    const missingOnDisk = !has(working, f)
+    if (notStaged && missingOnDisk) return
+    if (oldVal !== newVal && idxVal !== newVal) modified.push(f)
+  })
+  return { modified: modified.sort(), untracked: untracked.sort() }
 }
