@@ -195,6 +195,11 @@ export const ru: Dictionary = {
       listName: 'Командная работа',
     },
     gitSearching: { title: 'Git: поиск', windowTitle: 'sky-os — git: поиск', listName: 'Поиск' },
+    gitPractices: {
+      title: 'Git: эффективная работа',
+      windowTitle: 'sky-os — git: эффективная работа',
+      listName: 'Эффективная работа',
+    },
     gitSectionsLabel: 'Разделы Git',
     gitSectionLink: (number, name) => `Раздел ${number}: ${name}`,
     english: {

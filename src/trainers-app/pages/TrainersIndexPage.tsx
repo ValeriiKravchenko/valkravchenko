@@ -7,11 +7,11 @@ import { useDictionary } from '../../i18n'
 import { pageTitle } from '../../i18n/pageTitle'
 import { TRAINER_PATHS } from '../paths'
 
-/** First screen of the trainers page: the two trainers and the six Git sections. */
+/** First screen of the trainers page: the two trainers and the seven Git sections. */
 export function TrainersIndexPage() {
   const t = useDictionary()
   useDocumentTitle(pageTitle(t, t.trainers.heading))
-  // The six Git sections in order: name (from the dictionary) and path.
+  // The seven Git sections in order: name (from the dictionary) and path.
   const gitSections = [
     { name: t.trainers.git.listName, to: TRAINER_PATHS.git },
     { name: t.trainers.gitBranching.listName, to: TRAINER_PATHS.branching },
@@ -19,6 +19,7 @@ export function TrainersIndexPage() {
     { name: t.trainers.gitUndoing.listName, to: TRAINER_PATHS.undoing },
     { name: t.trainers.gitCollaborating.listName, to: TRAINER_PATHS.collaborating },
     { name: t.trainers.gitSearching.listName, to: TRAINER_PATHS.searching },
+    { name: t.trainers.gitPractices.listName, to: TRAINER_PATHS.practices },
   ]
   const cardClass = 'flex flex-col items-start gap-3 rounded-button border border-border bg-window p-5'
 

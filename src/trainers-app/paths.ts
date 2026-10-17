@@ -8,5 +8,6 @@ export const TRAINER_PATHS = {
   undoing: '/git/undoing',
   collaborating: '/git/collaborating',
   searching: '/git/searching',
+  practices: '/git/practices',
   english: '/english',
 } as const
