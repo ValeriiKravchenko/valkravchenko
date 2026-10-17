@@ -16,6 +16,7 @@ const GIT_PATHS = [
   TRAINER_PATHS.undoing,
   TRAINER_PATHS.collaborating,
   TRAINER_PATHS.searching,
+  TRAINER_PATHS.practices,
 ]
 
 afterEach(() => {
@@ -40,7 +41,7 @@ describe('trainers page entry', () => {
     expect(screen.getByRole('region', { name: t.trainers.english.windowTitle })).toBeInTheDocument()
   })
 
-  it('lists the six Git sections and English with in-page links', () => {
+  it('lists the seven Git sections and English with in-page links', () => {
     renderAt('/')
     const list = screen.getByRole('list', { name: t.trainers.gitSectionsLabel })
     const links = within(list).getAllByRole('link')
@@ -51,6 +52,7 @@ describe('trainers page entry', () => {
       t.trainers.gitSectionLink(4, t.trainers.gitUndoing.listName),
       t.trainers.gitSectionLink(5, t.trainers.gitCollaborating.listName),
       t.trainers.gitSectionLink(6, t.trainers.gitSearching.listName),
+      t.trainers.gitSectionLink(7, t.trainers.gitPractices.listName),
     ])
     expect(links.map((a) => a.getAttribute('href'))).toEqual(GIT_PATHS)
     expect(screen.getByRole('link', { name: t.trainers.ctaAriaLabel(t.trainers.english.title) })).toHaveAttribute(
@@ -76,6 +78,7 @@ describe('trainers page entry', () => {
     [TRAINER_PATHS.undoing, t.trainers.gitUndoing.windowTitle],
     [TRAINER_PATHS.collaborating, t.trainers.gitCollaborating.windowTitle],
     [TRAINER_PATHS.searching, t.trainers.gitSearching.windowTitle],
+    [TRAINER_PATHS.practices, t.trainers.gitPractices.windowTitle],
     [TRAINER_PATHS.english, t.trainers.english.windowTitle],
   ])('%s opens in the window "%s" with one h1', async (path, windowTitle) => {
     renderAt(path)
@@ -94,6 +97,7 @@ describe('trainers page entry', () => {
     [TRAINER_PATHS.undoing, 'Git: отмена действий — Валерий Кравченко'],
     [TRAINER_PATHS.collaborating, 'Git: командная работа — Валерий Кравченко'],
     [TRAINER_PATHS.searching, 'Git: поиск — Валерий Кравченко'],
+    [TRAINER_PATHS.practices, 'Git: эффективная работа — Валерий Кравченко'],
     [TRAINER_PATHS.english, 'Английский — Валерий Кравченко'],
     ['/', 'Тренажёры — Валерий Кравченко'],
     ['/nope', 'Страница не найдена — Валерий Кравченко'],

@@ -26,6 +26,8 @@ export type { ParsedCommitMessage } from './practicesCommit'
 export { PRACTICES_MISSION_IDS } from './practicesTypes'
 export { formatLogOneline } from './practicesLog'
 export { parseCommitMessage } from './practicesCommit'
+export { computeCommitAdvice, GIT_EMPTY_MESSAGE_LINE } from './practicesAdvice'
+export type { AdviceItem, AdviceKind, CommitAdvice } from './practicesAdvice'
 export type { IgnoreRule, IgnoreVerdict }
 export { DEFAULT_GITIGNORE, PRACTICES_FILES } from './practicesRepo'
 
