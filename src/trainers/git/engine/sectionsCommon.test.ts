@@ -2,7 +2,8 @@
 // прогонами — practicesProtocol.test.ts; здесь свёртка каталогов по таблице части IX, места 10,
 // и границы воспроизведения.
 import { describe, expect, it } from 'vitest'
-import { checkSafety, formatStatusNoCommits, fullCommitId, shortCommitId, type StatusEntry } from './sectionsCommon'
+import { checkSafety, formatStatusNoCommits, formatStatusWithCommits, fullCommitId, shortCommitId, type StatusEntry } from './sectionsCommon'
+import { protocolBlock, protocolEntry } from './appendixProtocolKit'
 
 const e = (path: string, kind: StatusEntry['kind']): StatusEntry => ({ path, kind })
 const short = { short: true, ignored: true, uall: false }
@@ -190,5 +191,132 @@ describe('checkSafety: переход не должен затереть нес�
 
   it('правка файла, который цель не меняет, не мешает', () => {
     expect(checkSafety(master, master, { ...master, 'README.md': 'x\n' }, master)).toEqual({ modified: [], untracked: [] })
+  })
+})
+
+// ---------- git status для репозитория с коммитами ----------
+//
+// Сценарии П8.21–П8.23 (docs/git-trainer/reports/appendix-g18e-git-runs.txt) и П8.1–П8.2
+// (section8-git-runs.txt): три снимка (HEAD, индекс, рабочий каталог) и вывод git, дословно.
+
+describe('formatStatusWithCommits: сверка с прогонами', () => {
+  const A0 = 'console.log("v1");\n'
+  const A1 = 'console.log("v1"); + правка\n'
+  const A2 = 'console.log("v1"); + правка + правка\n'
+  const README = '# Мини-сайт\n'
+  const NEW = 'новый файл\n'
+  const head = { 'app.js': A0, 'README.md': README }
+
+  const long = (first: string, h: Record<string, string>, i: Record<string, string>, w: Record<string, string>): string => {
+    const r = formatStatusWithCommits(first, h, i, w, { short: false })
+    if (!r.ok) throw new Error(r.reason)
+    return r.output
+  }
+  const shortOut = (h: Record<string, string>, i: Record<string, string>, w: Record<string, string>): string => {
+    const r = formatStatusWithCommits('On branch master', h, i, w, { short: true })
+    if (!r.ok) throw new Error(r.reason)
+    return r.output
+  }
+
+  const longs = protocolBlock('П8.21').filter((e) => e.command === 'git status')
+  const shorts = protocolBlock('П8.21').filter((e) => e.command === 'git status -s' || e.command === 'git status --short')
+
+  // Последовательность П8.21: каждое состояние — после очередного шага блока.
+  const states: { name: string; index: Record<string, string>; working: Record<string, string> }[] = [
+    { name: 'чисто', index: head, working: head },
+    { name: 'правка app.js и неотслеживаемый x.txt', index: head, working: { ...head, 'app.js': A1, 'x.txt': NEW } },
+    { name: 'app.js подготовлен, x.txt неотслеживаемый', index: { ...head, 'app.js': A1 }, working: { ...head, 'app.js': A1, 'x.txt': NEW } },
+    { name: 'app.js подготовлен и изменён ещё раз (MM)', index: { ...head, 'app.js': A1 }, working: { ...head, 'app.js': A2, 'x.txt': NEW } },
+    { name: 'README.md удалён из каталога (подсказка git add/rm)', index: { ...head, 'app.js': A1 }, working: { 'app.js': A2, 'x.txt': NEW } },
+    { name: 'удаление README.md подготовлено', index: { 'app.js': A1 }, working: { 'app.js': A2, 'x.txt': NEW } },
+    { name: 'README.md создан заново: подготовленное удаление и неотслеживаемый файл вместе', index: { 'app.js': A1 }, working: { 'app.js': A2, 'README.md': NEW, 'x.txt': NEW } },
+    { name: 'git add . после этого: подготовлено всё, строки итога нет', index: { 'app.js': A2, 'README.md': NEW, 'x.txt': NEW }, working: { 'app.js': A2, 'README.md': NEW, 'x.txt': NEW } },
+  ]
+  // Для сценария 0 (чисто) в блоке П8.21 есть `git status`, но нет короткой формы.
+  const shortIndexOf = [-1, 0, 1, 2, 3, 4, 5, 6]
+
+  states.forEach((st, n) => {
+    const entry = longs[n]
+    it(`длинный вид: ${st.name} (${entry.file}:${entry.line})`, () => {
+      expect(long('On branch master', head, st.index, st.working)).toBe(entry.output)
+    })
+  })
+
+  shortIndexOf.forEach((k, n) => {
+    if (k < 0) return
+    const entry = shorts[k]
+    it(`короткий вид: ${states[n].name} (${entry.file}:${entry.line})`, () => {
+      expect(shortOut(head, states[n].index, states[n].working)).toBe(entry.output)
+    })
+  })
+
+  it('чисто, ветка с коммитами (section8-git-runs.txt:40–42, П8.1)', () => {
+    expect(long('On branch master', head, head, head)).toBe(protocolEntry('П8.1', 'git status').output)
+  })
+
+  it('первая строка приходит снаружи: HEAD detached at v1.1.0 (section8-git-runs.txt, П8.2 после checkout тега)', () => {
+    const out = long('HEAD detached at v1.1.0', head, head, head)
+    expect(out).toBe(protocolEntry('П8.2', 'git status').output)
+  })
+
+  it('короткий вид строки ветки не содержит, чистое дерево — пустой вывод', () => {
+    expect(shortOut(head, head, head)).toBe('')
+  })
+
+  it('новый файл подготовлен, затем изменён (AM) и удалён (AD) (П8.22)', () => {
+    const entries = protocolBlock('П8.22')
+    const longsAm = entries.filter((e) => e.command === 'git status')
+    const shortsAm = entries.filter((e) => e.command === 'git status -s')
+    const withX = { ...head, 'x.txt': NEW }
+    expect(shortOut(head, withX, withX)).toBe(shortsAm[0].output)
+    expect(shortOut(head, withX, { ...head, 'x.txt': NEW + 'more\n' })).toBe(shortsAm[1].output)
+    expect(long('On branch master', head, withX, { ...head, 'x.txt': NEW + 'more\n' })).toBe(longsAm[0].output)
+    expect(shortOut(head, withX, head)).toBe(shortsAm[2].output)
+    expect(long('On branch master', head, withX, head)).toBe(longsAm[1].output)
+  })
+
+  it('на feature: удаление about.html не подготовлено, затем подготовлено (П8.23)', () => {
+    const feature = { 'app.js': 'console.log("v1"); // исправлена опечатка в логе\n', 'about.html': '<h1>О проекте</h1>\n' }
+    const without = { 'app.js': feature['app.js'] }
+    const entries = protocolBlock('П8.23').filter((e) => e.command === 'git status')
+    expect(long('On branch feature', feature, feature, without)).toBe(entries[0].output)
+    expect(long('On branch feature', feature, without, without)).toBe(entries[1].output)
+  })
+
+  it('итог без подготовленного: три разных строки — правки, только неотслеживаемое, чисто', () => {
+    expect(long('On branch master', head, head, { ...head, 'app.js': A1 })).toMatch(/no changes added to commit \(use "git add" and\/or "git commit -a"\)$/)
+    expect(long('On branch master', head, head, { ...head, 'x.txt': NEW })).toMatch(/nothing added to commit but untracked files present \(use "git add" to track\)$/)
+    expect(long('On branch master', head, head, head)).toMatch(/nothing to commit, working tree clean$/)
+  })
+
+  it('с подготовленным блоком вывод кончается пустой строкой и итога нет', () => {
+    const out = long('On branch master', head, { ...head, 'app.js': A1 }, { ...head, 'app.js': A1 })
+    expect(out.endsWith('\n')).toBe(true)
+    expect(out).not.toContain('no changes added')
+    expect(out).not.toContain('nothing')
+  })
+
+  it('удалённый и добавленный файлы вместе в подготовленном — renameDetection (П8.24, П8.25)', () => {
+    const idx = { 'app.js': A0, 'y.txt': NEW }
+    expect(formatStatusWithCommits('On branch master', head, idx, idx, { short: false })).toEqual({ ok: false, reason: 'renameDetection' })
+    expect(formatStatusWithCommits('On branch master', head, idx, idx, { short: true })).toEqual({ ok: false, reason: 'renameDetection' })
+    const entry = protocolBlock('П8.25').find((e) => e.command === 'git status')
+    expect(entry?.output).toContain('renamed:')
+    const different = protocolBlock('П8.24').find((e) => e.command === 'git status')
+    expect(different?.output).toContain('deleted:    README.md')
+  })
+
+  it('удалённый и добавленный, когда одно подготовлено, а другое нет, — не переименование', () => {
+    // Удалённый подготовлен, а новый файл неотслеживаемый (П8.21: README.md создан заново).
+    expect(formatStatusWithCommits('On branch master', head, { 'app.js': A0 }, { 'app.js': A0, 'x.txt': NEW }, { short: true })).toEqual({ ok: true, output: 'D  README.md\n?? x.txt' })
+  })
+
+  it('путь с каталогом — nestedPaths: свёртку каталогов вывод не воспроизводит', () => {
+    expect(formatStatusWithCommits('On branch master', head, head, { ...head, 'dir/f': 'x' }, { short: false })).toEqual({ ok: false, reason: 'nestedPaths' })
+  })
+
+  it('порядок по байтам имени: README.md перед app.js, и в длинном, и в коротком виде', () => {
+    const out = shortOut(head, head, { 'app.js': A1, 'README.md': NEW })
+    expect(out).toBe(' M README.md\n M app.js')
   })
 })
