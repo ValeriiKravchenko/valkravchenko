@@ -256,3 +256,115 @@ export function checkSafety(head: FileTree, index: FileTree, working: FileTree, 
   })
   return { modified: modified.sort(), untracked: untracked.sort() }
 }
+
+// ---------- git status для репозитория с коммитами ----------
+
+/** Ключи `git status` для репозитория с коммитами: воспроизводятся `git status` и `git status -s` (`--short`). */
+export interface CommitStatusOptions {
+  short: boolean
+}
+
+export type CommitStatusResult =
+  | { ok: true; output: string }
+  | {
+      ok: false
+      /**
+       * - `nestedPaths` — путь с каталогом: свёртка каталогов в этом выводе не воспроизводится;
+       * - `renameDetection` — в подготовленном есть и удалённый, и добавленный файл: git ищет среди
+       *   них переименования по сходству содержимого (П8.24), модуль сходство не считает.
+       */
+      reason: 'nestedPaths' | 'renameDetection'
+    }
+
+type StagedKind = 'new file' | 'modified' | 'deleted'
+type UnstagedKind = 'modified' | 'deleted'
+
+interface FileChange {
+  path: string
+  staged: StagedKind | null
+  unstaged: UnstagedKind | null
+}
+
+const SHORT_LETTER: Record<StagedKind | UnstagedKind, string> = { 'new file': 'A', modified: 'M', deleted: 'D' }
+
+/**
+ * Вывод `git status` для репозитория с коммитами (target.md, часть X, место «Локальная работа»;
+ * прогоны П8.1, П8.3, П8.21–П8.24 в docs/git-trainer/reports/). Входы — три снимка: HEAD, индекс
+ * и рабочий каталог (путь → содержимое). `firstLine` — `On branch master` или `HEAD detached at …`
+ * (его даёт `statusFirstLine` из detachedHead.ts); в коротком выводе строки ветки нет.
+ *
+ * Порядок строк: подготовленное, неподготовленное, неотслеживаемое; внутри блока по байтам имени.
+ * Короткий вид: сначала отслеживаемые файлы по имени (`XY путь`), потом `?? путь`. Файл, удалённый
+ * из индекса и созданный заново, — подготовленное удаление и неотслеживаемый файл одновременно
+ * (П8.21). Подсказка неподготовленного блока читается `git add/rm`, если среди его файлов есть
+ * удалённый (П8.21). Если подготовленное непусто, строки итога нет и вывод кончается пустой
+ * строкой (П8.21); иначе итог — одна из трёх строк (П8.1, П8.21).
+ */
+export function formatStatusWithCommits(
+  firstLine: string,
+  head: FileTree,
+  index: FileTree,
+  working: FileTree,
+  options: CommitStatusOptions,
+): CommitStatusResult {
+  const paths = [...new Set([...Object.keys(head), ...Object.keys(index), ...Object.keys(working)])].sort(compareBytes)
+  if (paths.some((p) => p.includes('/'))) return { ok: false, reason: 'nestedPaths' }
+
+  const changes: FileChange[] = []
+  const untracked: string[] = []
+  for (const path of paths) {
+    const inHead = has(head, path)
+    const inIndex = has(index, path)
+    const inWorking = has(working, path)
+    let staged: StagedKind | null = null
+    if (inIndex && !inHead) staged = 'new file'
+    else if (!inIndex && inHead) staged = 'deleted'
+    else if (inIndex && inHead && index[path] !== head[path]) staged = 'modified'
+    let unstaged: UnstagedKind | null = null
+    if (inIndex && inWorking && index[path] !== working[path]) unstaged = 'modified'
+    else if (inIndex && !inWorking) unstaged = 'deleted'
+    if (staged !== null || unstaged !== null) changes.push({ path, staged, unstaged })
+    if (!inIndex && inWorking) untracked.push(path)
+  }
+
+  const stagedList = changes.filter((c) => c.staged !== null)
+  if (stagedList.some((c) => c.staged === 'new file') && stagedList.some((c) => c.staged === 'deleted')) {
+    return { ok: false, reason: 'renameDetection' }
+  }
+
+  if (options.short) {
+    const rows = changes.map((c) => `${c.staged === null ? ' ' : SHORT_LETTER[c.staged]}${c.unstaged === null ? ' ' : SHORT_LETTER[c.unstaged]} ${c.path}`)
+    return { ok: true, output: [...rows, ...untracked.map((p) => `?? ${p}`)].join('\n') }
+  }
+
+  const row = (kind: string, path: string) => `\t${(kind + ':').padEnd(12)}${path}`
+  const blocks: string[][] = []
+  if (stagedList.length > 0) {
+    blocks.push(['Changes to be committed:', '  (use "git restore --staged <file>..." to unstage)', ...stagedList.map((c) => row(c.staged as string, c.path))])
+  }
+  const unstagedList = changes.filter((c) => c.unstaged !== null)
+  if (unstagedList.length > 0) {
+    const addOrRm = unstagedList.some((c) => c.unstaged === 'deleted') ? 'git add/rm' : 'git add'
+    blocks.push([
+      'Changes not staged for commit:',
+      `  (use "${addOrRm} <file>..." to update what will be committed)`,
+      '  (use "git restore <file>..." to discard changes in working directory)',
+      ...unstagedList.map((c) => row(c.unstaged as string, c.path)),
+    ])
+  }
+  if (untracked.length > 0) {
+    blocks.push(['Untracked files:', '  (use "git add <file>..." to include in what will be committed)', ...untracked.map((p) => `\t${p}`)])
+  }
+  if (stagedList.length === 0) {
+    if (unstagedList.length > 0) blocks.push(['no changes added to commit (use "git add" and/or "git commit -a")'])
+    else if (untracked.length > 0) blocks.push(['nothing added to commit but untracked files present (use "git add" to track)'])
+    else blocks.push(['nothing to commit, working tree clean'])
+  }
+  let output = firstLine
+  blocks.forEach((block, i) => {
+    output += (i === 0 ? '\n' : '\n\n') + block.join('\n')
+  })
+  // С подготовленным блоком итоговой строки нет, и вывод кончается пустой строкой (П8.21).
+  if (stagedList.length > 0) output += '\n'
+  return { ok: true, output }
+}

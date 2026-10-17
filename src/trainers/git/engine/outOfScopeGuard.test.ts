@@ -34,6 +34,10 @@ export const ALLOWED: Readonly<Record<string, Readonly<Record<string, number>>>>
   'remoteCommands.ts': { 'not a valid object name': 1, 'src refspec': 2 },
   'undoCommands.ts': { 'ambiguous argument': 1, 'not a valid object name': 1, 'bad revision': 1, 'Failed to resolve': 1 },
   'inspectCommands.ts': { 'ambiguous argument': 1 },
+  // Раздел 8: все три ответа сверены прогонами (appendix-g18e-git-runs.txt, П8.27–П8.31, и section8-git-runs.txt, П8.2).
+  'appendixTags.ts': { 'Failed to resolve': 1 },
+  'appendixLocal.ts': { 'not a valid object name': 1 },
+  'appendixRevisions.ts': { 'ambiguous argument': 1 },
 }
 
 /**
