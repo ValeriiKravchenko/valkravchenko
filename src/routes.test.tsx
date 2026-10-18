@@ -46,6 +46,7 @@ describe('routes', () => {
     '/trainers/git/collaborating',
     '/trainers/git/searching',
     '/trainers/git/practices',
+    '/trainers/git/appendix',
     '/trainers/english',
     '/trainers-app',
   ])('has no trainer screen in the site router: %s opens 404', (path) => {
