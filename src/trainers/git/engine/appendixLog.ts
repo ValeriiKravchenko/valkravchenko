@@ -8,7 +8,7 @@
 import type { AppendixState } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { allStarts, commitOf, currentCommitId, decorationMap, decorationText, logOrder } from './appendixRepo'
-import { ambiguousArgumentOutput, resolveRevision } from './appendixRevisions'
+import { ambiguousArgumentOutput, reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { shortCommitId } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
@@ -35,6 +35,7 @@ export function handleLog(state: AppendixState, args: readonly string[]): Outcom
   else {
     const revision = resolveRevision(state, words[0])
     if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('log', words[0]))
+    if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128)
     if (revision.kind === 'missing') {
       // Имя файла рабочего каталога git принял бы за путь и отфильтровал бы историю по нему.
       if (has(state.working, words[0])) return refuse(state, ae.logPathFilter(words[0]))
@@ -52,5 +53,7 @@ export function handleLog(state: AppendixState, args: readonly string[]): Outcom
     const body = commit.message.split('\n').map((line) => `    ${line}`)
     return [`commit ${id}${decoration}`, '', ...body].join('\n')
   })
-  return exited(state, entries.join(oneline ? '\n' : '\n\n'), 0, oneline ? null : ru.appendix.explain.authorDateNotShown)
+  // В отсоединённом HEAD история идёт от HEAD: коммиты веток в стороне не видны (target.md, часть XII, опасное место 12).
+  const notes = [...(oneline ? [] : [ru.appendix.explain.authorDateNotShown]), ...(state.head.kind === 'detached' && !all && words.length === 0 ? [ru.appendix.explain.logDetached] : [])]
+  return exited(state, entries.join(oneline ? '\n' : '\n\n'), 0, notes.length === 0 ? null : notes.join(' '))
 }

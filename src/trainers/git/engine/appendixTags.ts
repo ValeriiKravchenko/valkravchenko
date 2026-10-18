@@ -15,7 +15,7 @@ import type { AppendixState, AppendixTag } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { currentCommitId, tagNames } from './appendixRepo'
 import { globMatches, isValidTagName } from './appendixRefs'
-import { resolveRevision } from './appendixRevisions'
+import { reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { markMission } from './appendixMissions'
 import { fullCommitId, shortCommitId } from './sectionsCommon'
 import { has } from './util'
@@ -223,6 +223,7 @@ function createTag(state: AppendixState, parsed: TagArguments): Outcome {
   if (ref !== undefined) {
     const revision = resolveRevision(state, ref)
     if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('tag', ref))
+    if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128)
     if (revision.kind === 'missing') return exited(state, `fatal: Failed to resolve '${ref}' as a valid ref.`, 128)
     // Тег на аннотированный тег — вложенный тег: git указывает на объект тега, модель так не умеет.
     if (revision.annotated !== null) return refuse(state, ae.tagNested(ref))

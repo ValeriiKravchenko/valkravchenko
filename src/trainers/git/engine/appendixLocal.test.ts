@@ -364,7 +364,7 @@ describe('git branch', () => {
   })
 
   it('ссылка в записи, которую модель не разбирает, — отказ области', () => {
-    const r = run(fresh(), 'git branch x HEAD@{1}').result
+    const r = run(fresh(), 'git branch x HEAD@{1}~1').result
     refusal(r.output)
     expect(r.exitCode).toBeUndefined()
   })
@@ -375,8 +375,8 @@ describe('git branch', () => {
     refusal(run(tagged, 'git branch v1').result.output)
   })
 
-  it('ключи (-d, -D, -a, -v, --list) и три слова — отказ области', () => {
-    for (const form of ['git branch -d feature', 'git branch -a', 'git branch -v', 'git branch --list', 'git branch a b c']) {
+  it('ключи (-a, -v, --list, -d вместе с -D, --delete) и три слова — отказ области', () => {
+    for (const form of ['git branch -d -D feature', 'git branch --delete feature', 'git branch -a', 'git branch -v', 'git branch --list', 'git branch a b c']) {
       const r = run(fresh(), form).result
       expect(r.exitCode, form).toBeUndefined()
       refusal(r.output)
@@ -523,20 +523,24 @@ describe('git checkout', () => {
     expect(r.state.reflog[0].message).toBe(`checkout: moving from ${base} to master`)
   })
 
-  it('тег, id, HEAD~1, HEAD — отсоединили бы HEAD: отказ области, HEAD на месте', () => {
+  it(`тег, id, HEAD~1 отсоединяют HEAD с блоком Note, ветки на месте; HEAD с ветки ничего не меняет (${where('П8.19', 'git checkout master', 0)}, ${where('П8.57', 'git checkout HEAD')})`, () => {
     const s = runAll(fresh(), ['git tag v1.0.0 HEAD~1'])
     const base = idOf(s, seed.baseMessage)
-    for (const target of ['v1.0.0', base.slice(0, 7), 'HEAD~1', 'HEAD']) {
+    for (const target of ['v1.0.0', base.slice(0, 7), 'HEAD~1']) {
       const r = run(s, `git checkout ${target}`)
-      expect(r.result.exitCode, target).toBeUndefined()
-      refusal(r.result.output)
-      expect(r.result.output).toContain('отсоедин')
-      expect(r.state.head).toEqual(s.head)
+      expect(r.result.exitCode, target).toBe(0)
+      expect(r.result.output, target).toContain(`Note: switching to '${target}'.`)
+      expect(r.state.head, target).toEqual({ kind: 'detached', id: base })
+      expect(r.state.branches, target).toEqual(s.branches)
     }
+    const stay = run(s, 'git checkout HEAD')
+    expect(stay.result).toMatchObject({ ok: true, output: '', exitCode: 0 })
+    expect(stay.state.head).toEqual(s.head)
+    expect(stay.state.reflog).toEqual(s.reflog)
   })
 
-  it('выражение, которое модель не разбирает (HEAD@{1}), ключи, без аргументов, два слова — отказ области', () => {
-    for (const form of ['git checkout HEAD@{1}', 'git checkout -f feature', 'git checkout --detach', 'git checkout -', 'git checkout', 'git checkout feature master']) {
+  it('ключи, без аргументов, два слова, выражение вне грамматики — отказ области', () => {
+    for (const form of ['git checkout HEAD@{1}~1', 'git checkout -f feature', 'git checkout --detach -f', 'git checkout - x', 'git checkout', 'git checkout feature master']) {
       const r = run(fresh(), form).result
       expect(r.exitCode, form).toBeUndefined()
       refusal(r.output)

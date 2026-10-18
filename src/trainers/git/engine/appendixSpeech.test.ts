@@ -23,7 +23,10 @@ describe('ru.appendix', () => {
       a.errors.revisionForm('log', 'HEAD@{1}'),
       a.errors.checkoutFromRevision('master -- app.js'),
       a.errors.checkoutDuplicate,
-      a.errors.checkoutDetach('v1'),
+      a.errors.switchRefForm('HEAD'),
+      a.errors.branchDeleteDuplicate,
+      a.errors.detachedCommandOutOfScope('merge'),
+      a.errors.detachedCommandOutOfScope('pull'),
       a.errors.commitNeedsMessage,
       a.errors.refNameForm('тега', 'a/b'),
       a.errors.branchNameIsTag('v1'),
@@ -49,6 +52,71 @@ describe('ru.appendix', () => {
       expect(text.startsWith('[тренажёр]')).toBe(false)
       expect(text).not.toMatch(/^(fatal|error|usage|hint|warning):/)
     }
+  })
+
+  it('речь отсоединённого HEAD и журнала не начинается с метки и не выглядит как вывод git (target.md, часть XII, «Речь»)', () => {
+    const e = a.explain
+    const texts = [
+      e.detachedEntered,
+      e.previousPosition,
+      e.leavingBehind(1, 'abc1234'),
+      e.leavingBehind(2, 'abc1234'),
+      e.leavingBehind(5, 'abc1234'),
+      e.detachedBranchCreated('rescue'),
+      e.carriedFiles,
+      e.switchBranchExpected,
+      e.checkoutRefusedEdit,
+      e.checkoutHeadStays,
+      e.reflogShortEntries,
+      e.reflogShown,
+      e.commitDetached,
+      e.statusDetachedAt,
+      e.statusDetachedFrom,
+      e.statusRefsHeads,
+      e.statusNameLost,
+      e.branchListDetached,
+      e.logDetached,
+      e.stashNoBranch,
+      e.branchNotFound,
+      e.branchNotMerged(false),
+      e.branchNotMerged(true),
+      e.branchDeleted,
+      e.branchDeletedUnderHead,
+    ]
+    for (const text of texts) {
+      expect(text.startsWith('[тренажёр]')).toBe(false)
+      expect(text).not.toMatch(/^(fatal|error|usage|hint|warning):/)
+    }
+  })
+
+  it('смысл речи по таблице части XII: HEAD — указатель, Previous HEAD position не ошибка, три пути спасения, номера HEAD@{n} сдвигаются, switch только на ветки', () => {
+    const e = a.explain
+    expect(e.detachedEntered).toContain('указывает прямо на коммит, а не на ветку')
+    expect(e.detachedEntered).toContain('никуда не сдвинулись')
+    expect(e.previousPosition).toContain('не ошибка')
+    const paths = e.leavingBehind(2, 'abc1234')
+    for (const piece of ['git switch -c', 'git branch имя abc1234', 'git reflog', 'HEAD@{1}', 'сдвигаются']) expect(paths).toContain(piece)
+    expect(e.reflogShown).toContain('n перемещений назад, а не n коммитов назад')
+    expect(e.switchBranchExpected).toContain('только на ветки')
+    expect(e.switchBranchExpected).toContain('--detach')
+    expect(e.branchDeletedUnderHead).toContain('HEAD указывает на коммит, а не на ветку')
+    expect(e.statusDetachedFrom).toContain('Названо то место, куда поставили')
+    expect(e.stashNoBranch).toContain('(no branch)')
+  })
+
+  it('число коммитов склоняется: 1 коммит, 2 коммита, 5 коммитов, 11 коммитов, 21 коммит', () => {
+    const word = (n: number) => a.explain.leavingBehind(n, 'x').match(/Брошено: \d+ (\S+)\./)?.[1]
+    expect([1, 2, 5, 11, 21, 22, 25].map(word)).toEqual(['коммит', 'коммита', 'коммитов', 'коммитов', 'коммит', 'коммита', 'коммитов'])
+  })
+
+  it('списки команд в отказах называют switch и reflog, а допустимые формы — переходы и -d', () => {
+    expect(a.errors.commandOutOfScope('rebase')).toContain('switch')
+    expect(a.errors.commandOutOfScope('rebase')).toContain('reflog')
+    expect(a.errors.gitUsageNoArgs).toContain('switch')
+    expect(a.allowed.switch).toContain('--detach')
+    expect(a.allowed.checkout).toContain('--detach')
+    expect(a.allowed.branch).toContain('-d')
+    expect(a.errors.revisionForm('log', 'x')).toContain('HEAD@{n}')
   })
 
   it('речь исходной версии, которая учила неправде, убрана (target.md, место 2 и место 20)', () => {

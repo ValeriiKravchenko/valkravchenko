@@ -1,5 +1,5 @@
 // ============================================================
-// Раздел 8 git-тренажёра, шаг A: какие команды раздел выполняет и какие настоящие команды git
+// Раздел 8 git-тренажёра, шаги A и B (первая часть): какие команды раздел выполняет и какие настоящие команды git
 // знает. Список настоящих команд — данные про git, а не про раздел 1 (см. branchScope.ts).
 // Формы внутри выполняемых команд, которые раздел не разбирает, получают отказ области в
 // обработчиках (appendix*.ts) с меткой тренажёра (часть III, правило 1).
@@ -7,7 +7,7 @@
 import { REAL_GIT_COMMANDS } from './branchScope'
 
 /** Команды, которые раздел выполняет. */
-export const HANDLED_COMMANDS = ['status', 'add', 'commit', 'branch', 'checkout', 'diff', 'show', 'log', 'tag', 'stash'] as const
+export const HANDLED_COMMANDS = ['status', 'add', 'commit', 'branch', 'checkout', 'switch', 'diff', 'show', 'log', 'tag', 'stash', 'reflog'] as const
 export type HandledCommand = (typeof HANDLED_COMMANDS)[number]
 
 export function isHandledCommand(name: string): name is HandledCommand {

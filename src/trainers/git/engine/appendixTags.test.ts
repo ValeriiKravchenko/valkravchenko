@@ -241,7 +241,7 @@ describe('отказ области вместо выдуманного отве
   })
 
   it('ссылка, которую модель не разбирает, — отказ области', () => {
-    refusal(run(fresh(), 'git tag v1 HEAD@{1}').result.output)
+    refusal(run(fresh(), 'git tag v1 HEAD@{1}~1').result.output)
   })
 
   it('тот же тег дважды в -d — отказ области (git ответил особой ошибкой ссылок)', () => {

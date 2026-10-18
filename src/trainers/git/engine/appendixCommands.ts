@@ -1,8 +1,9 @@
 // ============================================================
-// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаг A: разбор командной строки и
-// диспетчер. Две стороны, как в остальных разделах: шелл (shell.ts: слова, кавычки, голая `*`) и
+// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (первая часть): разбор командной
+// строки и диспетчер. Две стороны, как в остальных разделах: шелл (shell.ts: слова, кавычки, голая `*`) и
 // git (appendix*.ts). Строки `fatal: …`, `error: …`, `hint: …` — буквальный вывод git 2.53.0 из
-// docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt, appendix-g18e2-git-runs.txt), не переводятся и в
+// docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt, appendix-g18e2-git-runs.txt,
+// appendix-g18g-git-runs.txt, detached-head-git-runs.txt), не переводятся и в
 // словарь не идут. Всё, что говорит сам тренажёр, лежит в ru.appendix и начинается с метки
 // [тренажёр] (target.md, часть III, правило 2).
 //
@@ -12,7 +13,9 @@
 // ============================================================
 import type { AppendixState, CommandResult } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
-import { handleAdd, handleBranch, handleCheckout, handleCommit, handleDiff, handleStatus } from './appendixLocal'
+import { handleAdd, handleBranch, handleCommit, handleDiff, handleStatus } from './appendixLocal'
+import { handleCheckout, handleSwitch } from './appendixSwitch'
+import { handleReflog } from './appendixReflog'
 import { handleLog } from './appendixLog'
 import { handleShow } from './appendixShow'
 import { handleStash } from './appendixStash'
@@ -58,6 +61,8 @@ function runHandled(state: AppendixState, sub: HandledCommand, args: readonly st
       return handleBranch(state, args)
     case 'checkout':
       return handleCheckout(state, args)
+    case 'switch':
+      return handleSwitch(state, args)
     case 'diff':
       return handleDiff(state, args)
     case 'show':
@@ -68,6 +73,8 @@ function runHandled(state: AppendixState, sub: HandledCommand, args: readonly st
       return handleTag(state, args)
     case 'stash':
       return handleStash(state, args)
+    case 'reflog':
+      return handleReflog(state, args)
   }
 }
 
@@ -100,6 +107,8 @@ export function executeAppendixCommand(state: AppendixState, rawInput: string): 
   const args = words.slice(2)
 
   if (isHandledCommand(sub)) return respond(runHandled(state, sub, args))
+  // merge и pull в отсоединённом HEAD вне области, но их исход сверен прогоном (О6): речь называет его.
+  if (state.head.kind === 'detached' && (sub === 'merge' || sub === 'pull')) return respond(refuse(state, ae.detachedCommandOutOfScope(sub)))
   if (isRealGitCommand(sub)) return respond(refuse(state, ae.commandOutOfScope(sub)))
   return respond(exited(state, gitNotACommand(sub), 1))
 }

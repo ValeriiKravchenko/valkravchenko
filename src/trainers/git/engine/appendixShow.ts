@@ -8,7 +8,7 @@
 import type { AppendixState } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { commitOf, commitTree, currentCommitId, decorationMap, decorationText, diffTrees, mayContainRename } from './appendixRepo'
-import { ambiguousArgumentOutput, resolveRevision } from './appendixRevisions'
+import { ambiguousArgumentOutput, reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { markMission } from './appendixMissions'
 import { has } from './util'
 import { ru } from '../locales/ru'
@@ -26,6 +26,7 @@ export function handleShow(state: AppendixState, args: readonly string[]): Outco
   if (args.length === 1) {
     const revision = resolveRevision(state, args[0])
     if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('show', args[0]))
+    if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128)
     if (revision.kind === 'missing') {
       if (has(state.working, args[0])) return refuse(state, ae.showPathFilter(args[0]))
       return exited(state, ambiguousArgumentOutput(args[0]), 128)
