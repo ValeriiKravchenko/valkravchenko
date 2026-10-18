@@ -7,7 +7,7 @@
 import { REAL_GIT_COMMANDS } from './branchScope'
 
 /** Команды, которые раздел выполняет. */
-export const HANDLED_COMMANDS = ['status', 'add', 'commit', 'branch', 'checkout', 'diff', 'show', 'log', 'tag'] as const
+export const HANDLED_COMMANDS = ['status', 'add', 'commit', 'branch', 'checkout', 'diff', 'show', 'log', 'tag', 'stash'] as const
 export type HandledCommand = (typeof HANDLED_COMMANDS)[number]
 
 export function isHandledCommand(name: string): name is HandledCommand {

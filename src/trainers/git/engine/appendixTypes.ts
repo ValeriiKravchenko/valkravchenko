@@ -33,10 +33,26 @@ export interface ReflogEntry {
   message: string
 }
 
-/** Миссии шага A, которые закрывает эта часть: 1 — лёгкий тег, 2 — `git show` аннотированного тега. */
-export type AppendixMissionId = 'lightTag' | 'annotatedShow'
+/**
+ * Тайник. `id` — 40 знаков; `text` — то, что `git stash list` печатает после `stash@{n}: `
+ * (`WIP on master: 9e73ccb Добавить README` или `On master: <сообщение>`); `branch` — метка ветки в
+ * этом тексте (`master` или `(no branch)`); `base` — коммит HEAD в момент сохранения. `index` и
+ * `work` — сохранённые индекс и рабочие версии отслеживаемых файлов: путь → содержимое; файл,
+ * удалённый из рабочего каталога, в `work` отсутствует.
+ */
+export interface AppendixStash {
+  id: string
+  text: string
+  branch: string
+  base: string
+  index: FileTree
+  work: FileTree
+}
 
-export const APPENDIX_MISSION_IDS: readonly AppendixMissionId[] = ['lightTag', 'annotatedShow']
+/** Миссии шага A: 1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное. */
+export type AppendixMissionId = 'lightTag' | 'annotatedShow' | 'stashSave' | 'stashRestore'
+
+export const APPENDIX_MISSION_IDS: readonly AppendixMissionId[] = ['lightTag', 'annotatedShow', 'stashSave', 'stashRestore']
 
 /** Миссия для показа: текст и подсказка из словаря, отметка выполнения. */
 export interface AppendixMissionView {
@@ -67,9 +83,11 @@ export interface AppendixState {
   tags: Record<string, AppendixTag>
   /** Журнал HEAD, новая запись первой. */
   reflog: ReflogEntry[]
+  /** Стопка тайников, свежий первым (`stash@{0}`). */
+  stashes: AppendixStash[]
   history: HistoryEntry[]
   /** Засчитанные миссии; значение, ставшее `true`, остаётся им (часть I, п. 2). */
   missionsDone: Record<AppendixMissionId, boolean>
-  /** Логические часы: растут на единицу при каждом новом коммите и каждом новом объекте аннотированного тега. */
+  /** Логические часы: растут на единицу при каждом новом коммите, каждом новом объекте аннотированного тега и каждом новом тайнике. */
   clock: number
 }

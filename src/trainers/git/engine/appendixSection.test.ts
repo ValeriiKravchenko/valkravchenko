@@ -116,13 +116,13 @@ describe('ветки, коммиты и теги для списка', () => {
 })
 
 describe('миссии', () => {
-  it('две миссии шага A, засчитываются по событию', () => {
-    expect(APPENDIX_MISSION_IDS).toEqual(['lightTag', 'annotatedShow'])
+  it('четыре миссии шага A, засчитываются по событию', () => {
+    expect(APPENDIX_MISSION_IDS).toEqual(['lightTag', 'annotatedShow', 'stashSave', 'stashRestore'])
     let s = createAppendixSection()
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, false, false])
     s = runAppendixCommand(s, 'git tag v1').state
     s = runAppendixCommand(s, 'git tag -a v2 -m "Релиз"').state
     s = runAppendixCommand(s, 'git show v2').state
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([true, true])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([true, true, false, false])
   })
 })

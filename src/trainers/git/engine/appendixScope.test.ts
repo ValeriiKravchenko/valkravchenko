@@ -3,12 +3,12 @@ import { HANDLED_COMMANDS, isHandledCommand, isRealGitCommand } from './appendix
 
 describe('область раздела 8, шаг A', () => {
   it('команды, которые раздел выполняет', () => {
-    expect([...HANDLED_COMMANDS]).toEqual(['status', 'add', 'commit', 'branch', 'checkout', 'diff', 'show', 'log', 'tag'])
+    expect([...HANDLED_COMMANDS]).toEqual(['status', 'add', 'commit', 'branch', 'checkout', 'diff', 'show', 'log', 'tag', 'stash'])
     for (const name of HANDLED_COMMANDS) expect(isHandledCommand(name), name).toBe(true)
   })
 
-  it('команды шага B, тайники и конфликты в список выполняемых не входят', () => {
-    for (const name of ['stash', 'cherry-pick', 'reflog', 'rebase', 'reset', 'switch', 'restore', 'merge', 'bisect', 'push', 'init']) expect(isHandledCommand(name), name).toBe(false)
+  it('команды шага B и конфликты в список выполняемых не входят', () => {
+    for (const name of ['cherry-pick', 'reflog', 'rebase', 'reset', 'switch', 'restore', 'merge', 'bisect', 'push', 'init']) expect(isHandledCommand(name), name).toBe(false)
   })
 
   it('настоящие команды git: выполняемые, из общего списка и собственный набор (git help -a, 2.53.0)', () => {
