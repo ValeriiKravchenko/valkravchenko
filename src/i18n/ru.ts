@@ -200,6 +200,11 @@ export const ru: Dictionary = {
       windowTitle: 'sky-os — git: эффективная работа',
       listName: 'Эффективная работа',
     },
+    gitAppendix: {
+      title: 'Git: приложение',
+      windowTitle: 'sky-os — git: приложение',
+      listName: 'Приложение',
+    },
     gitSectionsLabel: 'Разделы Git',
     gitSectionLink: (number, name) => `Раздел ${number}: ${name}`,
     english: {

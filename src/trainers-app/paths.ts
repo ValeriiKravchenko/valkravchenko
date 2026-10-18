@@ -9,5 +9,6 @@ export const TRAINER_PATHS = {
   collaborating: '/git/collaborating',
   searching: '/git/searching',
   practices: '/git/practices',
+  appendix: '/git/appendix',
   english: '/english',
 } as const

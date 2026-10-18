@@ -125,6 +125,7 @@ export interface Dictionary {
     gitCollaborating: GitScreenText
     gitSearching: GitScreenText
     gitPractices: GitScreenText
+    gitAppendix: GitScreenText
     /** Accessible name of the list of Git sections on the list of trainers. */
     gitSectionsLabel: string
     /** Visible link text for a Git section: its number and name. */

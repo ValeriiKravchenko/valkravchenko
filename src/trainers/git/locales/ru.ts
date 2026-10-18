@@ -1799,6 +1799,44 @@ export const ru = {
         'После git commit настоящий git печатает сводку изменений (сколько файлов и строк затронуто). Тренажёр её опускает.',
       ],
     },
+
+    /** Тексты экрана шага A (структура как у `practices.ui`). */
+    ui: {
+      heading: 'Git-тренажёр',
+      subheading: 'Раздел 8 — приложение',
+      intro:
+        'Небольшой репозиторий: ветки master и feature, четыре коммита. Ставь теги на коммиты, смотри подписи в git log и содержимое тега в git show, прячь незаконченную правку в тайник и возвращай её обратно. Файлы можно менять кнопками рядом с терминалом.',
+      resetButton: '↺ Начать раздел заново',
+
+      terminal: {
+        title: 'Терминал раздела 8',
+        placeholder: 'git tag v1.0.0',
+        emptyHistory: 'введи команду ниже и нажми Enter',
+        inputAriaLabel: 'Команда терминала раздела 8',
+        /** @param branch имя ветки, на которой стоит HEAD. */
+        prompt: (branch: string) => `(${branch}) $`,
+        /** @param shortId первые 7 знаков id коммита, на котором стоит отсоединённый HEAD. */
+        promptDetached: (shortId: string) => `(HEAD detached at ${shortId}) $`,
+      },
+
+      commitGraph: {
+        title: 'Граф коммитов',
+      },
+
+      files: {
+        title: 'Файлы в рабочем каталоге',
+        empty: 'Файлов пока нет.',
+        newFileNameLabel: 'Имя нового файла',
+        newFileNamePlaceholder: 'notes.txt',
+        createButton: 'Создать файл',
+        editButton: '✎ изменить',
+        deleteButton: '🗑 удалить из каталога',
+      },
+
+      missions: {
+        title: 'Что попробовать',
+      },
+    },
   },
 
   /**
