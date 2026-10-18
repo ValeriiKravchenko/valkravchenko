@@ -18,7 +18,7 @@ import { has } from './util'
 export type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry }
 export { APPENDIX_MISSION_IDS } from './appendixTypes'
 
-/** Начальное состояние: `master` и `feature`, 4 коммита, HEAD на `master`, чистый рабочий каталог, тегов нет. */
+/** Начальное состояние: `master` и `feature`, 4 коммита, HEAD на `master`, чистый рабочий каталог, тегов и тайников нет. */
 export function createAppendixSection(): AppendixState {
   return createAppendixSectionRaw()
 }
@@ -122,7 +122,31 @@ export function getTags(state: AppendixState): TagView[] {
   })
 }
 
-/** Миссии шага A (1 — лёгкий тег, 2 — `git show` аннотированного тега); засчитанная остаётся засчитанной. */
+/** Тайник для списка в экране: подпись `stash@{n}`, как её печатает `git stash list`, и текст записи. */
+export interface StashView {
+  /** `stash@{0}` у вершины стопки. */
+  ref: string
+  /** Полный id (40 знаков) и первые 7 знаков. */
+  id: string
+  shortId: string
+  /** Текст записи: `WIP on master: 9e73ccb Добавить README` или `On master: <сообщение>`. */
+  text: string
+  /** Метка ветки, на которой тайник сделан: `master` или `(no branch)`. */
+  branch: string
+}
+
+/** Стопка тайников, свежий первым (`stash@{0}`). */
+export function getStashes(state: AppendixState): StashView[] {
+  return state.stashes.map((stash, i) => ({
+    ref: `stash@{${i}}`,
+    id: stash.id,
+    shortId: shortCommitId(stash.id),
+    text: stash.text,
+    branch: stash.branch,
+  }))
+}
+
+/** Миссии шага A (1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное); засчитанная остаётся засчитанной. */
 export function getAppendixMissions(state: AppendixState): AppendixMissionView[] {
   return getAppendixMissionsRaw(state)
 }

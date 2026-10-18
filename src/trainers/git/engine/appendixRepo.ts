@@ -52,8 +52,9 @@ export function createAppendixSection(): AppendixState {
     working: { ...readmeTree },
     tags: {},
     reflog,
+    stashes: [],
     history: [],
-    missionsDone: { lightTag: false, annotatedShow: false },
+    missionsDone: { lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false },
     clock: 4,
   }
 }

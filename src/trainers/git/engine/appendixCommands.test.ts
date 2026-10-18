@@ -128,28 +128,38 @@ describe('git без подкоманды, глобальные ключи, не
   })
 })
 
-// Тайники и `git checkout -- <файл>` в этой части раздела отвечают отказом области. Отдельная
-// часть раздела заменит их работающими формами, поэтому эти проверки переписываются вместе с ней.
-describe('отказ области для тайников и checkout -- файл (заменяется работающими формами)', () => {
-  it('git stash во всех формах — отказ области, состояние репозитория не меняется', () => {
+// Тайники и `git checkout -- <файл>` работают (appendixStash.test.ts, appendixRestore.test.ts); здесь —
+// что диспетчер их передаёт обработчикам и что формы вне области остаются отказом области.
+describe('тайники и checkout -- файл в диспетчере', () => {
+  it('git stash во всех формах области отвечает выводом git с кодом возврата, а не отказом области', () => {
     const s = fresh()
     const edited = { ...s, working: { ...s.working, 'app.js': 'q\n' } }
-    for (const form of ['git stash', 'git stash -m "msg"', 'git stash push -m msg', 'git stash save msg', 'git stash list', 'git stash apply', 'git stash pop', 'git stash drop', 'git stash clear', 'git stash show', 'git stash -u']) {
+    for (const form of ['git stash', 'git stash -m "msg"', 'git stash push -m msg', 'git stash save msg', 'git stash list', 'git stash apply', 'git stash pop', 'git stash drop', 'git stash clear']) {
       const r = run(edited, form)
-      expect(r.result.output, form).toBe(ru.appendix.errors.stash)
-      expect(r.result.exitCode).toBeUndefined()
-      expect(r.state.working, form).toEqual(edited.working)
-      expect(r.state.commits).toEqual(edited.commits)
+      expect(r.result.exitCode, form).toBeDefined()
+      expect(r.result.output.startsWith('[тренажёр]'), form).toBe(false)
     }
   })
 
-  it('git checkout -- app.js — отказ области, файл не восстановлен', () => {
+  it('git stash вне области (show, -u, branch, --index) — отказ области, состояние репозитория не меняется', () => {
+    const s = fresh()
+    const edited = { ...s, working: { ...s.working, 'app.js': 'q\n' } }
+    for (const form of ['git stash show', 'git stash -u', 'git stash branch x', 'git stash pop --index']) {
+      const r = run(edited, form)
+      expect(r.result.output, form).toBe(ru.appendix.errors.form('stash', form.replace('git stash ', ''), ru.appendix.allowed.stash))
+      expect(r.result.exitCode).toBeUndefined()
+      expect(r.state.working, form).toEqual(edited.working)
+      expect(r.state.commits).toEqual(edited.commits)
+      expect(r.state.stashes).toEqual([])
+    }
+  })
+
+  it('git checkout -- app.js возвращает файл из индекса, а не отвечает отказом области', () => {
     const s = fresh()
     const edited = { ...s, working: { ...s.working, 'app.js': 'q\n' } }
     const r = run(edited, 'git checkout -- app.js')
-    refusal(r.result.output)
-    expect(r.result.exitCode).toBeUndefined()
-    expect(r.state.working['app.js']).toBe('q\n')
+    expect(r.result).toMatchObject({ output: '', exitCode: 0 })
+    expect(r.state.working['app.js']).toBe(s.working['app.js'])
   })
 })
 

@@ -2,7 +2,7 @@
 // Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаг A: разбор командной строки и
 // диспетчер. Две стороны, как в остальных разделах: шелл (shell.ts: слова, кавычки, голая `*`) и
 // git (appendix*.ts). Строки `fatal: …`, `error: …`, `hint: …` — буквальный вывод git 2.53.0 из
-// docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt), не переводятся и в
+// docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt, appendix-g18e2-git-runs.txt), не переводятся и в
 // словарь не идут. Всё, что говорит сам тренажёр, лежит в ru.appendix и начинается с метки
 // [тренажёр] (target.md, часть III, правило 2).
 //
@@ -15,6 +15,7 @@ import { exited, refuse, type Outcome } from './appendixOutcome'
 import { handleAdd, handleBranch, handleCheckout, handleCommit, handleDiff, handleStatus } from './appendixLocal'
 import { handleLog } from './appendixLog'
 import { handleShow } from './appendixShow'
+import { handleStash } from './appendixStash'
 import { handleTag } from './appendixTags'
 import { globMatches } from './appendixRefs'
 import { isHandledCommand, isRealGitCommand, type HandledCommand } from './appendixScope'
@@ -65,6 +66,8 @@ function runHandled(state: AppendixState, sub: HandledCommand, args: readonly st
       return handleLog(state, args)
     case 'tag':
       return handleTag(state, args)
+    case 'stash':
+      return handleStash(state, args)
   }
 }
 
@@ -97,7 +100,6 @@ export function executeAppendixCommand(state: AppendixState, rawInput: string): 
   const args = words.slice(2)
 
   if (isHandledCommand(sub)) return respond(runHandled(state, sub, args))
-  if (sub === 'stash') return respond(refuse(state, ae.stash))
   if (isRealGitCommand(sub)) return respond(refuse(state, ae.commandOutOfScope(sub)))
   return respond(exited(state, gitNotACommand(sub), 1))
 }

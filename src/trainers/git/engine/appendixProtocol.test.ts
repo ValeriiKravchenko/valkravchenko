@@ -41,3 +41,36 @@ describe('блоки протокола П8.21–П8.40 проигрываютс
     for (let n = 21; n <= 40; n++) expect(protocolBlock(`П8.${n}`).length, `П8.${n}`).toBeGreaterThan(0)
   })
 })
+
+// Блоки П8.41–П8.56 лежат в docs/git-trainer/reports/appendix-g18e2-git-runs.txt. Шаги, на которых
+// настоящий git работает, а раздел отвечает отказом области, названы в `refused`; шаги после них
+// проигрываются только там, где состояние не зависит от отказа.
+describe('блоки протокола П8.41–П8.56 проигрываются на движке', () => {
+  it('П8.41: ссылки stash@{n} и номер n, подпись в Dropped', () => expectReplay('П8.41'))
+  it('П8.42: слово вместо ссылки при непустой стопке', () => expectReplay('П8.42'))
+  it('П8.43: пустая стопка', () => expectReplay('П8.43'))
+  it('П8.44: слово, которое называет коммит, и слово, которое не называет ничего', () => expectReplay('П8.44'))
+  it('П8.45: создание тайника; сообщение с лишними пробелами и -u — отказ области', () => {
+    const lines = ['git stash save "a  b"', 'git stash push -m "  пробелы  "', 'git stash -u foo']
+    const refusedAt = protocolBlock('П8.45')
+      .map((e, i) => (lines.includes(e.command) ? i : -1))
+      .filter((i) => i >= 0)
+    // Шаги после отказа сверять нельзя: git сохранил тайник, раздел нет. Блок проигрывается до первого отказа.
+    expectReplay('П8.45', { until: refusedAt[0] })
+    expect(refusedAt).toHaveLength(3)
+  })
+  it('П8.47: что попадает в тайник', () => expectReplay('П8.47'))
+  it('П8.49: apply и pop при правке в другом файле и в том же файле', () => expectReplay('П8.49'))
+  it('П8.50: подготовленная правка того же файла, новый файл в тайнике, неотслеживаемый файл с тем же именем', () => expectReplay('П8.50'))
+  it('П8.51: те же правки уже в коммите', () => expectReplay('П8.51'))
+  it('П8.52: два файла в отказе; тайник на другой ветке без конфликта', () => expectReplay('П8.52'))
+  it('П8.53: checkout -- файл; checkout <ссылка> -- файл — отказ области', () => expectReplay('П8.53', { refused: (e) => e.command === 'git checkout master -- app.js' }))
+  it('П8.54: checkout -- файл; status с удалённым и новым файлом вместе — отказ области', () => expectReplay('П8.54', { refused: (e, i) => e.command === 'git status --short' && i === protocolBlock('П8.54').length - 1 }))
+  it('П8.55: checkout <файл> без --; дубликат и ссылка — отказ области', () => expectReplay('П8.55', { refused: (e) => e.command === 'git checkout app.js app.js' || e.command === 'git checkout master app.js' }))
+  it('П8.56: имя файла совпадает с именем ветки', () => expectReplay('П8.56'))
+
+  it('в протоколе есть все блоки П8.41–П8.56', () => {
+    for (let n = 41; n <= 56; n++) expect(protocolBlock(`П8.${n}`).length, `П8.${n}`).toBeGreaterThan(0)
+  })
+})
+

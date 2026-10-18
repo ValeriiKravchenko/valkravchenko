@@ -544,18 +544,31 @@ describe('git checkout', () => {
   })
 })
 
-// Восстановление файла командой checkout в этой части раздела не разбирается. Отдельная часть
-// раздела заменит отказ работающей формой, поэтому эта проверка переписывается вместе с ней.
-describe('отказ области для checkout файла (заменяется работающей формой)', () => {
-  it('имя файла и `--` — восстановление файла: отказ области, файл не восстановлен', () => {
+// Восстановление файла командой checkout разобрано в appendixRestore.test.ts; здесь — как
+// handleCheckout отличает файл от ветки и ссылки.
+describe('git checkout: файл, ветка и ссылка', () => {
+  it('имя файла и `--` возвращают файл из индекса; `ссылка -- файл` берёт файл из коммита — отказ области', () => {
     const s = fresh()
     const edited = { ...s, working: { ...s.working, 'app.js': 'правка\n' } }
-    for (const form of ['git checkout app.js', 'git checkout -- app.js', 'git checkout feature -- app.js']) {
+    for (const form of ['git checkout app.js', 'git checkout -- app.js']) {
       const r = run(edited, form)
-      expect(r.result.exitCode, form).toBeUndefined()
-      refusal(r.result.output)
-      expect(r.state.working['app.js'], form).toBe('правка\n')
+      expect(r.result.exitCode, form).toBe(0)
+      expect(r.state.working['app.js'], form).toBe(seed.appBase)
     }
+    const refused = run(edited, 'git checkout feature -- app.js')
+    expect(refused.result.exitCode).toBeUndefined()
+    refusal(refused.result.output)
+    expect(refused.state.working['app.js']).toBe('правка\n')
+  })
+
+  it('имя, которого нет среди веток и коммитов, — путь: ошибка pathspec, если файл не в индексе (П8.28, П8.55)', () => {
+    expect(run(fresh(), 'git checkout about.html').result).toMatchObject({ output: "error: pathspec 'about.html' did not match any file(s) known to git", exitCode: 1 })
+  })
+
+  it('ветка и ещё слово — отказ области, а не переход', () => {
+    const r = run(fresh(), 'git checkout feature app.js')
+    refusal(r.result.output)
+    expect(r.state.head).toEqual({ kind: 'branch', name: 'master' })
   })
 })
 

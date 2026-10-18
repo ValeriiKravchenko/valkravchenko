@@ -18,6 +18,7 @@ import { resolveRevision } from './appendixRevisions'
 import { advanceHead, branchListFirstLine, checkoutReflogEntry, commitLabel, statusFirstLine, switchOutput, type SwitchTarget } from './detachedHead'
 import { applyStageAll } from './commitFlags'
 import { checkSafety, formatStatusWithCommits, fullCommitId, shortCommitId } from './sectionsCommon'
+import { restoreFiles } from './appendixRestore'
 import { has } from './util'
 import { ru } from '../locales/ru'
 
@@ -379,19 +380,19 @@ export function handleCheckout(state: AppendixState, args: readonly string[]): O
     if (args.length > 2) return refuse(state, ae.form('checkout', args.join(' '), ALLOWED.checkout))
     return createAndSwitch(state, args[1])
   }
-  if (args.includes('--')) return refuse(state, ae.checkoutFile(args.join(' ')))
-  if (args.length > 1) return refuse(state, ae.form('checkout', args.join(' '), ALLOWED.checkout))
+  // `git checkout -- <файл>…` вернёт файлы из индекса; `--` после ссылки взял бы файл из коммита (П8.52, П8.53).
+  const dashAt = args.indexOf('--')
+  if (dashAt === 0) return restoreFiles(state, args.slice(1), true)
+  if (dashAt > 0) return refuse(state, ae.checkoutFromRevision(args.join(' ')))
   const name = args[0]
   if (name.startsWith('-')) return refuse(state, ae.form('checkout', name, ALLOWED.checkout))
-  if (has(state.branches, name)) return switchToBranch(state, name)
+  if (has(state.branches, name)) return args.length === 1 ? switchToBranch(state, name) : refuse(state, ae.form('checkout', args.join(' '), ALLOWED.checkout))
 
-  // Не ветка: тег, коммит или выражение отсоединили бы HEAD; имя файла восстановило бы файл.
+  // Не ветка: тег, коммит или выражение отсоединили бы HEAD (или взяли бы файл из коммита); иначе все слова — имена файлов (П8.52).
   const revision = resolveRevision(state, name)
-  if (revision.kind === 'commit') return refuse(state, ae.checkoutDetach(name))
+  if (revision.kind === 'commit') return refuse(state, args.length === 1 ? ae.checkoutDetach(name) : ae.checkoutFromRevision(args.join(' ')))
   if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('checkout', name))
-  const head = headTree(state)
-  if (has(state.working, name) || has(state.index, name) || has(head, name)) return refuse(state, ae.checkoutFile(name))
-  return exited(state, `error: pathspec '${name}' did not match any file(s) known to git`, 1)
+  return restoreFiles(state, args, false)
 }
 
 // ---------- git diff ----------
