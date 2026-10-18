@@ -115,6 +115,81 @@ describe('ветки, коммиты и теги для списка', () => {
   })
 })
 
+const play = (state: ReturnType<typeof createAppendixSection>, lines: readonly string[]) =>
+  lines.reduce((acc, line) => (line.startsWith('edit ') ? editAppendixFile(acc, line.slice(5)) : (runAppendixCommand(acc, line).state)), state)
+
+describe('отсоединённый HEAD в публичном API (шаг B)', () => {
+  const abandoned = () => play(createAppendixSection(), ['git checkout --detach master', 'edit app.js', 'git commit -am "Опыт 1"', 'edit app.js', 'git commit -am "Опыт 2"'])
+
+  it('getBranches: на ветке текущая одна, в отсоединённом HEAD ни одна', () => {
+    expect(getBranches(createAppendixSection()).map((b) => b.current)).toEqual([false, true])
+    const detached = play(createAppendixSection(), ['git checkout --detach master'])
+    expect(getBranches(detached).map((b) => b.current)).toEqual([false, false])
+    expect(getBranches(detached).map((b) => b.name)).toEqual(['feature', 'master'])
+  })
+
+  it('getCommits: подпись HEAD без стрелки, ветка на том же коммите в подписи есть; коммиты не бледные (О2)', () => {
+    const detached = play(createAppendixSection(), ['git checkout --detach master'])
+    const top = getCommits(detached)[0]
+    expect(top.decorations).toEqual(['HEAD', 'master'])
+    expect(getCommits(detached).every((c) => !c.faded)).toBe(true)
+  })
+
+  it('коммиты в отсоединённом HEAD держит HEAD: они на графе, но не бледные; с ухода HEAD бледнеют, граф их по-прежнему показывает', () => {
+    const detached = abandoned()
+    const commits = getCommits(detached)
+    expect(commits).toHaveLength(6)
+    expect(commits.slice(0, 2).map((c) => [c.subject, c.faded, c.decorations])).toEqual([['Опыт 2', false, ['HEAD']], ['Опыт 1', false, []]])
+    const left = play(detached, ['git checkout master'])
+    const after = getCommits(left)
+    expect(after).toHaveLength(6)
+    expect(after.slice(0, 2).map((c) => [c.subject, c.faded])).toEqual([['Опыт 2', true], ['Опыт 1', true]])
+    expect(after.slice(2).every((c) => !c.faded)).toBe(true)
+    expect(after[0].decorations).toEqual([])
+  })
+
+  it('брошенный коммит снова обычный, когда на него укажет ветка или тег (часть XII, «Как вернуть брошенные коммиты»)', () => {
+    const left = play(abandoned(), ['git checkout master'])
+    const tip = getCommits(left)[0]
+    expect(tip.faded).toBe(true)
+    const byBranch = play(left, [`git branch rescue ${tip.shortId}`])
+    expect(getCommits(byBranch).map((c) => c.faded)).toEqual([false, false, false, false, false, false])
+    expect(getCommits(byBranch)[0].decorations).toEqual(['rescue'])
+    const byTag = play(left, [`git tag keep ${tip.shortId}`])
+    expect(getCommits(byTag).every((c) => !c.faded)).toBe(true)
+    const byLog = play(left, ['git branch rescue HEAD@{1}'])
+    expect(getCommits(byLog).every((c) => !c.faded)).toBe(true)
+  })
+
+  it('удаление ветки бросает её коммиты, если их больше ничто не держит; порядок графа — по логическому моменту', () => {
+    const s = play(createAppendixSection(), ['git branch -D feature'])
+    const commits = getCommits(s)
+    expect(commits.map((c) => [c.subject, c.faded])).toEqual([
+      ['Добавить README', false],
+      ['Добавить страницу «О проекте»', true],
+      ['fix: опечатка в логе', true],
+      ['Базовая версия приложения', false],
+    ])
+  })
+
+  it('git log --all не показывает брошенные коммиты, а граф показывает бледными (О3)', () => {
+    const left = play(abandoned(), ['git checkout master'])
+    expect(runAppendixCommand(left, 'git log --oneline --all').result?.output).not.toContain('Опыт')
+    expect(getCommits(left).filter((c) => c.faded)).toHaveLength(2)
+  })
+
+  it('команды шага B в публичном API: reflog и switch выполняются, reset, cherry-pick, rebase и merge — отказ области', () => {
+    const s = createAppendixSection()
+    expect(runAppendixCommand(s, 'git reflog').result?.exitCode).toBe(0)
+    expect(runAppendixCommand(s, 'git switch feature').result?.exitCode).toBe(0)
+    for (const command of ['git reset --hard HEAD~1', 'git cherry-pick feature', 'git rebase feature', 'git merge feature']) {
+      const r = runAppendixCommand(s, command).result
+      expect(r?.exitCode, command).toBeUndefined()
+      expect(r?.output.startsWith('[тренажёр]'), command).toBe(true)
+    }
+  })
+})
+
 describe('миссии', () => {
   it('четыре миссии шага A, засчитываются по событию', () => {
     expect(APPENDIX_MISSION_IDS).toEqual(['lightTag', 'annotatedShow', 'stashSave', 'stashRestore'])

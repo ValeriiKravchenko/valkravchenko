@@ -83,7 +83,7 @@ describe('разбор ссылки', () => {
   })
 
   it('выражения, которые git понимает, а модель нет, — foreign', () => {
-    for (const token of ['HEAD@{1}', '@', 'master..feature', 'a...b', 'refs/heads/master', 'origin/master', 'v1^{}', ':/README', '^master', '~1', '-x', 'a:b', 'a*', 'a?', 'a[1]', 'a\\b', 'a b', 'HEAD~x', 'HEAD~1x']) {
+    for (const token of ['HEAD@{1}~1', 'HEAD@{01}', 'HEAD@{-1}', 'HEAD@{x}', 'master@{1}', '@{1}', '@', 'master..feature', 'a...b', 'refs/tags/v1', 'refs/heads/', 'tags/', 'tags/a/b', 'refs/heads/master..feature', 'origin/master', 'v1^{}', ':/README', '^master', '~1', '-x', 'a:b', 'a*', 'a?', 'a[1]', 'a\\b', 'a b', 'HEAD~x', 'HEAD~1x']) {
       expect(resolveRevision(s, token), token).toEqual({ kind: 'foreign' })
     }
   })
@@ -91,6 +91,51 @@ describe('разбор ссылки', () => {
   it('тег и ветка с одним именем не создаются, поэтому порядок поиска ветка → тег не важен; имя ветки находится раньше id', () => {
     const state = runAll(fresh(), ['git branch dead'])
     expect(resolveRevision(state, 'dead')).toMatchObject({ id: currentCommitId(state) })
+  })
+})
+
+describe('HEAD@{n}, tags/<тег> и refs/heads/<ветка>', () => {
+  const s = runAll(fresh(), ['git tag v1', 'git tag -a v2 -m "Релиз" feature'])
+  const base = idOf(s, seed.baseMessage)
+  const about = idOf(s, seed.aboutMessage)
+  const fix = idOf(s, seed.fixMessage)
+
+  it(`HEAD@{n}: запись журнала HEAD с номером n, считая с нуля; {0} — сам HEAD (${where('П8.61', 'git log --oneline HEAD@{2}')})`, () => {
+    expect(resolveRevision(s, 'HEAD@{0}')).toEqual({ kind: 'commit', id: s.reflog[0].id, annotated: null })
+    expect(resolveRevision(s, 'HEAD@{1}')).toEqual({ kind: 'commit', id: base, annotated: null })
+    expect(resolveRevision(s, 'HEAD@{2}')).toEqual({ kind: 'commit', id: about, annotated: null })
+    expect(resolveRevision(s, 'HEAD@{3}')).toEqual({ kind: 'commit', id: fix, annotated: null })
+    expect(resolveRevision(s, 'HEAD@{5}')).toEqual({ kind: 'commit', id: base, annotated: null })
+  })
+
+  it(`за концом журнала — reflogShort с числом записей (${where('П8.61', 'git show HEAD@{6}')}); число растёт с перемещениями HEAD`, () => {
+    expect(resolveRevision(s, 'HEAD@{6}')).toEqual({ kind: 'reflogShort', entries: 6 })
+    expect(resolveRevision(s, 'HEAD@{99}')).toEqual({ kind: 'reflogShort', entries: 6 })
+    const moved = runAll(s, ['git checkout feature'])
+    expect(resolveRevision(moved, 'HEAD@{6}')).toMatchObject({ kind: 'commit' })
+    expect(resolveRevision(moved, 'HEAD@{7}')).toEqual({ kind: 'reflogShort', entries: 7 })
+  })
+
+  it('номер без ведущих нулей и не больше шести знаков; цепочка после HEAD@{n} не разбирается', () => {
+    for (const token of ['HEAD@{01}', 'HEAD@{-1}', 'HEAD@{1000000}', 'HEAD@{}', 'HEAD@{1}~1', 'HEAD@{1}^', 'head@{1}']) expect(resolveRevision(s, token), token).toEqual({ kind: 'foreign' })
+  })
+
+  it(`tags/<тег> и refs/heads/<ветка> называют ссылку целиком (${where('О12', 'git checkout tags/v2.0')}, ${where('О11', 'git checkout -q refs/heads/master; git status | head -1')})`, () => {
+    expect(resolveRevision(s, 'tags/v1')).toEqual({ kind: 'commit', id: currentCommitId(s), annotated: null })
+    expect(resolveRevision(s, 'refs/heads/feature')).toEqual({ kind: 'commit', id: about, annotated: null })
+    expect(resolveRevision(s, 'refs/heads/feature~1')).toEqual({ kind: 'commit', id: fix, annotated: null })
+    expect(resolveRevision(s, 'tags/v2~1')).toEqual({ kind: 'commit', id: fix, annotated: null })
+    const annotated = resolveRevision(s, 'tags/v2')
+    expect(annotated).toMatchObject({ kind: 'commit', id: about })
+    if (annotated.kind === 'commit') expect(annotated.annotated?.name).toBe('v2')
+  })
+
+  it('префикс ищет только среди своих ссылок: tags/<ветка> и refs/heads/<тег> — missing; чужой префикс — foreign', () => {
+    expect(resolveRevision(s, 'tags/feature')).toEqual({ kind: 'missing' })
+    expect(resolveRevision(s, 'refs/heads/v1')).toEqual({ kind: 'missing' })
+    expect(resolveRevision(s, 'tags/nosuch')).toEqual({ kind: 'missing' })
+    expect(resolveRevision(s, 'tags/v1~9')).toEqual({ kind: 'missing' })
+    for (const token of ['refs/tags/v1', 'refs/remotes/origin/x', 'tags/', 'tags/a/b', 'refs/heads/a..b']) expect(resolveRevision(s, token), token).toEqual({ kind: 'foreign' })
   })
 })
 

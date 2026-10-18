@@ -72,6 +72,8 @@ function resolveStashRef(state: AppendixState, command: string, token: string | 
   if (token.trim() === '' || /^\d+$/.test(token) || /^stash@\{\d+\}$/.test(token)) return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
   const notValid = { ok: false, outcome: exited(state, `error: ${token} is not a valid reference`, 1, ax.stashBadRef) } as const
   if (token.startsWith('stash@')) return notValid
+  // `HEAD@{n}` называет запись журнала HEAD, `tags/…` и `refs/heads/…` — полные имена ссылок: как git ответил бы тайнику такой ссылкой, не сверено.
+  if (token.startsWith('HEAD@{') || token.includes('/')) return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
   const revision = resolveRevision(state, token)
   if (revision.kind === 'foreign') return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
   if (revision.kind === 'missing') return notValid
@@ -93,7 +95,7 @@ function save(state: AppendixState, message: string | null): Outcome {
   if (!hasTrackedChanges(state)) return exited(state, 'No local changes to save', 0, ax.stashNothing)
   if (hasRecreatedPath(state)) return refuse(state, ae.stashUnverified('push'))
   const saved = markMission(saveStash(state, message), 'stashSave')
-  return exited(saved, `Saved working directory and index state ${saved.stashes[0].text}`, 0, ax.stashSaved)
+  return exited(saved, `Saved working directory and index state ${saved.stashes[0].text}`, 0, state.head.kind === 'detached' ? `${ax.stashSaved} ${ax.stashNoBranch}` : ax.stashSaved)
 }
 
 interface PushArgs {

@@ -1,17 +1,26 @@
 // ============================================================
-// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаг A: публичная точка входа движка.
-// Аналог practicesSection.ts. Внутренние модули (appendix*.ts, sectionsCommon.ts,
+// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (первая часть): публичная точка
+// входа движка. Аналог practicesSection.ts. Внутренние модули (appendix*.ts, sectionsCommon.ts,
 // detachedHead.ts) снаружи напрямую не импортируются: экран берёт всё отсюда.
 //
 // Состояние неизменяемое: каждая функция возвращает новый объект. Команда ничего не бросает:
 // отказ git (вывод и код возврата в `exitCode`) и отказ области (без `exitCode`, вывод начинается
 // с метки «[тренажёр]») — обычные результаты.
+//
+// Шаг B, первая часть: HEAD может стоять на коммите (`state.head.kind === 'detached'`). Команды:
+// `git checkout` во всех формах перехода (ветка, тег, `tags/<тег>`, id, `<ссылка>~n`, `HEAD@{n}`,
+// `refs/heads/<ветка>`, `--detach [<ссылка>]`, `-`, `-b`, `HEAD`), `git switch` (`<ветка>`, `--detach
+// [<ссылка>]`, `-c <имя>`, `-`; на коммит и тег без `--detach` отказ git с кодом 128), `git reflog`,
+// `git branch -d/-D`. Ссылка `HEAD@{n}` принимается там же, где другие ссылки (`show`, `log`, `tag`,
+// `branch`, `checkout`, `switch`); за концом журнала — `fatal: log for 'HEAD' only has N entries`,
+// код 128. `reset`, `cherry-pick`, `rebase`, `merge` и `pull` отвечают отказом области.
 // ============================================================
 import type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry } from './appendixTypes'
 import { executeAppendixCommand } from './appendixCommands'
 import { createFile as createFileRaw, deleteFile as deleteFileRaw, editFile as editFileRaw } from './appendixFileOps'
 import { getAppendixMissions as getAppendixMissionsRaw } from './appendixMissions'
-import { allStarts, branchNames, createAppendixSection as createAppendixSectionRaw, decorationMap, listWorkingFiles, logOrder, subjectOf, tagNames } from './appendixRepo'
+import { branchNames, createAppendixSection as createAppendixSectionRaw, decorationMap, fadedCommitIds, listWorkingFiles, subjectOf, tagNames } from './appendixRepo'
+import { compareBytes } from './appendixRefs'
 import { shortCommitId } from './sectionsCommon'
 import { has } from './util'
 
@@ -61,7 +70,7 @@ export function getFileContent(state: AppendixState, file: string): string | nul
   return has(state.working, file) ? state.working[file] : null
 }
 
-/** Ветка для списка: `current` — на ней стоит HEAD. */
+/** Ветка для списка: `current` — на ней стоит HEAD; в отсоединённом HEAD текущей нет ни у одной. */
 export interface BranchView {
   name: string
   /** Полный id коммита (40 знаков). */
@@ -87,19 +96,30 @@ export interface CommitView {
   shortId: string
   subject: string
   parents: string[]
-  /** Подписи по порядку git: `HEAD -> master`, `tag: v1`, `feature`. */
+  /** Подписи по порядку git: `HEAD -> master`, `tag: v1`, `feature`; в отсоединённом HEAD начинаются с `HEAD` без стрелки. */
   decorations: string[]
+  /**
+   * Бледный коммит: недостижим ни из одной ветки, ни из одного тега и не лежит под HEAD. Коммит не удалён
+   * (его видно в `git reflog`), но на него ничто не указывает; снова обычным он становится, когда на него укажет ветка или тег.
+   */
+  faded: boolean
 }
 
-/** Все коммиты репозитория, новые сверху (по логическому моменту: родитель всегда ниже потомка). */
+/**
+ * Все коммиты репозитория, новые сверху (по логическому моменту: родитель всегда ниже потомка), в том числе
+ * брошенные (`faded`): они остаются на графе бледными.
+ */
 export function getCommits(state: AppendixState): CommitView[] {
   const decorations = decorationMap(state)
-  return logOrder(state, allStarts(state)).map((id) => ({
+  const faded = fadedCommitIds(state)
+  const ids = Object.keys(state.commits).sort((a, b) => state.commits[b].clock - state.commits[a].clock || compareBytes(a, b))
+  return ids.map((id) => ({
     id,
     shortId: shortCommitId(id),
     subject: subjectOf(state, id),
     parents: state.commits[id].parents,
     decorations: decorations.get(id) ?? [],
+    faded: faded.has(id),
   }))
 }
 

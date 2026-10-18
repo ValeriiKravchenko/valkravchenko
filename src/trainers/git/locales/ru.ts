@@ -1670,8 +1670,11 @@ export const ru = {
       status: 'git status и git status -s (или --short)',
       add: 'git add <файл>…, git add . и git add -A (или --all)',
       commit: 'git commit -m "сообщение" (один раз), git commit -a -m "…" и git commit -am "…"',
-      branch: 'git branch, git branch <имя> и git branch <имя> <ссылка>',
-      checkout: 'git checkout <ветка>, git checkout -b <имя>, git checkout -- <файл>… и git checkout <файл>…',
+      branch: 'git branch, git branch <имя>, git branch <имя> <ссылка> и git branch -d / -D <имя>…',
+      checkout:
+        'git checkout <ветка>, git checkout -b <имя>, git checkout <тег, id или ссылка> (HEAD отсоединяется), git checkout --detach [<ссылка>], git checkout -, git checkout HEAD, git checkout -- <файл>… и git checkout <файл>…',
+      switch: 'git switch <ветка>, git switch -c <имя>, git switch --detach [<ссылка>] и git switch -',
+      reflog: 'git reflog (без аргументов)',
       diff: 'git diff и git diff --staged (или --cached)',
       show: 'git show и git show <ссылка> (коммит, ветка или тег)',
       log: 'git log, git log --oneline, -<число>, --all и git log <ссылка> (ключи в любом порядке)',
@@ -1679,9 +1682,13 @@ export const ru = {
       stash: 'git stash, git stash -m "…", git stash push [-m "…"], git stash save [сообщение…], git stash list, git stash clear и git stash apply, pop, drop с необязательным stash@{n} или номером n',
     },
     errors: {
-      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, diff, show, log, tag и stash.`,
+      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash и reflog.`,
       commandOutOfScope: (sub: string) =>
-        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, diff, show, log, tag и stash.`,
+        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash и reflog.`,
+      detachedCommandOutOfScope: (sub: string) =>
+        sub === 'merge'
+          ? `${TRAINER_MARKER} git merge в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git при перемотке передвинул бы HEAD, а не ветку: ветка осталась бы на месте, а HEAD встал бы на её коммит. Ничего не изменено.`
+          : `${TRAINER_MARKER} git pull в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git отказал бы с кодом 1: HEAD не на ветке, и он просит указать, с какой веткой сливать. Ничего не изменено.`,
       form: (command: string, form: string, allowed: string) =>
         `${TRAINER_MARKER} git ${command}${form === '' ? '' : ` ${form}`} — эта форма в разделе не разбирается. Здесь поддерживается: ${allowed}.`,
       renameDetection: (command: string) =>
@@ -1690,7 +1697,7 @@ export const ru = {
       pathspecForm: (command: string, path: string) =>
         `${TRAINER_MARKER} git ${command} ${path} — путь в такой записи (маска, каталог, «./», «:») в разделе не разбирается. Назови файл рабочего каталога по имени.`,
       revisionForm: (command: string, token: string) =>
-        `${TRAINER_MARKER} git ${command}: ссылка «${token}» в такой записи в разделе не разбирается. Здесь понятны: HEAD, имя ветки, имя тега, начало id коммита (от 4 знаков) и ~N или ^ после них, например HEAD~1.`,
+        `${TRAINER_MARKER} git ${command}: ссылка «${token}» в такой записи в разделе не разбирается. Здесь понятны: HEAD, HEAD@{n}, имя ветки, имя тега, tags/<тег>, refs/heads/<ветка>, начало id коммита (от 4 знаков) и ~N или ^ после них, например HEAD~1.`,
       checkoutFromRevision: (form: string) =>
         `${TRAINER_MARKER} git checkout ${form}: так git берёт файл из коммита и подготавливает его, а не возвращает из индекса. Эта форма в разделе не разбирается. Файлы не изменены.`,
       checkoutDuplicate: `${TRAINER_MARKER} одно и то же имя файла дважды в git checkout без «--»: как git посчитал бы обновлённые пути, в разделе не сверено. Назови каждый файл один раз или поставь «--» перед именами.`,
@@ -1701,8 +1708,9 @@ export const ru = {
         `${TRAINER_MARKER} git stash ${command}: правка в тайнике и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Настоящий git применил бы тайник с конфликтом: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, а pop оставил бы тайник в стопке. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: файлы и тайник на месте. Без конфликта тайник применяется там, где файл остался таким, каким был при сохранении, — обычно на ветке, где тайник сделан.`,
       stashUnverified: (command: string) =>
         `${TRAINER_MARKER} git stash ${command}: сочетание правок в рабочем каталоге и в тайнике (конфликт вместе с несохранённой правкой, оба вида отказа сразу, файл, удалённый из индекса и созданный заново) в разделе не разбирается. Ничего не изменено.`,
-      checkoutDetach: (name: string) =>
-        `${TRAINER_MARKER} git checkout ${name}: переход на тег или коммит отсоединяет HEAD — он перестаёт указывать на ветку. Это в этой части раздела не разбирается; HEAD остался на месте.`,
+      switchRefForm: (word: string) =>
+        `${TRAINER_MARKER} git switch ${word}: HEAD и полное имя ветки (refs/heads/…) git switch называет в отказе по-особому, и эта строка в разделе не сверена. Перейти на ветку: git switch имя_ветки; поставить HEAD на коммит: git switch --detach ${word}. HEAD остался на месте.`,
+      branchDeleteDuplicate: `${TRAINER_MARKER} одно и то же имя дважды в git branch -d: как git ответил бы на повтор, в разделе не сверено. Назови каждую ветку один раз.`,
       commitNeedsMessage: `${TRAINER_MARKER} git commit без -m открыл бы текстовый редактор для сообщения. В тренажёре редактора нет, коммит не создан. Дай сообщение прямо в команде: git commit -m "что изменил".`,
       refNameForm: (kind: string, name: string) =>
         `${TRAINER_MARKER} имя ${kind} «${name}» в разделе не разбирается: имена с «/» (git хранит их в каталогах и проверяет конфликты между ними) и одиночный «@» не поддерживаются. Возьми обычное имя без «/».`,
@@ -1779,6 +1787,39 @@ export const ru = {
         'Git не знает такого файла: проверь имя. Файл, который ещё не добавлен командой git add, git checkout вернуть не может. Если среди имён есть неизвестное, не восстановлен ни один файл.',
       restoreWithoutDashes:
         'Без «--» git сначала пробует прочитать слово как ветку или коммит; такой ветки нет, поэтому это имя файла. Надёжнее писать git checkout -- файл.',
+      // Отсоединённый HEAD, переходы, журнал (target.md, часть XII, «Речь»; часть X, места 14 и 15)
+      detachedEntered:
+        'HEAD теперь указывает прямо на коммит, а не на ветку: это отсоединённый HEAD. Ветки остались на своих местах и никуда не сдвинулись. Смотреть и пробовать можно, коммитить тоже, но ни одна ветка за новыми коммитами не пойдёт. Вернуться на ветку: git switch имя_ветки; git switch - вернёт туда, откуда пришёл.',
+      previousPosition: 'Строка «Previous HEAD position was …» — не ошибка: git просто сообщает, на каком коммите стоял HEAD до перехода.',
+      leavingBehind: (count: number, shortId: string) => {
+        const word = count % 10 === 1 && count % 100 !== 11 ? 'коммит' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'коммита' : 'коммитов'
+        return `Брошено: ${count} ${word}. Они не удалены, но на них не указывает ни одна ветка и ни один тег, поэтому на графе они бледные, а найти их станет труднее. Вернуть можно тремя путями. Пока не ушёл: git switch -c имя (или git checkout -b имя) оставляет коммиты на новой ветке. Сразу после ухода: git branch имя ${shortId} — эту команду подсказал сам git. Позже: git reflog называет, откуда ушёл HEAD, а git branch rescue HEAD@{1} ставит ветку на тот коммит. Номера HEAD@{n} сдвигаются с каждым перемещением HEAD, поэтому смотри журнал перед тем, как брать номер.`
+      },
+      detachedBranchCreated: (name: string) =>
+        `Ветка «${name}» создана на коммите, где стоял HEAD, и HEAD теперь на ней. Всё, что было сделано в отсоединённом HEAD, лежит на этой ветке и при следующем переходе не будет брошено.`,
+      carriedFiles: 'Строки «M файл» — файлы, в которых у тебя была несохранённая правка: переход их не затрагивал, и правка переехала вместе с HEAD.',
+      switchBranchExpected:
+        'git switch переходит только на ветки. На коммит или тег он отказывает, потому что HEAD там отсоединился бы: для этого нужен ключ --detach (git switch --detach ссылка). git checkout ссылка делает то же, но сначала печатает блок Note. HEAD остался на месте.',
+      checkoutRefusedEdit:
+        'Git отказал: у места, куда ты идёшь, этот файл другой, и твоя несохранённая правка в нём была бы затёрта. Так бывает при переходе в любую сторону — на ветку и на коммит. Сохрани правку коммитом, спрячь её в тайник (git stash) или верни файл (git checkout -- файл), потом повтори. HEAD остался на месте.',
+      checkoutHeadStays: 'git checkout HEAD с ветки ничего не меняет: HEAD и так там, он не отсоединяется и в журнал ничего не пишется. Отсоединить HEAD на текущем коммите: git checkout --detach.',
+      reflogShortEntries: 'Номер HEAD@{n} дальше конца журнала: записей меньше. Сколько их и какие — покажет git reflog.',
+      reflogShown:
+        'git reflog — журнал HEAD: каждое перемещение HEAD (коммит, переход между ветками и коммитами, reset) — отдельная запись, новая сверху. HEAD@{n} — где HEAD был n перемещений назад, а не n коммитов назад: с каждым новым перемещением все номера сдвигаются на единицу. В скобках — подписи коммита сейчас. Через журнал находят брошенные коммиты: git branch rescue HEAD@{n}.',
+      commitDetached: 'Коммит сделан в отсоединённом HEAD: на него указывает только HEAD, ни одна ветка за ним не пойдёт. Чтобы не потерять его, поставь на него ветку: git switch -c имя (или git branch имя).',
+      statusDetachedAt: 'HEAD отсоединён: он стоит на коммите, а не на ветке. «detached at» — HEAD стоит там, куда его поставили.',
+      statusDetachedFrom: '«detached from» — HEAD ушёл с места, куда его поставили (новым коммитом или reset). Названо то место, куда поставили, а не где HEAD сейчас.',
+      statusRefsHeads: '«refs/heads/…» — полное имя ветки: HEAD стоит на том же коммите, что и эта ветка, но не на ней, поэтому новый коммит ветку не сдвинет.',
+      statusNameLost: 'В строке не имя, а короткий id: git называет место по ссылке, только пока она указывает на этот коммит. Тег переставили или удалили, ветку удалили — имени больше нет.',
+      branchListDetached: 'Звёздочка стоит не у ветки, а у строки «HEAD detached …»: HEAD сейчас не на ветке. Все ветки на своих местах.',
+      logDetached: 'git log показывает историю от HEAD: коммиты веток, которые лежат выше или в стороне, здесь не видны. Все ветки сразу: git log --oneline --all.',
+      stashNoBranch: 'В отсоединённом HEAD тайник записан как «(no branch)»: он не помнит ни тега, ни того, как HEAD пришёл на этот коммит.',
+      branchNotFound: 'Ветки с таким именем нет — список покажет git branch.',
+      branchNotMerged: (detached: boolean) =>
+        `git branch -d удаляет только слитую ветку: её коммиты достижимы ${detached ? 'из коммита, на котором стоит HEAD' : 'из HEAD'}. Иначе они остались бы без ветки. Принудительно: git branch -D имя; коммиты при этом не исчезают сразу, но найти их можно будет только через git reflog.`,
+      branchDeleted: 'Удалена только метка-ветка; коммиты, достижимые из других веток, тегов или HEAD, остались. В скобках — коммит, на который указывала ветка.',
+      branchDeletedUnderHead:
+        'Git разрешил удалить ветку, на коммите которой стоит HEAD: HEAD указывает на коммит, а не на ветку. На самой ветке такую команду git отклонил бы. Коммиты остались: их держит HEAD, пока он на них.',
     },
     /** Миссии «Что попробовать»: формулировки исходной версии тренажёра (target.md, часть X, «Миссии»). */
     missions: {

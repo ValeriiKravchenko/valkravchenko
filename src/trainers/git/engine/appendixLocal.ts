@@ -1,6 +1,7 @@
 // ============================================================
-// Раздел 8 git-тренажёра, шаг A: локальная работа — `status`, `add`, `commit`, `branch`,
-// `checkout`, `diff` (target.md, часть X, «Что входит», строка «Локальная работа»). Нужна, чтобы
+// Раздел 8 git-тренажёра, шаги A и B: локальная работа — `status`, `add`, `commit`, `branch`,
+// `diff` (target.md, часть X, «Что входит», строка «Локальная работа»). `checkout` и `switch` —
+// appendixSwitch.ts, `branch -d` — appendixBranchDelete.ts. Нужна, чтобы
 // игрок мог создавать правки и коммиты, на которые ставятся теги. Вывод git сверен с протоколом
 // docs/git-trainer/reports/appendix-g18e-git-runs.txt (П8.21–П8.32) и section8-git-runs.txt
 // (П8.1, П8.3); строки git — английские литералы и не переводятся. Всё, что отсюда не
@@ -12,13 +13,13 @@
 // ============================================================
 import type { AppendixCommit, AppendixState, FileTree } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
-import { branchNames, commitTree, currentCommitId, diffTrees, graphOf, headTree, mayContainRename, refsOf, sameTree } from './appendixRepo'
+import { branchNames, currentCommitId, diffTrees, headTree, mayContainRename, refsOf, sameTree } from './appendixRepo'
 import { isValidBranchName } from './appendixRefs'
-import { resolveRevision } from './appendixRevisions'
-import { advanceHead, branchListFirstLine, checkoutReflogEntry, commitLabel, statusFirstLine, switchOutput, type SwitchTarget } from './detachedHead'
+import { reflogShortOutput, resolveRevision } from './appendixRevisions'
+import { advanceHead, branchListFirstLine, commitLabel, statusFirstLine } from './detachedHead'
+import { deleteBranches } from './appendixBranchDelete'
 import { applyStageAll } from './commitFlags'
-import { checkSafety, formatStatusWithCommits, fullCommitId, shortCommitId } from './sectionsCommon'
-import { restoreFiles } from './appendixRestore'
+import { formatStatusWithCommits, fullCommitId, shortCommitId } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
 
@@ -34,6 +35,22 @@ function hasGlobChars(word: string): boolean {
 
 // ---------- git status ----------
 
+/** Короткий id вместо имени в `HEAD detached at <X>`: имя тега или ветки пропало, потому что ссылку переставили или удалили (О15). */
+function isNameSpec(spec: string): boolean {
+  const name = spec.startsWith('tags/') ? spec.slice('tags/'.length) : spec.startsWith('refs/heads/') ? spec.slice('refs/heads/'.length) : spec
+  return /^[A-Za-z0-9._-]+$/.test(name) && name !== 'HEAD' && !/^[0-9a-f]{4,40}$/.test(name)
+}
+
+/** Пояснение к первой строке `git status` в отсоединённом HEAD: `at` или `from`, полное имя ветки, потерянное имя. */
+function detachedStatusNote(state: AppendixState, first: string): string | null {
+  const match = /^HEAD detached (at|from) (.+)$/.exec(first)
+  if (state.head.kind !== 'detached' || match === null) return null
+  const notes = [match[1] === 'at' ? ax.statusDetachedAt : ax.statusDetachedFrom]
+  if (match[2].startsWith('refs/heads/')) notes.push(ax.statusRefsHeads)
+  else if (state.lastCheckout !== null && match[2] === shortCommitId(state.lastCheckout.id) && isNameSpec(state.lastCheckout.spec)) notes.push(ax.statusNameLost)
+  return notes.join(' ')
+}
+
 export function handleStatus(state: AppendixState, args: readonly string[]): Outcome {
   let short = false
   for (const arg of args) {
@@ -43,7 +60,7 @@ export function handleStatus(state: AppendixState, args: readonly string[]): Out
   const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), null) as string
   const formatted = formatStatusWithCommits(first, headTree(state), state.index, state.working, { short })
   if (!formatted.ok) return refuse(state, formatted.reason === 'renameDetection' ? ae.renameDetection('status') : ae.statusNestedPaths)
-  return exited(state, formatted.output, 0)
+  return exited(state, formatted.output, 0, detachedStatusNote(state, first))
 }
 
 // ---------- git add ----------
@@ -191,12 +208,13 @@ export function handleCommit(state: AppendixState, args: readonly string[]): Out
     reflog: [{ id: commit.id, message: `commit: ${message.split('\n')[0]}` }, ...state.reflog],
     clock: state.clock + 1,
   }
-  return exited(next, `[${commitLabel(state.head)} ${shortCommitId(commit.id)}] ${message}`, 0, ax.commitStatNotShown)
+  const note = state.head.kind === 'detached' ? `${ax.commitStatNotShown} ${ax.commitDetached}` : ax.commitStatNotShown
+  return exited(next, `[${commitLabel(state.head)} ${shortCommitId(commit.id)}] ${message}`, 0, note)
 }
 
 // ---------- git branch ----------
 
-const BRANCH_INVALID = (name: string) =>
+export const BRANCH_INVALID = (name: string) =>
   [
     `fatal: '${name}' is not a valid branch name`,
     "hint: See 'git help check-ref-format'",
@@ -204,7 +222,7 @@ const BRANCH_INVALID = (name: string) =>
   ].join('\n')
 
 /** Имя, которое тренажёр для ветки не принимает, хотя git его допускает: с каталогом или совпадающее с тегом. */
-function branchNameOutOfScope(state: AppendixState, name: string): string | null {
+export function branchNameOutOfScope(state: AppendixState, name: string): string | null {
   if (name.includes('/')) return ae.refNameForm('ветки', name)
   if (has(state.tags, name)) return ae.branchNameIsTag(name)
   return null
@@ -214,6 +232,8 @@ export function handleBranch(state: AppendixState, args: readonly string[]): Out
   const dashAt = args.indexOf('--')
   const options = dashAt < 0 ? args.filter((a) => a.startsWith('-')) : args.slice(0, dashAt)
   const names = dashAt < 0 ? args.filter((a) => !a.startsWith('-')) : args.slice(dashAt + 1)
+  // `-d` и `-D` удаляют ветки, имён может быть сколько угодно (П8.63); остальные ключи в разделе не разбираются.
+  if (options.length === 1 && (options[0] === '-d' || options[0] === '-D')) return deleteBranches(state, names, options[0] === '-D')
   if (options.length > 0) return refuse(state, ae.form('branch', options[0], ALLOWED.branch))
   if (names.length > 2) return refuse(state, ae.form('branch', names.join(' '), ALLOWED.branch))
 
@@ -222,7 +242,7 @@ export function handleBranch(state: AppendixState, args: readonly string[]): Out
     const detached = branchListFirstLine(state.head, state.lastCheckout, refs, null, null)
     const current = state.head.kind === 'branch' ? state.head.name : null
     const rows = branchNames(state).map((n) => `${n === current ? '* ' : '  '}${n}`)
-    return exited(state, (detached === null ? rows : [detached, ...rows]).join('\n'), 0)
+    return exited(state, (detached === null ? rows : [detached, ...rows]).join('\n'), 0, detached === null ? null : ax.branchListDetached)
   }
 
   const [name, start] = names
@@ -234,165 +254,12 @@ export function handleBranch(state: AppendixState, args: readonly string[]): Out
   if (start !== undefined) {
     const revision = resolveRevision(state, start)
     if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('branch', start))
+    if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128, ax.reflogShortEntries)
     if (revision.kind === 'missing') return exited(state, `fatal: not a valid object name: '${start}'`, 128)
     tip = revision.id
   }
   // `git branch` HEAD не двигает: в журнал HEAD ничего не пишется (П8.15).
   return exited({ ...state, branches: { ...state.branches, [name]: tip } }, '', 0)
-}
-
-// ---------- git checkout ----------
-
-/**
- * Буква в строке отчёта `<буква>\t<файл>`, которую `git checkout` печатает про файл, переехавший
- * на другую ветку вместе с правкой. Отчёт строится так, как `git diff-index` без `--cached`: по
- * индексу, без перечитывания содержимого, поэтому правка, возвращённая к исходному тексту, всё
- * равно считается правкой (П8.28, П8.33):
- * - файла нет в индексе (подготовлено удаление): `D`, если он есть у цели, иначе строки нет;
- * - файла нет в рабочем каталоге: `D`, если он есть у цели, иначе строки нет (подготовленный новый
- *   файл, который потом удалили, в отчёт не попадает);
- * - файла нет у цели: `A`;
- * - иначе `M`, если рабочий файл отличается от индекса или индекс от цели; если нет — строки нет.
- */
-function carriedLetter(inIndex: boolean, inWorking: boolean, inTarget: boolean, indexValue: string | undefined, workingValue: string | undefined, targetValue: string | undefined): 'M' | 'A' | 'D' | null {
-  if (!inIndex || !inWorking) return inTarget ? 'D' : null
-  if (!inTarget) return 'A'
-  return indexValue !== targetValue || workingValue !== indexValue ? 'M' : null
-}
-
-/**
- * Дерево после перехода и строки `M\t<файл>`: файл, который переход не трогает, переносится как
- * есть (правка остаётся); остальные приводятся к дереву цели. Правило то же, что в разделе 2
- * (branchRepo.ts, applyTreeChange); буквы отчёта — `carriedLetter` (П8.28).
- */
-function applyTargetTree(state: AppendixState, target: FileTree): { index: FileTree; working: FileTree; carried: string[] } {
-  const head = headTree(state)
-  const files = new Set([...Object.keys(head), ...Object.keys(target), ...Object.keys(state.index), ...Object.keys(state.working)])
-  const index: FileTree = {}
-  const working: FileTree = {}
-  const carried: { file: string; letter: 'M' | 'A' | 'D' }[] = []
-  for (const f of files) {
-    const inHead = has(head, f)
-    const inIndex = has(state.index, f)
-    const inWorking = has(state.working, f)
-    const inTarget = has(target, f)
-    const indexValue = inIndex ? state.index[f] : undefined
-    const workingValue = inWorking ? state.working[f] : undefined
-    const headValue = inHead ? head[f] : undefined
-    const targetValue = inTarget ? target[f] : undefined
-    const dirty = headValue !== indexValue || workingValue !== indexValue
-    // Файл удалён из рабочего каталога без `git rm`, а переход его трогает: git создаёт его заново.
-    const recreated = dirty && headValue !== targetValue && indexValue === headValue && !inWorking
-    if (dirty && !recreated) {
-      if (inIndex) index[f] = state.index[f]
-      if (inWorking) working[f] = state.working[f]
-      // В отчёт попадают только файлы, известные git; неотслеживаемые остаются молча.
-      if (!inHead && !inIndex) continue
-      const letter = carriedLetter(inIndex, inWorking, inTarget, indexValue, workingValue, targetValue)
-      if (letter !== null) carried.push({ file: f, letter })
-      continue
-    }
-    if (inTarget) {
-      index[f] = target[f]
-      working[f] = target[f]
-    }
-  }
-  carried.sort((x, y) => (x.file < y.file ? -1 : x.file > y.file ? 1 : 0))
-  return { index, working, carried: carried.map((c) => `${c.letter}\t${c.file}`) }
-}
-
-/**
- * Отказ из-за правок или неотслеживаемых файлов, которые переход затёр бы: код 1, ничего не
- * изменено. Блоков до трёх, в порядке git (П8.28, П8.32, П8.34–П8.37): файлы, у которых индекс
- * отличается от HEAD (подготовленное), затем файлы с правкой только в рабочем каталоге; у обоих
- * блоков один и тот же текст; затем неотслеживаемые файлы; в конце один `Aborting`.
- */
-function overwriteRefusal(staged: readonly string[], unstaged: readonly string[], untracked: readonly string[]): string {
-  const parts: string[] = []
-  for (const group of [staged, unstaged]) {
-    if (group.length === 0) continue
-    parts.push('error: Your local changes to the following files would be overwritten by checkout:', ...group.map((f) => `\t${f}`), 'Please commit your changes or stash them before you switch branches.')
-  }
-  if (untracked.length > 0) {
-    parts.push('error: The following untracked working tree files would be overwritten by checkout:', ...untracked.map((f) => `\t${f}`), 'Please move or remove them before you switch branches.')
-  }
-  return [...parts, 'Aborting'].join('\n')
-}
-
-/** Строки, которые git печатает при переходе на ветку (`Switched to …`, `Already on …`, `Previous HEAD position …`). */
-function branchSwitchText(state: AppendixState, to: SwitchTarget): string {
-  const printed = switchOutput(state.head, to, 'checkout', refsOf(state), graphOf(state), [])
-  // Отказом `switchOutput` отвечает только на переход к коммиту; переход на ветку ему всегда по силам.
-  if (!printed.ok) throw new Error('переход на ветку не может быть отказом')
-  return printed.output
-}
-
-function switchToBranch(state: AppendixState, name: string): Outcome {
-  const targetId = state.branches[name]
-  const target = commitTree(state, targetId)
-  const head = headTree(state)
-  const block = checkSafety(head, state.index, state.working, target)
-  if (block.modified.length > 0 || block.untracked.length > 0) {
-    const isStaged = (f: string) => (has(state.index, f) ? state.index[f] : undefined) !== (has(head, f) ? head[f] : undefined)
-    return exited(state, overwriteRefusal(block.modified.filter(isStaged), block.modified.filter((f) => !isStaged(f)), block.untracked), 1)
-  }
-
-  const to: SwitchTarget = { kind: 'branch', name, id: targetId, created: false }
-  const printed = branchSwitchText(state, to)
-  const tree = applyTargetTree(state, target)
-  const entry = checkoutReflogEntry(state.head, to)
-  const next: AppendixState = {
-    ...state,
-    head: { kind: 'branch', name },
-    index: tree.index,
-    working: tree.working,
-    lastCheckout: entry === null ? state.lastCheckout : entry.lastCheckout,
-    reflog: entry === null ? state.reflog : [{ id: targetId, message: entry.message }, ...state.reflog],
-  }
-  return exited(next, [...tree.carried, printed].join('\n'), 0)
-}
-
-function createAndSwitch(state: AppendixState, name: string): Outcome {
-  if (!isValidBranchName(name)) return exited(state, BRANCH_INVALID(name), 128)
-  const outOfScope = branchNameOutOfScope(state, name)
-  if (outOfScope !== null) return refuse(state, outOfScope)
-  if (has(state.branches, name)) return exited(state, `fatal: a branch named '${name}' already exists`, 128)
-  const tip = currentCommitId(state)
-  const to: SwitchTarget = { kind: 'branch', name, id: tip, created: true }
-  const printed = branchSwitchText(state, to)
-  const entry = checkoutReflogEntry(state.head, to)
-  const next: AppendixState = {
-    ...state,
-    branches: { ...state.branches, [name]: tip },
-    head: { kind: 'branch', name },
-    lastCheckout: entry === null ? state.lastCheckout : entry.lastCheckout,
-    reflog: entry === null ? state.reflog : [{ id: tip, message: entry.message }, ...state.reflog],
-  }
-  // Форма `checkout -b <имя>` из двух слов переносимые файлы не перечисляет (П8.28).
-  return exited(next, printed, 0)
-}
-
-export function handleCheckout(state: AppendixState, args: readonly string[]): Outcome {
-  if (args.length === 0) return refuse(state, ae.form('checkout', '', ALLOWED.checkout))
-  if (args[0] === '-b') {
-    // `error: switch `b' requires a value` — весь вывод git, без usage (П8.28).
-    if (args.length === 1) return exited(state, "error: switch `b' requires a value", 129)
-    if (args.length > 2) return refuse(state, ae.form('checkout', args.join(' '), ALLOWED.checkout))
-    return createAndSwitch(state, args[1])
-  }
-  // `git checkout -- <файл>…` вернёт файлы из индекса; `--` после ссылки взял бы файл из коммита (П8.52, П8.53).
-  const dashAt = args.indexOf('--')
-  if (dashAt === 0) return restoreFiles(state, args.slice(1), true)
-  if (dashAt > 0) return refuse(state, ae.checkoutFromRevision(args.join(' ')))
-  const name = args[0]
-  if (name.startsWith('-')) return refuse(state, ae.form('checkout', name, ALLOWED.checkout))
-  if (has(state.branches, name)) return args.length === 1 ? switchToBranch(state, name) : refuse(state, ae.form('checkout', args.join(' '), ALLOWED.checkout))
-
-  // Не ветка: тег, коммит или выражение отсоединили бы HEAD (или взяли бы файл из коммита); иначе все слова — имена файлов (П8.52).
-  const revision = resolveRevision(state, name)
-  if (revision.kind === 'commit') return refuse(state, args.length === 1 ? ae.checkoutDetach(name) : ae.checkoutFromRevision(args.join(' ')))
-  if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('checkout', name))
-  return restoreFiles(state, args, false)
 }
 
 // ---------- git diff ----------

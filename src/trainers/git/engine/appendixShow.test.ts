@@ -78,7 +78,7 @@ describe('git show коммита', () => {
   })
 
   it('файл рабочего каталога, ключи (--stat, -s, --no-patch), несколько слов, выражения — отказ области', () => {
-    for (const form of ['git show app.js', 'git show --stat', 'git show -s', 'git show --no-patch', 'git show feature master', 'git show HEAD@{1}', 'git show -- app.js']) {
+    for (const form of ['git show app.js', 'git show --stat', 'git show -s', 'git show --no-patch', 'git show feature master', 'git show HEAD@{1}~1', 'git show -- app.js']) {
       const r = run(fresh(), form).result
       expect(r.exitCode, form).toBeUndefined()
       refusal(r.output)

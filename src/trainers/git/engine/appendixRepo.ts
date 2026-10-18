@@ -140,6 +140,16 @@ export function allStarts(state: AppendixState): string[] {
   return [...Object.values(state.branches), ...Object.values(state.tags).map((t) => t.commit), currentCommitId(state)]
 }
 
+/**
+ * Брошенные коммиты: недостижимые ни из одной ветки, ни из одного тега и не лежащие под HEAD (target.md,
+ * часть XII, «Как вернуть брошенные коммиты»). Коммит под отсоединённым HEAD ещё не брошен: он бледнеет,
+ * когда HEAD уходит. Снова обычным коммит становится, когда на него укажет ветка или тег.
+ */
+export function fadedCommitIds(state: AppendixState): Set<string> {
+  const kept = reachableFrom(state, allStarts(state))
+  return new Set(Object.keys(state.commits).filter((id) => !kept.has(id)))
+}
+
 // ---------- подписи ----------
 
 /**

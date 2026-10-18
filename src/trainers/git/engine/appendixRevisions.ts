@@ -1,10 +1,16 @@
 // ============================================================
 // Раздел 8 git-тренажёра: разбор ссылки на коммит (`<ссылка>` в `git tag`, `git branch`, `git log`,
-// `git show`, `git checkout`). Разбирается узкая грамматика, сверенная прогонами (П8.2, П8.27,
-// П8.28, П8.30): `HEAD`, имя ветки, имя тега, 4–40 знаков id коммита и цепочка `~N`, `~`, `^`, `^1`,
-// `^0` после них. Всё остальное, что git понимает (`HEAD@{1}`, `A..B`, `refs/…`, `:/текст`,
-// `v1^{}`), разбор не воспроизводит: результат `foreign`, а раздел отвечает отказом области. Ссылка,
-// которую git по этой грамматике не нашёл бы, — `missing`: ответ git зависит от команды.
+// `git show`, `git checkout`, `git switch`). Разбирается узкая грамматика, сверенная прогонами (П8.2,
+// П8.27, П8.28, П8.30, П8.58, П8.61):
+// - `HEAD`, имя ветки, имя тега, 4–40 знаков id коммита и цепочка `~N`, `~`, `^`, `^1`, `^0` после них;
+// - `tags/<тег>` и `refs/heads/<ветка>` (с той же цепочкой): полное имя ссылки (П8.58, О11, О12);
+// - `HEAD@{n}`, где `n` — десятичное число без ведущих нулей: запись журнала HEAD с номером `n`
+//   (target.md, часть X, место 15). Номер считает перемещения HEAD, а не коммиты назад. Цепочка
+//   после `HEAD@{n}` не разбирается.
+// Всё остальное, что git понимает (`A..B`, `refs/tags/…`, `:/текст`, `v1^{}`, `@{u}`, `master@{1}`),
+// разбор не воспроизводит: результат `foreign`, а раздел отвечает отказом области. Ссылка, которую
+// git по этой грамматике не нашёл бы, — `missing`: ответ git зависит от команды. `HEAD@{n}` за концом
+// журнала — `reflogShort`: ответ git один у всех команд (П8.61).
 // ============================================================
 import type { AppendixState, AppendixTag } from './appendixTypes'
 import { commitOf, currentCommitId } from './appendixRepo'
@@ -25,6 +31,8 @@ export type Revision =
     }
   | { kind: 'missing' }
   | { kind: 'foreign' }
+  /** `HEAD@{n}` за концом журнала HEAD: `entries` — сколько в нём записей. */
+  | { kind: 'reflogShort'; entries: number }
 
 const CHAIN = /^(?:~\d*|\^\d*)*$/
 const HEX = /^[0-9a-fA-F]{4,40}$/
@@ -75,8 +83,42 @@ function baseCommit(state: AppendixState, base: string): { id: string; annotated
   return { id: found[0], annotated: null }
 }
 
+const REFLOG_REF = /^HEAD@\{(0|[1-9]\d{0,5})\}$/
+const QUALIFIED = /^(tags|refs\/heads)\/(.+)$/
+
+/** Ответ git на `HEAD@{n}` за концом журнала, одинаковый у `show`, `log`, `tag`, `branch`, `checkout`, `switch` (П8.61): код 128. */
+export function reflogShortOutput(entries: number): string {
+  return `fatal: log for 'HEAD' only has ${entries} entries`
+}
+
+/** `tags/<тег>` и `refs/heads/<ветка>` с цепочкой `~`/`^`: имя ссылки целиком, поиск только среди тегов или только среди веток. */
+function qualifiedRevision(state: AppendixState, prefix: string, rest: string): Revision {
+  const cut = rest.search(/[~^]/)
+  const name = cut < 0 ? rest : rest.slice(0, cut)
+  const chain = cut < 0 ? '' : rest.slice(cut)
+  if (name === '' || !CHAIN.test(chain) || FOREIGN_CHARS.some((ch) => name.includes(ch))) return { kind: 'foreign' }
+  let found: { id: string; annotated: AnnotatedTagRef | null } | null = null
+  if (prefix === 'tags' && has(state.tags, name)) {
+    const tag = state.tags[name]
+    found = { id: tag.commit, annotated: tag.kind === 'annotated' ? { name, tag } : null }
+  } else if (prefix === 'refs/heads' && has(state.branches, name)) {
+    found = { id: state.branches[name], annotated: null }
+  }
+  if (found === null) return { kind: 'missing' }
+  if (chain === '') return { kind: 'commit', id: found.id, annotated: found.annotated }
+  const moved = applyChain(state, found.id, chain)
+  return moved === null ? { kind: 'missing' } : { kind: 'commit', id: moved, annotated: null }
+}
+
 /** Разбирает одно слово командной строки как ссылку. */
 export function resolveRevision(state: AppendixState, token: string): Revision {
+  const reflog = REFLOG_REF.exec(token)
+  if (reflog !== null) {
+    const n = Number(reflog[1])
+    return n < state.reflog.length ? { kind: 'commit', id: state.reflog[n].id, annotated: null } : { kind: 'reflogShort', entries: state.reflog.length }
+  }
+  const qualified = QUALIFIED.exec(token)
+  if (qualified !== null && !token.includes('..')) return qualifiedRevision(state, qualified[1], qualified[2])
   if (token.startsWith('-') || token.startsWith('^') || token.startsWith('~') || token.includes('..')) return { kind: 'foreign' }
   if (FOREIGN_CHARS.some((ch) => token.includes(ch))) return { kind: 'foreign' }
   const cut = token.search(/[~^]/)

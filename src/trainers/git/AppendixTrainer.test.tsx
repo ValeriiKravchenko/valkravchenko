@@ -9,8 +9,8 @@ import { ru } from './locales/ru'
 
 const ui = ru.appendix.ui
 
-// The step A engine refuses `git checkout <tag>` (area refusal), so a detached HEAD cannot be reached
-// by commands yet. To check the prompt format, the initial state can be swapped for a detached one.
+// To check the prompt format for an arbitrary id without running commands, the initial state can be
+// swapped for a detached one.
 const override = vi.hoisted(() => ({ detachedAt: null as string | null }))
 vi.mock('./engine/appendixSection', async (importOriginal) => {
   const original = await importOriginal<typeof import('./engine/appendixSection')>()
@@ -106,13 +106,14 @@ describe('AppendixTrainer', () => {
       expect(screen.queryByText('(master) $')).toBeNull()
     })
 
-    it('keeps the branch prompt when the engine refuses to check out a tag, and shows the refusal', async () => {
+    it('shows the detached prompt after git checkout <tag>, with the Note block in the log', async () => {
       const user = userEvent.setup()
       renderScreen()
       await run(user, 'git tag v1.0.0')
       await run(user, 'git checkout v1.0.0')
-      expect(within(log()).getByText(/\[тренажёр\]/)).toBeInTheDocument()
-      expect(screen.getAllByText('(master) $').length).toBeGreaterThan(0)
+      const shortId = createAppendixSection().branches.master.slice(0, 7)
+      expect(screen.getAllByText(ui.terminal.promptDetached(shortId)).length).toBeGreaterThan(0)
+      expect(within(log()).getByText(/Note: switching to 'v1.0.0'\./)).toBeInTheDocument()
     })
   })
 

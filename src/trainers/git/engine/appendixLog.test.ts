@@ -129,7 +129,7 @@ describe('git log: ошибки и отказы области', () => {
   })
 
   it(`две ссылки (${where('П8.31', 'git log feature master')}), --all со ссылкой, другие ключи, 0 и выражения — отказ области`, () => {
-    for (const form of ['git log feature master', 'git log --all feature', 'git log --graph', 'git log -p', 'git log --stat', 'git log -n 1', 'git log --max-count=1', 'git log -0', 'git log --no-decorate', 'git log --decorate=full', 'git log -- app.js', 'git log HEAD@{1}', 'git log master..feature']) {
+    for (const form of ['git log feature master', 'git log --all feature', 'git log --graph', 'git log -p', 'git log --stat', 'git log -n 1', 'git log --max-count=1', 'git log -0', 'git log --no-decorate', 'git log --decorate=full', 'git log -- app.js', 'git log HEAD@{1}~1', 'git log master..feature']) {
       const r = run(fresh(), form).result
       expect(r.exitCode, form).toBeUndefined()
       refusal(r.output)
