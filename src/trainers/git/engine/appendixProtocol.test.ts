@@ -21,7 +21,7 @@ describe('блоки протокола П8.21–П8.40 проигрываютс
   it('П8.25: переименование — отказ области вместо status, status -s, diff --staged и show', () => expectReplay('П8.25', { refused: (_e, i) => [6, 7, 8, 10].includes(i) }))
   it('П8.26: add и commit', () => expectReplay('П8.26', { refused: (e) => e.command === 'git commit -m "x" extra' }))
   it('П8.27: формы add', () => expectReplay('П8.27'))
-  it('П8.28: branch и checkout (git reflog — шаг B, отказ области)', () => expectReplay('П8.28', { refused: (e) => e.command.startsWith('git reflog') }))
+  it('П8.28: branch и checkout (git reflog -<n> проигрывается как есть)', () => expectReplay('П8.28'))
   it('П8.29: создание тегов, порядок проверок, имена', () =>
     expectReplay('П8.29', { skip: (e) => e.command.startsWith('GIT_EDITOR='), until: 28 }))
   it('П8.30: -f, -d, список', () => expectReplay('П8.30', { refused: (e) => e.command === 'git tag -d v9 v9' }))

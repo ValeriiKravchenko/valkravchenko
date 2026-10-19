@@ -1,7 +1,7 @@
 // ============================================================
 // Помощники тестов раздела 8 (шаг A). Читают протоколы прогонов настоящего git 2.53.0
 // (docs/git-trainer/reports/section8-git-runs.txt, блоки П8.1–П8.20, и appendix-g18e-git-runs.txt,
-// блоки П8.21–П8.40, appendix-g18e2-git-runs.txt, блоки П8.41–П8.56, и appendix-g18g-git-runs.txt, блоки П8.57–П8.68)
+// блоки П8.21–П8.40, appendix-g18e2-git-runs.txt, блоки П8.41–П8.56, appendix-g18g-git-runs.txt, блоки П8.57–П8.68, и appendix-g18g2-git-runs.txt, блоки П8.69–П8.80)
 // и detached-head-git-runs.txt, блоки О1–О31) и выдают команды блока с выводом и кодом возврата. Блок можно проиграть на
 // движке целиком: id коммитов и объектов у git настоящие, у тренажёра свои, поэтому вывод
 // сверяется со скелетом, а соответствие «настоящий id → id тренажёра» запоминается и обязано
@@ -12,6 +12,7 @@ import section8Runs from '../../../../docs/git-trainer/reports/section8-git-runs
 import appendixRuns from '../../../../docs/git-trainer/reports/appendix-g18e-git-runs.txt?raw'
 import stashRuns from '../../../../docs/git-trainer/reports/appendix-g18e2-git-runs.txt?raw'
 import switchRuns from '../../../../docs/git-trainer/reports/appendix-g18g-git-runs.txt?raw'
+import resetRuns from '../../../../docs/git-trainer/reports/appendix-g18g2-git-runs.txt?raw'
 import detachedRuns from '../../../../docs/git-trainer/reports/detached-head-git-runs.txt?raw'
 import { createAppendixSection, createAppendixFile, deleteAppendixFile, editAppendixFile, runAppendixCommand } from './appendixSection'
 import type { AppendixState, CommandResult } from './appendixSection'
@@ -23,7 +24,7 @@ export interface ProtocolEntry {
   exitCode: number
   /** Номер строки команды в файле протокола (с 1). */
   line: number
-  file: 'section8-git-runs.txt' | 'appendix-g18e-git-runs.txt' | 'appendix-g18e2-git-runs.txt' | 'appendix-g18g-git-runs.txt' | 'detached-head-git-runs.txt'
+  file: 'section8-git-runs.txt' | 'appendix-g18e-git-runs.txt' | 'appendix-g18e2-git-runs.txt' | 'appendix-g18g-git-runs.txt' | 'appendix-g18g2-git-runs.txt' | 'detached-head-git-runs.txt'
 }
 
 function readBlocks(text: string, file: ProtocolEntry['file'], into: Map<string, ProtocolEntry[]>): void {
@@ -58,6 +59,7 @@ readBlocks(section8Runs, 'section8-git-runs.txt', blocks)
 readBlocks(appendixRuns, 'appendix-g18e-git-runs.txt', blocks)
 readBlocks(stashRuns, 'appendix-g18e2-git-runs.txt', blocks)
 readBlocks(switchRuns, 'appendix-g18g-git-runs.txt', blocks)
+readBlocks(resetRuns, 'appendix-g18g2-git-runs.txt', blocks)
 readBlocks(detachedRuns, 'detached-head-git-runs.txt', blocks)
 
 /** Команды блока (`П8.21`) в порядке протокола. */
@@ -80,13 +82,13 @@ const ID = /\b[0-9a-f]{7}(?:[0-9a-f]{33})?\b/g
 
 /**
  * Вывод git приводится к тому, что печатает тренажёр: без строк `Author:`, `Date:` и `Tagger:`,
- * без диффстата и `create mode` после первой строки `git commit`, без маркера
+ * без диффстата и `create mode` после первой строки `git commit` и `git cherry-pick`, без маркера
  * `\ No newline at end of file`, с одинаковыми хэшами блобов в строках `index` и с путём `/site` вместо
  * каталога прогона в отказе `branch -d` текущей ветки (там тренажёр, как раздел 2, ставит плейсхолдер).
  */
 export function normalizeGitOutput(command: string, output: string): string {
   let lines = output.split('\n')
-  if (/(^|; )git commit/.test(command) && lines[0]?.startsWith('[')) lines = [lines[0]]
+  if (/(^|; )git (commit|cherry-pick)/.test(command) && lines[0]?.startsWith('[')) lines = [lines[0]]
   lines = lines
     .filter((l) => !/^(Author|Tagger): /.test(l) && !/^Date: {3}/.test(l) && l !== '\\ No newline at end of file')
     .map((l) => l.replace(/^index [0-9a-f]{7}\.\.[0-9a-f]{7}/, 'index <blob>..<blob>').replace("used by worktree at '/work'", "used by worktree at '/site'"))
@@ -177,8 +179,6 @@ export interface ReplayOptions {
    * на терминале — первым (О24, target.md, часть XII). Такие шаги сверяются как наборы строк.
    */
   unordered?: (entry: ProtocolEntry, index: number) => boolean
-  /** Читать `git reflog -<n>` как n верхних строк `git reflog`: сам ключ раздел не разбирает. */
-  reflogLimit?: boolean
 }
 
 /**
@@ -232,12 +232,9 @@ export function replayBlock(block: string | readonly string[], options: ReplayOp
         continue
       }
       const quiet = isQuiet(part)
-      // `git reflog -<n>` раздел не разбирает (отказ области); в протоколе он печатает n верхних строк того, что печатает `git reflog`.
-      const limit = options.reflogLimit === true ? /^git reflog -(\d+)$/.exec(part) : null
-      const run = runAppendixCommand(state, limit ? 'git reflog' : translateCommand(quiet ? withoutQuiet(part) : part, ids, Object.keys(state.commits)))
+      const run = runAppendixCommand(state, translateCommand(quiet ? withoutQuiet(part) : part, ids, Object.keys(state.commits)))
       state = run.state
       result = run.result as CommandResult
-      if (limit) result = { ...result, output: result.output.split('\n').slice(0, Number(limit[1])).join('\n') }
       if (!quiet && result.output !== '') printed.push(result.output)
     }
     const shown = printed.join('\n')

@@ -38,6 +38,8 @@ export const ALLOWED: Readonly<Record<string, Readonly<Record<string, number>>>>
   'appendixTags.ts': { 'Failed to resolve': 1 },
   'appendixLocal.ts': { 'not a valid object name': 1 },
   'appendixRevisions.ts': { 'ambiguous argument': 1 },
+  // Раздел 8, cherry-pick: `fatal: bad revision` сверен прогонами (section8-git-runs.txt, П8.4; appendix-g18g2-git-runs.txt, П8.76).
+  'appendixCherryPick.ts': { 'bad revision': 1 },
 }
 
 /**

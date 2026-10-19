@@ -54,7 +54,7 @@ export function createAppendixSection(): AppendixState {
     reflog,
     stashes: [],
     history: [],
-    missionsDone: { lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false },
+    missionsDone: { lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false, cherryPick: false, rescueCommit: false },
     clock: 4,
   }
 }

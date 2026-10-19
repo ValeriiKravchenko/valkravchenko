@@ -1674,17 +1674,19 @@ export const ru = {
       checkout:
         'git checkout <ветка>, git checkout -b <имя>, git checkout <тег, id или ссылка> (HEAD отсоединяется), git checkout --detach [<ссылка>], git checkout -, git checkout HEAD, git checkout -- <файл>… и git checkout <файл>…',
       switch: 'git switch <ветка>, git switch -c <имя>, git switch --detach [<ссылка>] и git switch -',
-      reflog: 'git reflog (без аргументов)',
+      reflog: 'git reflog и git reflog -<число>',
+      reset: 'git reset [--soft | --mixed | --hard] [<ссылка>] (одна ссылка, без путей)',
+      cherryPick: 'git cherry-pick <ссылка> (один коммит, без ключей)',
       diff: 'git diff и git diff --staged (или --cached)',
       show: 'git show и git show <ссылка> (коммит, ветка или тег)',
-      log: 'git log, git log --oneline, -<число>, --all и git log <ссылка> (ключи в любом порядке)',
+      log: 'git log, git log --oneline, -<число>, --all, git log <ссылка> и git log -g --oneline [-<число>] (ключи в любом порядке)',
       tag: 'git tag, git tag <имя> [<ссылка>], -a -m "…", -m "…", -f, -l [<маска>…] (или --list) и -d <имя>…',
       stash: 'git stash, git stash -m "…", git stash push [-m "…"], git stash save [сообщение…], git stash list, git stash clear и git stash apply, pop, drop с необязательным stash@{n} или номером n',
     },
     errors: {
-      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash и reflog.`,
+      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset и cherry-pick.`,
       commandOutOfScope: (sub: string) =>
-        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash и reflog.`,
+        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset и cherry-pick.`,
       detachedCommandOutOfScope: (sub: string) =>
         sub === 'merge'
           ? `${TRAINER_MARKER} git merge в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git при перемотке передвинул бы HEAD, а не ветку: ветка осталась бы на месте, а HEAD встал бы на её коммит. Ничего не изменено.`
@@ -1730,6 +1732,13 @@ export const ru = {
         `${TRAINER_MARKER} «${file}» — файл рабочего каталога, и git log принял бы это слово за путь и показал бы историю одного файла. Фильтр по путям в разделе не разбирается.`,
       showPathFilter: (file: string) =>
         `${TRAINER_MARKER} «${file}» — файл рабочего каталога, и git show принял бы это слово за путь. Фильтр по путям в разделе не разбирается.`,
+      resetPathForm: (word: string) =>
+        `${TRAINER_MARKER} «${word}» — файл рабочего каталога, и git reset принял бы это слово за путь (git reset файл убирает файл из индекса) либо потребовал бы «--», если так же называется ссылка. Формы с путями в разделе не разбираются. Ничего не изменено.`,
+      cherryPickConflict: (files: readonly string[]) =>
+        `${TRAINER_MARKER} git cherry-pick: копируемый коммит и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git cherry-pick --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
+      cherryPickEmpty: `${TRAINER_MARKER} git cherry-pick: изменение этого коммита уже есть в HEAD, копия вышла бы пустой. Настоящий git остановился бы (код возврата 1) и ждал бы git cherry-pick --skip или --abort; такое состояние тренажёр не моделирует, поэтому ничего не изменено.`,
+      cherryPickUnverified: (file: string) =>
+        `${TRAINER_MARKER} git cherry-pick: коммит удаляет файл «${file}», а в рабочем каталоге этот файл изменён или удалён. Как git ответил бы на это сочетание, в разделе не сверено. Ничего не изменено.`,
     },
     /** Пояснения 💡 под выводом команды: визуально отделены от вывода, метки не требуют. */
     explain: {
@@ -1820,6 +1829,37 @@ export const ru = {
       branchDeleted: 'Удалена только метка-ветка; коммиты, достижимые из других веток, тегов или HEAD, остались. В скобках — коммит, на который указывала ветка.',
       branchDeletedUnderHead:
         'Git разрешил удалить ветку, на коммите которой стоит HEAD: HEAD указывает на коммит, а не на ветку. На самой ветке такую команду git отклонил бы. Коммиты остались: их держит HEAD, пока он на них.',
+      // git reset, git cherry-pick, git reflog -<n> (target.md, часть X, места 13–15; часть XII, «Команды в отсоединённом HEAD»)
+      resetHard: (branch: string | null, shortId: string) =>
+        branch === null
+          ? `В отсоединённом HEAD reset --hard двигает только HEAD: он встал на коммит ${shortId}, а все ветки остались на своих местах. Индекс и рабочий каталог приведены к состоянию коммита: несохранённые правки в отслеживаемых файлах пропали, а файлы, которые git не отслеживает, остались.`
+          : `reset --hard передвинул ветку ${branch} вместе с HEAD на коммит ${shortId}. Индекс и рабочий каталог приведены к состоянию этого коммита: несохранённые правки в отслеживаемых файлах пропали, а файлы, которые git не отслеживает, остались.`,
+      resetSoft: (branch: string | null, shortId: string) =>
+        `${branch === null ? `В отсоединённом HEAD reset --soft двигает только HEAD: он встал на коммит ${shortId}, ветки остались на местах.` : `reset --soft передвинул ветку ${branch} вместе с HEAD на коммит ${shortId}.`} Индекс и рабочий каталог не тронуты, поэтому разница между новым местом и индексом теперь видна в git status как подготовленная правка.`,
+      resetMixed: (branch: string | null, shortId: string, unstaged: boolean) =>
+        `${branch === null ? `В отсоединённом HEAD reset двигает только HEAD: он встал на коммит ${shortId}, ветки остались на местах.` : `reset (режим mixed, он включён по умолчанию) передвинул ветку ${branch} вместе с HEAD на коммит ${shortId}.`} Индекс приведён к состоянию коммита, рабочий каталог не тронут: правки остались в файлах, но больше не подготовлены.${unstaged ? ' Строки «Unstaged changes after reset:» перечисляют файлы, в которых рабочий каталог теперь отличается от индекса: M — изменён, D — удалён.' : ''}`,
+      resetSameCommit: 'HEAD уже стоял на этом коммите, поэтому ничего не сдвинулось. Запись в журнал git всё равно делает: reset всегда оставляет след в git reflog.',
+      resetViaReflog: (ref: string, shortId: string) =>
+        `${ref} — это место, где HEAD был n перемещений назад, а не коммит назад по истории: с каждым перемещением номера сдвигаются. Здесь это коммит ${shortId}. Прежде чем брать номер, смотри git reflog.`,
+      resetLeftBehind: (count: number) => {
+        const word = count % 10 === 1 && count % 100 !== 11 ? 'коммит' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'коммита' : 'коммитов'
+        return `Теперь ни ветка, ни тег не указывают на ${count} ${word}: они не удалены, но на графе бледные, а найти их можно только по журналу. Вернуть: git reflog покажет, где был HEAD, а git reset --hard HEAD@{n} на ветке или git branch имя HEAD@{n} поставит ветку на нужный коммит.`
+      },
+      resetRescued: (branch: string, shortId: string) =>
+        `Ветка ${branch} вернулась на коммит ${shortId}, на который перед этим не указывала ни одна ветка и ни один тег: он спасён и снова обычный на графе.`,
+      resetNoCommit: 'Такой ссылки git не нашёл: это не ветка, не тег, не id коммита и не имя файла рабочего каталога. Что есть, покажет git log --oneline --all.',
+      cherryPickDone: 'cherry-pick сделал копию коммита поверх HEAD: у копии новый id, а оригинал остался на своём месте. Настоящий git после первой строки печатает ещё Date: (дату оригинала) и сводку изменений; тренажёр их не печатает.',
+      cherryPickDetached: 'Копия сделана в отсоединённом HEAD: двигается только HEAD, ни одна ветка за ней не пойдёт. Чтобы не потерять её, поставь на неё ветку: git switch -c имя (или git branch имя).',
+      cherryPickRefusedEdit:
+        'Git отказал: коммит меняет файл, в котором у тебя несохранённая правка, и копия затёрла бы её. Ничего не изменено, правка на месте. Верни файл (git checkout -- app.js), сохрани правку коммитом или спрячь её (git stash), потом повтори.',
+      cherryPickRefusedStaged:
+        'Git отказал: в индексе есть подготовленная правка (git add), а cherry-pick не берётся за дело, пока она есть, даже если она в другом файле. Ничего не изменено. Сохрани правку коммитом, спрячь её (git stash) или сними подготовку, потом повтори.',
+      cherryPickRefusedUntracked:
+        'Git отказал: коммит добавляет файл, а файл с таким именем уже лежит в рабочем каталоге, и git его не отслеживает. Перенеси или удали его кнопкой 🗑, потом повтори. Ничего не изменено.',
+      cherryPickUsage: 'Без аргумента cherry-pick не знает, что копировать: нужна ссылка на коммит, например git cherry-pick feature~1. Git печатает подсказку usage и отвечает кодом 129.',
+      cherryPickBadRevision: 'Такого коммита git не нашёл. Ветки, теги и id смотри в git log --oneline --all.',
+      reflogLimited: (count: number) =>
+        count === 0 ? 'Ключ -0 просит ноль записей, поэтому вывод пуст: это не ошибка.' : `Ключ -${count} оставляет в выводе только ${count} верхних записей журнала; номера HEAD@{n} при этом остаются прежними.`,
     },
     /** Миссии «Что попробовать»: формулировки исходной версии тренажёра (target.md, часть X, «Миссии»). */
     missions: {
@@ -1830,6 +1870,14 @@ export const ru = {
       },
       stashSave: { text: 'Спрячь незавершённую правку, не делая коммита: отложи её в тайник.', hint: 'измени файл (✎ изменить) → git stash' },
       stashRestore: { text: 'Верни спрятанную правку из тайника на место.', hint: 'git stash pop' },
+      cherryPick: {
+        text: 'Скопируй коммит с фиксом из ветки feature в master. Если git откажется копировать поверх твоей правки — сначала верни файл командой git checkout -- app.js.',
+        hint: 'git cherry-pick feature~1',
+      },
+      rescueCommit: {
+        text: 'Откати ветку на коммит назад, а потом верни потерянный коммит: найди его в журнале и поставь на него ветку командой reset.',
+        hint: 'git reset --hard HEAD~1 → git reflog → git reset --hard HEAD@{n}',
+      },
     },
     /** Рамка «Чем тренажёр отличается от настоящего Git» — пункты, относящиеся к тегам, подписям и локальной работе. */
     note: {

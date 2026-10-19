@@ -178,11 +178,13 @@ describe('отсоединённый HEAD в публичном API (шаг B)',
     expect(getCommits(left).filter((c) => c.faded)).toHaveLength(2)
   })
 
-  it('команды шага B в публичном API: reflog и switch выполняются, reset, cherry-pick, rebase и merge — отказ области', () => {
+  it('команды шага B в публичном API: reflog, switch, reset и cherry-pick выполняются, rebase и merge — отказ области', () => {
     const s = createAppendixSection()
     expect(runAppendixCommand(s, 'git reflog').result?.exitCode).toBe(0)
     expect(runAppendixCommand(s, 'git switch feature').result?.exitCode).toBe(0)
-    for (const command of ['git reset --hard HEAD~1', 'git cherry-pick feature', 'git rebase feature', 'git merge feature']) {
+    expect(runAppendixCommand(s, 'git reset --hard HEAD~1').result?.exitCode).toBe(0)
+    expect(runAppendixCommand(s, 'git cherry-pick feature').result?.exitCode).toBe(0)
+    for (const command of ['git rebase feature', 'git merge feature']) {
       const r = runAppendixCommand(s, command).result
       expect(r?.exitCode, command).toBeUndefined()
       expect(r?.output.startsWith('[тренажёр]'), command).toBe(true)
@@ -191,13 +193,17 @@ describe('отсоединённый HEAD в публичном API (шаг B)',
 })
 
 describe('миссии', () => {
-  it('четыре миссии шага A, засчитываются по событию', () => {
-    expect(APPENDIX_MISSION_IDS).toEqual(['lightTag', 'annotatedShow', 'stashSave', 'stashRestore'])
+  it('шесть миссий (шаг A и шаг B без rebase), засчитываются по событию', () => {
+    expect(APPENDIX_MISSION_IDS).toEqual(['lightTag', 'annotatedShow', 'stashSave', 'stashRestore', 'cherryPick', 'rescueCommit'])
     let s = createAppendixSection()
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, false, false])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, false, false, false, false])
     s = runAppendixCommand(s, 'git tag v1').state
     s = runAppendixCommand(s, 'git tag -a v2 -m "Релиз"').state
     s = runAppendixCommand(s, 'git show v2').state
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([true, true, false, false])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([true, true, false, false, false, false])
+    s = runAppendixCommand(s, 'git cherry-pick feature~1').state
+    s = runAppendixCommand(s, 'git reset --hard HEAD~1').state
+    s = runAppendixCommand(s, 'git reset --hard HEAD@{1}').state
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([true, true, false, false, true, true])
   })
 })

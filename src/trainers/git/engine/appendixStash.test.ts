@@ -34,7 +34,7 @@ describe('П8.3: дословный сценарий тайников', () => {
     s = same(s, 'П8.3', 'git stash', ids, 0)
     s = same(s, 'П8.3', 'git stash list', ids, 0)
     expect(s.stashes).toEqual([])
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, false, false])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, false, false, false, false])
     // Правка, `git stash`, затем вторая правка и `-m`, список из двух.
     s = same(edit(s), 'П8.3', 'git stash', ids, 1)
     expect(s.working).toEqual(s.index)
@@ -542,7 +542,7 @@ describe('миссии 3 и 4 (target.md, «Миссии»)', () => {
   it('миссия 3: git stash, -m, push, save после правки засчитывают; миссия 4 ещё нет', () => {
     for (const line of ['git stash', 'git stash -m "x"', 'git stash push', 'git stash push -m x', 'git stash save y']) {
       const s = run(edit(fresh()), line).state
-      expect(getAppendixMissions(s).map((m) => m.done), line).toEqual([false, false, true, false])
+      expect(getAppendixMissions(s).map((m) => m.done), line).toEqual([false, false, true, false, false, false])
     }
   })
 
@@ -575,12 +575,12 @@ describe('миссии 3 и 4 (target.md, «Миссии»)', () => {
     s = run(s, 'git stash clear').state
     s = run(edit(s, 'README.md'), 'git stash').state
     s = run(s, 'git stash drop').state
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, true, true])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, true, true, false, false])
   })
 
   it('путь целиком: правка, git stash, git stash pop — миссии 3 и 4 (S8-76 в части шага A)', () => {
     const s = runAll(edit(fresh()), ['git stash', 'git stash pop'])
-    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, true, true])
+    expect(getAppendixMissions(s).map((m) => m.done)).toEqual([false, false, true, true, false, false])
     expect(getAppendixMissions(s)[2].text).toBe(ru.appendix.missions.stashSave.text)
   })
 })
@@ -649,6 +649,6 @@ describe('устойчивость', () => {
     expect(s.missionsDone.stashSave).toBe(true)
     const again = fresh()
     expect(again.stashes).toEqual([])
-    expect(again.missionsDone).toEqual({ lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false })
+    expect(again.missionsDone).toEqual({ lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false, cherryPick: false, rescueCommit: false })
   })
 })

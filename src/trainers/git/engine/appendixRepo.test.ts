@@ -82,7 +82,7 @@ describe('исходное состояние (target.md, часть X, «Исх
   it('логические часы продолжаются с четвёртого шага; история терминала и миссии пусты', () => {
     expect(s.clock).toBe(4)
     expect(s.history).toEqual([])
-    expect(s.missionsDone).toEqual({ lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false })
+    expect(s.missionsDone).toEqual({ lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false, cherryPick: false, rescueCommit: false })
     expect(s.stashes).toEqual([])
   })
 

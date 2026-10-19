@@ -4,18 +4,38 @@
 // порядке. Подписи `(HEAD -> master, tag: v1, feature)` печатаются на каждой строке, как на
 // терминале (П8.13). Строк `Author:` и `Date:` нет: так решено для раздела 8 («Автор и дата в
 // разделе 8»); речь говорит, что git их показал бы.
+//
+// Журнал: `git log -g --oneline [-<n>]` (ключи в любом порядке) печатает те же строки, что `git reflog [-<n>]`
+// (П8.5, П8.79); без `--oneline` git печатает длинную форму со строками `Reflog:`, `Author:`, `Date:` — это, `-g` со ссылкой
+// и `--all` — отказ области.
 // ============================================================
 import type { AppendixState } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { allStarts, commitOf, currentCommitId, decorationMap, decorationText, logOrder } from './appendixRepo'
 import { ambiguousArgumentOutput, reflogShortOutput, resolveRevision } from './appendixRevisions'
+import { REFLOG_LIMIT, reflogOutcome } from './appendixReflog'
 import { shortCommitId } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
 
 const ae = ru.appendix.errors
 
+/** `git log -g`: журнал HEAD в одну строку; другие формы — отказ области. */
+function logReflog(state: AppendixState, args: readonly string[]): Outcome {
+  let oneline = false
+  let limit: number | null = null
+  for (const arg of args) {
+    if (arg === '-g') continue
+    if (arg === '--oneline') oneline = true
+    else if (REFLOG_LIMIT.test(arg)) limit = Number(arg.slice(1))
+    else return refuse(state, ae.form('log', args.join(' '), ru.appendix.allowed.log))
+  }
+  if (!oneline) return refuse(state, ae.form('log', args.join(' '), ru.appendix.allowed.log))
+  return reflogOutcome(state, limit)
+}
+
 export function handleLog(state: AppendixState, args: readonly string[]): Outcome {
+  if (args.includes('-g')) return logReflog(state, args)
   let oneline = false
   let all = false
   let limit: number | null = null

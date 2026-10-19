@@ -1,0 +1,1385 @@
+# Прогоны git 2.53.0, 19.10.2026 (поток g18g2), LC_ALL=C, GIT_PAGER=cat, GIT_CONFIG_NOSYSTEM=1, HOME и XDG_CONFIG_HOME внутри каталога из mktemp -d,
+#   git запускается как `git -c log.decorate=short -c init.defaultBranch=master`, под stdbuf -oL -eL: порядок строк stdout и stderr такой, как на терминале.
+# Автор и коммиттер: Валера <valera@example.com>. Каждая команда сдвигает часы на минуту (GIT_AUTHOR_DATE/GIT_COMMITTER_DATE),
+#   начиная с Mon Jun 1 10:00:00 2026 +0300, поэтому хэши воспроизводимы внутри файла и совпадают с хэшами appendix-g18g-git-runs.txt для исходной истории
+#   (README — fc30a66, «О проекте» — da2dfdc, fix — 60eddbb, базовый — 535ca80), дальше зависят от порядка команд. Каждый блок начинается с исходной истории
+#   раздела 8, как в П8.1 (файлы кончаются переводом строки: app.js, README.md, about.html), HEAD на master, рабочий каталог чист; после блока каталог удалён.
+#   Каталог прогона в выводе заменён на /work.
+# Служебные шаги: `edit <файл>` дописывает ` + правка` перед концом строки файла (так ✎ меняет файл в тренажёре), `mkfile <файл>` создаёт файл
+#   с одной строкой «новый файл», `rm <файл>` удаляет файл. Это не команды git; вывода у них нет. Команды с `-q` — подготовка, их вывод образцом не служит.
+#   Слова `{short:…}` и `{full:…}` в записи команды заменены настоящими 7 или 40 знаками id той ссылки, которая в скобках (так набрал бы игрок).
+# Блоки П8.69–П8.81 закрывают формы, которых нет в section8-git-runs.txt (П8.4, П8.5, П8.10), detached-head-git-runs.txt (О6, О18, О20) и
+#   appendix-g18g-git-runs.txt: `git reset` в трёх режимах на ветке и в отсоединённом HEAD (запись журнала, правки, `Unstaged changes after reset:`),
+#   `reset --hard HEAD@{n}` на брошенный коммит, `git cherry-pick` (ссылки, правки в рабочем каталоге и в индексе, пустая копия, конфликт, удаление файла),
+#   `git reflog -<n>` и `git log -g --oneline -<n>`.
+# Формат: "$ команда", вывод (stdout+stderr), [exit код]. Пустая строка в конце вывода команды — это перевод строки в конце вывода git.
+
+===== П8.69. RESET --hard на ветке: HEAD~1, тот же коммит, ветка, id, тег, HEAD@{n}, ошибки
+$ git reset --hard HEAD~1
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git log --oneline --all
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 (HEAD -> master) Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD~1
+fc30a66 HEAD@{1}: commit: Добавить README
+[exit 0]
+
+$ git reset --hard HEAD
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD
+535ca80 (HEAD -> master) HEAD@{1}: reset: moving to HEAD~1
+[exit 0]
+
+$ git reset --hard master
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to master
+[exit 0]
+
+$ git reset --hard feature
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ git log --oneline --all
+da2dfdc (HEAD -> master, feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -3
+da2dfdc (HEAD -> master, feature) HEAD@{0}: reset: moving to feature
+535ca80 HEAD@{1}: reset: moving to master
+535ca80 HEAD@{2}: reset: moving to HEAD
+[exit 0]
+
+$ git reset --hard HEAD@{1}
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git log --oneline --all
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 (HEAD -> master) Базовая версия приложения
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD@{1}
+[exit 0]
+
+$ git reset --hard 60eddbb
+HEAD is now at 60eddbb fix: опечатка в логе
+[exit 0]
+
+$ git reflog -1
+60eddbb (HEAD -> master) HEAD@{0}: reset: moving to 60eddbb
+[exit 0]
+
+$ git reset --hard 60eddbbcc4b09cb2298e609821e292fd6e417079
+HEAD is now at 60eddbb fix: опечатка в логе
+[exit 0]
+
+$ git reflog -1
+60eddbb (HEAD -> master) HEAD@{0}: reset: moving to 60eddbbcc4b09cb2298e609821e292fd6e417079
+[exit 0]
+
+$ git reset --hard feature^
+HEAD is now at 60eddbb fix: опечатка в логе
+[exit 0]
+
+$ git reflog -1
+60eddbb (HEAD -> master) HEAD@{0}: reset: moving to feature^
+[exit 0]
+
+$ git tag -a v1.1.0 -m "Релиз" feature
+[exit 0]
+
+$ git reset --hard v1.1.0
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ git reflog -1
+da2dfdc (HEAD -> master, tag: v1.1.0, feature) HEAD@{0}: reset: moving to v1.1.0
+[exit 0]
+
+$ git log --oneline --all
+da2dfdc (HEAD -> master, tag: v1.1.0, feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reset --hard nosuch
+fatal: ambiguous argument 'nosuch': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+[exit 128]
+
+$ git reset --hard HEAD~9
+fatal: ambiguous argument 'HEAD~9': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+[exit 128]
+
+$ git reset --hard HEAD@{99}
+fatal: log for 'HEAD' only has 15 entries
+[exit 128]
+
+$ git reset --hard HEAD@{0}
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ git reflog -1
+da2dfdc (HEAD -> master, tag: v1.1.0, feature) HEAD@{0}: reset: moving to HEAD@{0}
+[exit 0]
+
+
+===== П8.70. RESET --soft и смешанный (mixed) на чистом дереве
+$ git reset --soft HEAD~1
+[exit 0]
+
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   README.md
+
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD~1
+[exit 0]
+
+$ git reset --soft HEAD@{1}
+[exit 0]
+
+$ git status
+On branch master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD -> master) HEAD@{0}: reset: moving to HEAD@{1}
+[exit 0]
+
+$ git reset HEAD~1
+[exit 0]
+
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD~1
+[exit 0]
+
+$ git reset
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD
+[exit 0]
+
+$ git reset --mixed HEAD@{1}
+[exit 0]
+
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD@{1}
+[exit 0]
+
+$ git reset --soft feature
+[exit 0]
+
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	deleted:    about.html
+	modified:   app.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+[exit 0]
+
+$ git log --oneline --all
+da2dfdc (HEAD -> master, feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -1
+da2dfdc (HEAD -> master, feature) HEAD@{0}: reset: moving to feature
+[exit 0]
+
+$ git reset --mixed
+Unstaged changes after reset:
+D	about.html
+M	app.js
+[exit 0]
+
+$ git reflog -1
+da2dfdc (HEAD -> master, feature) HEAD@{0}: reset: moving to HEAD
+[exit 0]
+
+
+===== П8.71. RESET с правками в рабочем каталоге и в индексе
+$ edit app.js
+[exit 0]
+
+$ git reset --soft HEAD~1
+[exit 0]
+
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   README.md
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app.js
+
+[exit 0]
+
+$ git reset
+Unstaged changes after reset:
+M	app.js
+[exit 0]
+
+$ git status
+On branch master
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[exit 0]
+
+$ git add app.js
+[exit 0]
+
+$ git reset --hard
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+$ git reflog -2
+535ca80 (HEAD -> master) HEAD@{0}: reset: moving to HEAD
+535ca80 (HEAD -> master) HEAD@{1}: reset: moving to HEAD
+[exit 0]
+
+$ mkfile notes.txt
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git reset --hard HEAD
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+	notes.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+$ rm app.js
+[exit 0]
+
+$ git reset
+Unstaged changes after reset:
+D	app.js
+[exit 0]
+
+$ git status
+On branch master
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    app.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+	notes.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[exit 0]
+
+$ git checkout -- app.js
+[exit 0]
+
+$ git reset --hard feature
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git reset --mixed HEAD~1
+Unstaged changes after reset:
+M	app.js
+[exit 0]
+
+$ git status
+On branch master
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+	about.html
+	notes.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[exit 0]
+
+$ git reset --hard HEAD~1
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ mkfile about.html
+[exit 0]
+
+$ git reset --hard feature
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+	notes.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+
+===== П8.72. RESET в отсоединённом HEAD: двигается только HEAD, ветки на месте
+$ git checkout -q --detach master
+[exit 0]
+
+$ git reset --hard HEAD~1
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git branch
+* (HEAD detached from refs/heads/master)
+  feature
+  master
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 (HEAD) Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+535ca80 (HEAD) HEAD@{0}: reset: moving to HEAD~1
+fc30a66 (master) HEAD@{1}: checkout: moving from master to master
+[exit 0]
+
+$ git status
+HEAD detached from refs/heads/master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git reset --hard HEAD@{1}
+HEAD is now at fc30a66 Добавить README
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (HEAD, master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -3
+fc30a66 (HEAD, master) HEAD@{0}: reset: moving to HEAD@{1}
+535ca80 HEAD@{1}: reset: moving to HEAD~1
+fc30a66 (HEAD, master) HEAD@{2}: checkout: moving from master to master
+[exit 0]
+
+$ git status
+HEAD detached at refs/heads/master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git reset --hard feature
+HEAD is now at da2dfdc Добавить страницу «О проекте»
+[exit 0]
+
+$ git status
+HEAD detached from refs/heads/master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (master) Добавить README
+da2dfdc (HEAD, feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reset --soft HEAD~1
+[exit 0]
+
+$ git status
+HEAD detached from refs/heads/master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   about.html
+
+[exit 0]
+
+$ git reflog -1
+60eddbb (HEAD) HEAD@{0}: reset: moving to HEAD~1
+[exit 0]
+
+$ git reset
+[exit 0]
+
+$ git status
+HEAD detached from refs/heads/master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	about.html
+
+nothing added to commit but untracked files present (use "git add" to track)
+[exit 0]
+
+$ git reflog -1
+60eddbb (HEAD) HEAD@{0}: reset: moving to HEAD~1
+[exit 0]
+
+$ git checkout master
+Previous HEAD position was 60eddbb fix: опечатка в логе
+Switched to branch 'master'
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (HEAD -> master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+
+===== П8.73. RESET --hard HEAD@{n} в отсоединённом HEAD на брошенный коммит: ветка не двигается
+$ git checkout -q --detach master
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git commit -qam "Эксперимент"
+[exit 0]
+
+$ git checkout -q master
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (HEAD -> master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -3
+fc30a66 (HEAD -> master) HEAD@{0}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+2ac27d3 HEAD@{1}: commit: Эксперимент
+fc30a66 (HEAD -> master) HEAD@{2}: checkout: moving from master to master
+[exit 0]
+
+$ git checkout -q --detach master
+[exit 0]
+
+$ git reflog -4
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+fc30a66 (HEAD, master) HEAD@{1}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+2ac27d3 HEAD@{2}: commit: Эксперимент
+fc30a66 (HEAD, master) HEAD@{3}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --hard HEAD@{2}
+HEAD is now at 2ac27d3 Эксперимент
+[exit 0]
+
+$ git branch
+* (HEAD detached from refs/heads/master)
+  feature
+  master
+[exit 0]
+
+$ git log --oneline --all
+2ac27d3 (HEAD) Эксперимент
+fc30a66 (master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -3
+2ac27d3 (HEAD) HEAD@{0}: reset: moving to HEAD@{2}
+fc30a66 (master) HEAD@{1}: checkout: moving from master to master
+fc30a66 (master) HEAD@{2}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+[exit 0]
+
+$ git status
+HEAD detached from refs/heads/master
+nothing to commit, working tree clean
+[exit 0]
+
+
+===== П8.74. RESET --hard HEAD@{n} на ветке: брошенный коммит возвращается, номера сдвигаются
+$ git checkout -q --detach master
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git commit -qam "Эксперимент"
+[exit 0]
+
+$ git checkout -q master
+[exit 0]
+
+$ git reflog -3
+fc30a66 (HEAD -> master) HEAD@{0}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+2ac27d3 HEAD@{1}: commit: Эксперимент
+fc30a66 (HEAD -> master) HEAD@{2}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --hard HEAD@{1}
+HEAD is now at 2ac27d3 Эксперимент
+[exit 0]
+
+$ git log --oneline --all
+2ac27d3 (HEAD -> master) Эксперимент
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git branch
+  feature
+* master
+[exit 0]
+
+$ git status
+On branch master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git reflog -3
+2ac27d3 (HEAD -> master) HEAD@{0}: reset: moving to HEAD@{1}
+fc30a66 HEAD@{1}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+2ac27d3 (HEAD -> master) HEAD@{2}: commit: Эксперимент
+[exit 0]
+
+$ git reset --hard HEAD@{2}
+HEAD is now at 2ac27d3 Эксперимент
+[exit 0]
+
+$ git log --oneline --all
+2ac27d3 (HEAD -> master) Эксперимент
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -3
+2ac27d3 (HEAD -> master) HEAD@{0}: reset: moving to HEAD@{2}
+2ac27d3 (HEAD -> master) HEAD@{1}: reset: moving to HEAD@{1}
+fc30a66 HEAD@{2}: checkout: moving from 2ac27d3824307105c94a91069a1d692f8628b88b to master
+[exit 0]
+
+$ git reset --hard HEAD@{2}
+HEAD is now at fc30a66 Добавить README
+[exit 0]
+
+$ git log --oneline --all
+fc30a66 (HEAD -> master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+
+===== П8.75. CHERRY-PICK на ветке: ссылки, запись журнала, граф, повтор уже применённого
+$ git cherry-pick feature~1
+[master e7c4838] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git log --oneline --all
+e7c4838 (HEAD -> master) fix: опечатка в логе
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+e7c4838 (HEAD -> master) HEAD@{0}: cherry-pick: fix: опечатка в логе
+fc30a66 HEAD@{1}: commit: Добавить README
+[exit 0]
+
+$ git status
+On branch master
+nothing to commit, working tree clean
+[exit 0]
+
+$ git cherry-pick feature
+[master 34bd65e] Добавить страницу «О проекте»
+ Date: Mon Jun 1 10:06:00 2026 +0300
+ 1 file changed, 1 insertion(+)
+ create mode 100644 about.html
+[exit 0]
+
+$ git log --oneline --all
+34bd65e (HEAD -> master) Добавить страницу «О проекте»
+e7c4838 fix: опечатка в логе
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+34bd65e (HEAD -> master) HEAD@{0}: cherry-pick: Добавить страницу «О проекте»
+e7c4838 HEAD@{1}: cherry-pick: fix: опечатка в логе
+[exit 0]
+
+$ git cherry-pick HEAD@{1}
+On branch master
+You are currently cherry-picking commit e7c4838.
+  (all conflicts fixed: run "git cherry-pick --continue")
+  (use "git cherry-pick --skip" to skip this patch)
+  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
+
+nothing to commit, working tree clean
+The previous cherry-pick is now empty, possibly due to conflict resolution.
+If you wish to commit it anyway, use:
+
+    git commit --allow-empty
+
+Otherwise, please use 'git cherry-pick --skip'
+[exit 1]
+
+
+===== П8.76. CHERRY-PICK: аннотированный тег, id, ошибки
+$ git log --oneline --all
+fc30a66 (HEAD -> master) Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git tag -a v1.1.0 -m "Релиз" feature~1
+[exit 0]
+
+$ git cherry-pick v1.1.0
+[master 5aac0b2] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git reflog -1
+5aac0b2 (HEAD -> master) HEAD@{0}: cherry-pick: fix: опечатка в логе
+[exit 0]
+
+$ git reset -q --hard HEAD~1
+[exit 0]
+
+$ git cherry-pick 60eddbb
+[master 68930d7] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git reset -q --hard HEAD~1
+[exit 0]
+
+$ git cherry-pick 60eddbbcc4b09cb2298e609821e292fd6e417079
+[master a82c19d] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git reflog -1
+a82c19d (HEAD -> master) HEAD@{0}: cherry-pick: fix: опечатка в логе
+[exit 0]
+
+$ git cherry-pick nosuch
+fatal: bad revision 'nosuch'
+[exit 128]
+
+$ git cherry-pick HEAD@{99}
+fatal: log for 'HEAD' only has 11 entries
+[exit 128]
+
+$ git cherry-pick
+usage: git cherry-pick [--edit] [-n] [-m <parent-number>] [-s] [-x] [--ff]
+                       [-S[<keyid>]] <commit>...
+   or: git cherry-pick (--continue | --skip | --abort | --quit)
+
+    --quit                end revert or cherry-pick sequence
+    --continue            resume revert or cherry-pick sequence
+    --abort               cancel revert or cherry-pick sequence
+    --skip                skip current commit and continue
+    --[no-]cleanup <mode> how to strip spaces and #comments from message
+    -n, --no-commit       don't automatically commit
+    --commit              opposite of --no-commit
+    -e, --[no-]edit       edit the commit message
+    -s, --[no-]signoff    add a Signed-off-by trailer
+    -m, --[no-]mainline <parent-number>
+                          select mainline parent
+    --[no-]rerere-autoupdate
+                          update the index with reused conflict resolution if possible
+    --[no-]strategy <strategy>
+                          merge strategy
+    -X, --[no-]strategy-option <option>
+                          option for merge strategy
+    -S, --[no-]gpg-sign[=<key-id>]
+                          GPG sign commit
+    -x                    append commit name
+    --[no-]ff             allow fast-forward
+    --[no-]allow-empty    preserve initially empty commits
+    --[no-]allow-empty-message
+                          allow commits with empty messages
+    --[no-]keep-redundant-commits
+                          deprecated: use --empty=keep instead
+    --empty (stop|drop|keep)
+                          how to handle commits that become empty
+
+[exit 129]
+
+$ git cherry-pick HEAD~9
+fatal: bad revision 'HEAD~9'
+[exit 128]
+
+$ git status
+On branch master
+nothing to commit, working tree clean
+[exit 0]
+
+
+===== П8.77. CHERRY-PICK при правках: файл коммита, посторонний файл, подготовленная правка, неотслеживаемый файл
+$ edit app.js
+[exit 0]
+
+$ git cherry-pick feature~1
+error: Your local changes to the following files would be overwritten by merge:
+	app.js
+Please commit your changes or stash them before you merge.
+Aborting
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+ M app.js
+[exit 0]
+
+$ git add app.js
+[exit 0]
+
+$ git cherry-pick feature~1
+error: your local changes would be overwritten by cherry-pick.
+hint: commit your changes or stash them to proceed.
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+M  app.js
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ edit README.md
+[exit 0]
+
+$ git cherry-pick feature~1
+[master 04d5b45] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git status --short
+ M README.md
+[exit 0]
+
+$ git log --oneline
+04d5b45 (HEAD -> master) fix: опечатка в логе
+fc30a66 Добавить README
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reset -q --hard HEAD~1
+[exit 0]
+
+$ edit README.md
+[exit 0]
+
+$ git add README.md
+[exit 0]
+
+$ git cherry-pick feature~1
+error: your local changes would be overwritten by cherry-pick.
+hint: commit your changes or stash them to proceed.
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+M  README.md
+[exit 0]
+
+$ git log --oneline
+fc30a66 (HEAD -> master) Добавить README
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ mkfile about.html
+[exit 0]
+
+$ git cherry-pick feature
+error: The following untracked working tree files would be overwritten by merge:
+	about.html
+Please move or remove them before you merge.
+Aborting
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+?? about.html
+[exit 0]
+
+$ git log --oneline
+fc30a66 (HEAD -> master) Добавить README
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ rm about.html
+[exit 0]
+
+$ git cherry-pick feature
+[master 6aea950] Добавить страницу «О проекте»
+ Date: Mon Jun 1 10:06:00 2026 +0300
+ 1 file changed, 1 insertion(+)
+ create mode 100644 about.html
+[exit 0]
+
+$ git status --short
+[exit 0]
+
+
+===== П8.78. CHERRY-PICK: коммит уже в истории (пустая копия) и конфликт
+$ git cherry-pick HEAD
+On branch master
+You are currently cherry-picking commit fc30a66.
+  (all conflicts fixed: run "git cherry-pick --continue")
+  (use "git cherry-pick --skip" to skip this patch)
+  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
+
+nothing to commit, working tree clean
+The previous cherry-pick is now empty, possibly due to conflict resolution.
+If you wish to commit it anyway, use:
+
+    git commit --allow-empty
+
+Otherwise, please use 'git cherry-pick --skip'
+[exit 1]
+
+$ git cherry-pick --abort
+[exit 0]
+
+$ git cherry-pick HEAD~1
+On branch master
+You are currently cherry-picking commit 535ca80.
+  (all conflicts fixed: run "git cherry-pick --continue")
+  (use "git cherry-pick --skip" to skip this patch)
+  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
+
+nothing to commit, working tree clean
+The previous cherry-pick is now empty, possibly due to conflict resolution.
+If you wish to commit it anyway, use:
+
+    git commit --allow-empty
+
+Otherwise, please use 'git cherry-pick --skip'
+[exit 1]
+
+$ git cherry-pick --abort
+[exit 0]
+
+$ git cherry-pick master
+On branch master
+You are currently cherry-picking commit fc30a66.
+  (all conflicts fixed: run "git cherry-pick --continue")
+  (use "git cherry-pick --skip" to skip this patch)
+  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
+
+nothing to commit, working tree clean
+The previous cherry-pick is now empty, possibly due to conflict resolution.
+If you wish to commit it anyway, use:
+
+    git commit --allow-empty
+
+Otherwise, please use 'git cherry-pick --skip'
+[exit 1]
+
+$ git cherry-pick --abort
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git commit -qam "Правка"
+[exit 0]
+
+$ git cherry-pick feature~1
+Auto-merging app.js
+CONFLICT (content): Merge conflict in app.js
+error: could not apply 60eddbb... fix: опечатка в логе
+hint: After resolving the conflicts, mark them with
+hint: "git add/rm <pathspec>", then run
+hint: "git cherry-pick --continue".
+hint: You can instead skip this commit with "git cherry-pick --skip".
+hint: To abort and get back to the state before "git cherry-pick",
+hint: run "git cherry-pick --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+[exit 1]
+
+$ git status --short
+UU app.js
+[exit 0]
+
+$ git cherry-pick --abort
+[exit 0]
+
+$ git log --oneline --all
+efa7d85 (HEAD -> master) Правка
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+
+===== П8.79. REFLOG -<n> и LOG -g --oneline -<n>
+$ git reflog -0
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+[exit 0]
+
+$ git reflog -3
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+[exit 0]
+
+$ git reflog -6
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+60eddbb HEAD@{3}: commit: fix: опечатка в логе
+535ca80 HEAD@{4}: checkout: moving from master to feature
+535ca80 HEAD@{5}: commit (initial): Базовая версия приложения
+[exit 0]
+
+$ git reflog -7
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+60eddbb HEAD@{3}: commit: fix: опечатка в логе
+535ca80 HEAD@{4}: checkout: moving from master to feature
+535ca80 HEAD@{5}: commit (initial): Базовая версия приложения
+[exit 0]
+
+$ git reflog -99
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+60eddbb HEAD@{3}: commit: fix: опечатка в логе
+535ca80 HEAD@{4}: checkout: moving from master to feature
+535ca80 HEAD@{5}: commit (initial): Базовая версия приложения
+[exit 0]
+
+$ git reflog -01
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+[exit 0]
+
+$ git reflog -1 -2
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+[exit 0]
+
+$ git reflog -2 -1
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+[exit 0]
+
+$ git log -g --oneline -3
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+[exit 0]
+
+$ git log -g --oneline
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+60eddbb HEAD@{3}: commit: fix: опечатка в логе
+535ca80 HEAD@{4}: checkout: moving from master to feature
+535ca80 HEAD@{5}: commit (initial): Базовая версия приложения
+[exit 0]
+
+$ git log -g --oneline -0
+[exit 0]
+
+$ git log -g --oneline -99
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+da2dfdc (feature) HEAD@{2}: commit: Добавить страницу «О проекте»
+60eddbb HEAD@{3}: commit: fix: опечатка в логе
+535ca80 HEAD@{4}: checkout: moving from master to feature
+535ca80 HEAD@{5}: commit (initial): Базовая версия приложения
+[exit 0]
+
+$ git log --oneline -g -2
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+[exit 0]
+
+$ git log -g -2 --oneline
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+535ca80 HEAD@{1}: checkout: moving from feature to master
+[exit 0]
+
+$ git log -g --oneline -01
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+[exit 0]
+
+$ git log --oneline -0
+[exit 0]
+
+$ git log -2 --oneline -g -1
+fc30a66 (HEAD -> master) HEAD@{0}: commit: Добавить README
+[exit 0]
+
+
+===== П8.80. CHERRY-PICK: правки в нескольких местах, файл удалён в рабочем каталоге, удаление файла коммитом
+$ edit app.js
+[exit 0]
+
+$ git add app.js
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git cherry-pick feature~1
+error: your local changes would be overwritten by cherry-pick.
+hint: commit your changes or stash them to proceed.
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+MM app.js
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ edit README.md
+[exit 0]
+
+$ git add README.md
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ git cherry-pick feature~1
+error: your local changes would be overwritten by cherry-pick.
+hint: commit your changes or stash them to proceed.
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+M  README.md
+ M app.js
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ edit README.md
+[exit 0]
+
+$ git add README.md
+[exit 0]
+
+$ git cherry-pick HEAD
+error: your local changes would be overwritten by cherry-pick.
+hint: commit your changes or stash them to proceed.
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+M  README.md
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ rm app.js
+[exit 0]
+
+$ git cherry-pick feature~1
+[master e2acaf8] fix: опечатка в логе
+ Date: Mon Jun 1 10:04:00 2026 +0300
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[exit 0]
+
+$ git status --short
+[exit 0]
+
+$ git reset -q --hard HEAD~1
+[exit 0]
+
+$ git checkout -q -b both
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ mkfile extra.txt
+[exit 0]
+
+$ git add extra.txt app.js
+[exit 0]
+
+$ git commit -qm "Двойной"
+[exit 0]
+
+$ git checkout -q master
+[exit 0]
+
+$ edit app.js
+[exit 0]
+
+$ mkfile extra.txt
+[exit 0]
+
+$ git cherry-pick both
+error: Your local changes to the following files would be overwritten by merge:
+	app.js
+Please commit your changes or stash them before you merge.
+error: The following untracked working tree files would be overwritten by merge:
+	extra.txt
+Please move or remove them before you merge.
+Aborting
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+ M app.js
+?? extra.txt
+[exit 0]
+
+$ rm extra.txt
+[exit 0]
+
+$ git cherry-pick both
+error: Your local changes to the following files would be overwritten by merge:
+	app.js
+Please commit your changes or stash them before you merge.
+Aborting
+fatal: cherry-pick failed
+[exit 128]
+
+$ git status --short
+ M app.js
+[exit 0]
+
+$ git reset -q --hard
+[exit 0]
+
+$ git cherry-pick both
+[master 01d03ee] Двойной
+ Date: Mon Jun 1 10:35:00 2026 +0300
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+ create mode 100644 extra.txt
+[exit 0]
+
+$ git log --oneline --all
+01d03ee (HEAD -> master) Двойной
+f52cd06 (both) Двойной
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+$ git checkout -q -b del
+[exit 0]
+
+$ rm README.md
+[exit 0]
+
+$ git commit -qam "Удалить README"
+[exit 0]
+
+$ git checkout -q master
+[exit 0]
+
+$ git cherry-pick del
+[master 4fc371a] Удалить README
+ Date: Mon Jun 1 10:49:00 2026 +0300
+ 1 file changed, 1 deletion(-)
+ delete mode 100644 README.md
+[exit 0]
+
+$ git status --short
+[exit 0]
+
+$ git log --oneline --all
+4fc371a (HEAD -> master) Удалить README
+afec49d (del) Удалить README
+01d03ee Двойной
+f52cd06 (both) Двойной
+fc30a66 Добавить README
+da2dfdc (feature) Добавить страницу «О проекте»
+60eddbb fix: опечатка в логе
+535ca80 Базовая версия приложения
+[exit 0]
+
+
+===== П8.81. RESET в отсоединённом HEAD на тот же коммит: записи в журнал нет; на ветке она есть
+$ git checkout -q --detach master
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --hard HEAD
+HEAD is now at fc30a66 Добавить README
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --hard master
+HEAD is now at fc30a66 Добавить README
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --soft HEAD
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+[exit 0]
+
+$ git reset HEAD@{0}
+[exit 0]
+
+$ git reflog -1
+fc30a66 (HEAD, master) HEAD@{0}: checkout: moving from master to master
+[exit 0]
+
+$ git reset --hard HEAD~1
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -1
+535ca80 (HEAD) HEAD@{0}: reset: moving to HEAD~1
+[exit 0]
+
+$ git reset --hard HEAD
+HEAD is now at 535ca80 Базовая версия приложения
+[exit 0]
+
+$ git reflog -2
+535ca80 (HEAD) HEAD@{0}: reset: moving to HEAD~1
+fc30a66 (master) HEAD@{1}: checkout: moving from master to master
+[exit 0]
+
+$ git checkout master
+Previous HEAD position was 535ca80 Базовая версия приложения
+Switched to branch 'master'
+[exit 0]
+
+$ git reset --hard HEAD
+HEAD is now at fc30a66 Добавить README
+[exit 0]
+
+$ git reflog -2
+fc30a66 (HEAD -> master) HEAD@{0}: reset: moving to HEAD
+fc30a66 (HEAD -> master) HEAD@{1}: checkout: moving from 535ca80a110d4303e61aac8f48c5d5f8ebaae78a to master
+[exit 0]

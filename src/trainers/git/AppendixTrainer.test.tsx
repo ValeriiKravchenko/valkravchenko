@@ -139,11 +139,11 @@ describe('AppendixTrainer', () => {
   })
 
   describe('missions', () => {
-    it('shows the four missions in the engine order, all not done', () => {
+    it('shows the missions in the engine order, all not done', () => {
       renderScreen()
       const panel = screen.getByRole('region', { name: ui.missions.title })
       const items = within(panel).getAllByRole('listitem')
-      expect(items).toHaveLength(4)
+      expect(items).toHaveLength(getAppendixMissions(initial()).length)
       getAppendixMissions(initial()).forEach((m, i) => {
         expect(items[i]).toHaveTextContent(m.text)
         expect(items[i]).toHaveTextContent(m.hint)

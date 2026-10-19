@@ -110,8 +110,8 @@ describe('git без подкоманды, глобальные ключи, не
     expect(r.ok).toBe(false)
   })
 
-  it('команды шага B, конфликты и сервера — отказ области с названием команды', () => {
-    for (const name of ['cherry-pick', 'rebase', 'reset', 'restore', 'merge', 'bisect', 'push', 'pull', 'clone', 'init', 'config', 'rm', 'mv', 'revert', 'show-ref', 'cat-file']) {
+  it('rebase, конфликты и сервера — отказ области с названием команды', () => {
+    for (const name of ['rebase', 'restore', 'merge', 'bisect', 'push', 'pull', 'clone', 'init', 'config', 'rm', 'mv', 'revert', 'show-ref', 'cat-file']) {
       const r = run(fresh(), `git ${name}`)
       expect(r.result.output, name).toBe(ru.appendix.errors.commandOutOfScope(name))
       expect(r.result.exitCode).toBeUndefined()
@@ -120,7 +120,7 @@ describe('git без подкоманды, глобальные ключи, не
   })
 
   it('отказ области всегда начинается с метки тренажёра и не подделывает вывод git', () => {
-    for (const line of ['git rebase master', 'git cherry-pick HEAD', 'git reflog show', 'git merge feature', 'git switch -C feature', 'git reset --hard']) {
+    for (const line of ['git rebase master', 'git cherry-pick -x HEAD', 'git reflog show', 'git merge feature', 'git switch -C feature', 'git reset --keep HEAD', 'git log -g']) {
       const out = run(fresh(), line).result.output
       refusal(out)
       expect(out).not.toMatch(/^(fatal|error|usage|hint):/)

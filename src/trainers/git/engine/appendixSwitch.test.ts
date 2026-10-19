@@ -15,7 +15,7 @@ const play = (state: AppendixState, steps: readonly string[]): AppendixState =>
 const refusal = (output: string) => expect(output.startsWith('[тренажёр]')).toBe(true)
 
 function expectReplay(block: string | readonly string[], options: ReplayOptions = {}): void {
-  const replay = replayBlock(block, { reflogLimit: true, ...options })
+  const replay = replayBlock(block, options)
   const problems = replay.steps.filter((s) => s.mismatch !== null).map((s) => `${s.entry.file}:${s.entry.line} «${s.entry.command}» — ${s.mismatch}`)
   expect(problems).toEqual([])
   expect(replay.steps.length).toBeGreaterThan(0)
