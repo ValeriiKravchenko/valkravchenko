@@ -92,7 +92,7 @@ describe('AppendixTrainer', () => {
   it('shows the area refusal from the engine history as it is', async () => {
     const user = userEvent.setup()
     renderScreen()
-    await run(user, 'git rebase master')
+    await run(user, 'git rebase -i master')
     expect(within(log()).getByText(/\[тренажёр\]/)).toBeInTheDocument()
   })
 

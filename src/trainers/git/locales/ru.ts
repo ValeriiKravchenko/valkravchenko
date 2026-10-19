@@ -1677,6 +1677,7 @@ export const ru = {
       reflog: 'git reflog и git reflog -<число>',
       reset: 'git reset [--soft | --mixed | --hard] [<ссылка>] (одна ссылка, без путей)',
       cherryPick: 'git cherry-pick <ссылка> (один коммит, без ключей)',
+      rebase: 'git rebase <ссылка> на ветке (одна ссылка, без ключей)',
       diff: 'git diff и git diff --staged (или --cached)',
       show: 'git show и git show <ссылка> (коммит, ветка или тег)',
       log: 'git log, git log --oneline, -<число>, --all, git log <ссылка> и git log -g --oneline [-<число>] (ключи в любом порядке)',
@@ -1684,9 +1685,9 @@ export const ru = {
       stash: 'git stash, git stash -m "…", git stash push [-m "…"], git stash save [сообщение…], git stash list, git stash clear и git stash apply, pop, drop с необязательным stash@{n} или номером n',
     },
     errors: {
-      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset и cherry-pick.`,
+      gitUsageNoArgs: `${TRAINER_MARKER} git без подкоманды в этом разделе не разбирается — настоящий git печатает длинную подсказку usage. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset, cherry-pick и rebase.`,
       commandOutOfScope: (sub: string) =>
-        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset и cherry-pick.`,
+        `${TRAINER_MARKER} команда «git ${sub}» в этой части раздела не разбирается. Здесь работают: git status, add, commit, branch, checkout, switch, diff, show, log, tag, stash, reflog, reset, cherry-pick и rebase.`,
       detachedCommandOutOfScope: (sub: string) =>
         sub === 'merge'
           ? `${TRAINER_MARKER} git merge в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git при перемотке передвинул бы HEAD, а не ветку: ветка осталась бы на месте, а HEAD встал бы на её коммит. Ничего не изменено.`
@@ -1737,6 +1738,15 @@ export const ru = {
       cherryPickConflict: (files: readonly string[]) =>
         `${TRAINER_MARKER} git cherry-pick: копируемый коммит и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git cherry-pick --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
       cherryPickEmpty: `${TRAINER_MARKER} git cherry-pick: изменение этого коммита уже есть в HEAD, копия вышла бы пустой. Настоящий git остановился бы (код возврата 1) и ждал бы git cherry-pick --skip или --abort; такое состояние тренажёр не моделирует, поэтому ничего не изменено.`,
+      rebaseDetached: `${TRAINER_MARKER} git rebase в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git перенёс бы коммиты и напечатал бы «Successfully rebased and updated detached HEAD.»; двигался бы только HEAD, ветки остались бы на местах, а git status показал бы «HEAD detached from …». Перейди на ветку (git switch имя) и повтори. Ничего не изменено.`,
+      rebaseConflict: (files: readonly string[]) =>
+        `${TRAINER_MARKER} git rebase: переносимый коммит и новая основа изменили ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git rebase --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
+      rebaseEmpty: (subject: string) =>
+        `${TRAINER_MARKER} git rebase: после переноса коммит «${subject}» ничего бы не менял, потому что его изменение уже есть в новой основе. Как git поступил бы с таким коммитом, в разделе не разбирается. Ничего не изменено.`,
+      rebaseAllApplied: `${TRAINER_MARKER} git rebase: изменения всех коммитов ветки уже есть в новой основе (например, после git cherry-pick), переносить нечего. Как выглядит этот исход, в разделе не разбирается. Ничего не изменено.`,
+      rebaseUntracked: (file: string) =>
+        `${TRAINER_MARKER} git rebase: в рабочем каталоге лежит неотслеживаемый файл «${file}», а после переноса файл с таким именем появился бы в коммитах. Как git ответил бы на это, в разделе не сверено. Перенеси или удали файл кнопкой 🗑 и повтори. Ничего не изменено.`,
+      rebaseUnverified: `${TRAINER_MARKER} git rebase: история с коммитом слияния в разделе не разбирается. Ничего не изменено.`,
       cherryPickUnverified: (file: string) =>
         `${TRAINER_MARKER} git cherry-pick: коммит удаляет файл «${file}», а в рабочем каталоге этот файл изменён или удалён. Как git ответил бы на это сочетание, в разделе не сверено. Ничего не изменено.`,
     },
@@ -1857,6 +1867,23 @@ export const ru = {
       cherryPickRefusedUntracked:
         'Git отказал: коммит добавляет файл, а файл с таким именем уже лежит в рабочем каталоге, и git его не отслеживает. Перенеси или удали его кнопкой 🗑, потом повтори. Ничего не изменено.',
       cherryPickUsage: 'Без аргумента cherry-pick не знает, что копировать: нужна ссылка на коммит, например git cherry-pick feature~1. Git печатает подсказку usage и отвечает кодом 129.',
+      rebaseUpToDate: 'Переносить нечего: коммиты ветки уже лежат поверх этой основы (или основа — сама ветка либо её предок). Ничего не изменилось, id прежние, в журнал ничего не записано.',
+      rebaseMoved: (count: number) =>
+        `rebase перенёс ${count} ${count % 10 === 1 && count % 100 !== 11 ? 'коммит' : 'коммита'} поверх новой основы и поставил на них ветку: у перенесённых коммитов новые id, потому что у каждого другой родитель. Настоящий git по ходу печатает ещё строки «Rebasing (1/${count})»; на терминале их затирает итоговая строка, и тренажёр их не печатает. Журнал git reflog записал rebase (start), rebase (pick) на каждый коммит и rebase (finish).`,
+      rebaseFastForward: (branch: string, shortId: string) =>
+        `У ветки ${branch} не было своих коммитов, поэтому переносить было нечего: ветка просто встала на коммит ${shortId}. Итоговая строка у git та же, что и при переносе; в журнале только rebase (start) и rebase (finish).`,
+      rebaseSkipped:
+        'Строки warning: skipped previously applied commit перечисляют коммиты ветки, чьё изменение уже есть в новой основе (например, после git cherry-pick): rebase их не переносит. В скобках id — старый коммит ветки, а не копия в основе.',
+      rebaseLeftBehind: (count: number, word: string) =>
+        `Старые коммиты ветки (${count} ${word}) никто больше не держит: они не удалены, но на графе бледные, а найти их можно по git reflog и вернуть командой git reset --hard HEAD@{n}.`,
+      rebaseNoTracking: 'rebase без аргумента берёт основу из настроек отслеживания ветки, а их у учебной ветки нет, поэтому git печатает подсказку и отвечает кодом 1. Назови основу сам: git rebase master.',
+      rebaseInvalidUpstream: 'Такой основы git не нашёл: это не ветка, не тег и не коммит. Ветки, теги и id смотри в git log --oneline --all. Ничего не изменено.',
+      rebaseRefusedUnstaged:
+        'Git отказал: в отслеживаемом файле есть несохранённая правка (или файл удалён), а rebase не начинает, пока она есть. Ничего не изменено. Сохрани правку коммитом, спрячь её (git stash) или верни файл (git checkout -- имя), потом повтори.',
+      rebaseRefusedStaged:
+        'Git отказал: в индексе есть подготовленная правка (git add), а rebase не начинает, пока она есть. Ничего не изменено. Сохрани правку коммитом, спрячь её (git stash) или сними подготовку (git reset), потом повтори.',
+      rebaseRefusedBoth:
+        'Git отказал: есть и неподготовленная правка, и подготовленная (git add). Ничего не изменено. Сохрани правки коммитом или спрячь их (git stash), потом повтори.',
       cherryPickBadRevision: 'Такого коммита git не нашёл. Ветки, теги и id смотри в git log --oneline --all.',
       reflogLimited: (count: number) =>
         count === 0 ? 'Ключ -0 просит ноль записей, поэтому вывод пуст: это не ошибка.' : `Ключ -${count} оставляет в выводе только ${count} верхних записей журнала; номера HEAD@{n} при этом остаются прежними.`,
@@ -1873,6 +1900,10 @@ export const ru = {
       cherryPick: {
         text: 'Скопируй коммит с фиксом из ветки feature в master. Если git откажется копировать поверх твоей правки — сначала верни файл командой git checkout -- app.js.',
         hint: 'git cherry-pick feature~1',
+      },
+      rebase: {
+        text: 'Перенеси коммиты ветки feature поверх свежего master: перейди на feature и сделай rebase. После него история пойдёт одной линией.',
+        hint: 'git checkout feature → git rebase master',
       },
       rescueCommit: {
         text: 'Откати ветку на коммит назад, а потом верни потерянный коммит: найди его в журнале и поставь на него ветку командой reset.',

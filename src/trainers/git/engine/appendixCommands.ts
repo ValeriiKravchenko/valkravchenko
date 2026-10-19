@@ -1,5 +1,5 @@
 // ============================================================
-// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (кроме rebase): разбор командной
+// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B: разбор командной
 // строки и диспетчер. Две стороны, как в остальных разделах: шелл (shell.ts: слова, кавычки, голая `*`) и
 // git (appendix*.ts). Строки `fatal: …`, `error: …`, `hint: …` — буквальный вывод git 2.53.0 из
 // docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt, appendix-g18e2-git-runs.txt,
@@ -18,6 +18,7 @@ import { handleCheckout, handleSwitch } from './appendixSwitch'
 import { handleReflog } from './appendixReflog'
 import { handleReset } from './appendixReset'
 import { handleCherryPick } from './appendixCherryPick'
+import { handleRebase } from './appendixRebase'
 import { handleLog } from './appendixLog'
 import { handleShow } from './appendixShow'
 import { handleStash } from './appendixStash'
@@ -81,6 +82,8 @@ function runHandled(state: AppendixState, sub: HandledCommand, args: readonly st
       return handleReset(state, args)
     case 'cherry-pick':
       return handleCherryPick(state, args)
+    case 'rebase':
+      return handleRebase(state, args)
   }
 }
 

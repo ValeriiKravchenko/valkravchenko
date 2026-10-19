@@ -356,7 +356,7 @@ describe('миссия 6: успешный reset --hard HEAD@{n} на комми
     const r = run(s, 'git reset --hard HEAD@{1}')
     expect(r.result.exitCode).toBe(0)
     expect(r.state.missionsDone.rescueCommit).toBe(true)
-    expect(getAppendixMissions(r.state).map((m) => m.done)).toEqual([false, false, false, false, true, true])
+    expect(getAppendixMissions(r.state).map((m) => m.done)).toEqual([false, false, false, false, true, true, false])
     expect(r.result.explanation).toContain(ax.resetRescued('master', short(r.state.branches.master)))
   })
 
