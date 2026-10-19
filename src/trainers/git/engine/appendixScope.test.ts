@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { HANDLED_COMMANDS, isHandledCommand, isRealGitCommand } from './appendixScope'
 
-describe('область раздела 8, шаги A и B', () => {
+describe('область раздела 8, шаги A и B (без rebase)', () => {
   it('команды, которые раздел выполняет', () => {
-    expect([...HANDLED_COMMANDS]).toEqual(['status', 'add', 'commit', 'branch', 'checkout', 'switch', 'diff', 'show', 'log', 'tag', 'stash', 'reflog'])
+    expect([...HANDLED_COMMANDS]).toEqual(['status', 'add', 'commit', 'branch', 'checkout', 'switch', 'diff', 'show', 'log', 'tag', 'stash', 'reflog', 'reset', 'cherry-pick'])
     for (const name of HANDLED_COMMANDS) expect(isHandledCommand(name), name).toBe(true)
   })
 
-  it('cherry-pick, rebase, reset, merge и конфликты в список выполняемых не входят', () => {
-    for (const name of ['cherry-pick', 'rebase', 'reset', 'restore', 'merge', 'bisect', 'push', 'init']) expect(isHandledCommand(name), name).toBe(false)
+  it('rebase, merge и конфликты в список выполняемых не входят, а reset и cherry-pick входят', () => {
+    for (const name of ['rebase', 'restore', 'merge', 'bisect', 'push', 'init']) expect(isHandledCommand(name), name).toBe(false)
+    for (const name of ['reset', 'cherry-pick']) expect(isHandledCommand(name), name).toBe(true)
   })
 
   it('настоящие команды git: выполняемые, из общего списка и собственный набор (git help -a, 2.53.0)', () => {

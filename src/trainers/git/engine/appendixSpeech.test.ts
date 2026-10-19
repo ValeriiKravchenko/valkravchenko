@@ -38,6 +38,13 @@ describe('ru.appendix', () => {
       a.errors.tagDeleteDuplicate,
       a.errors.logPathFilter('app.js'),
       a.errors.showPathFilter('app.js'),
+      a.errors.resetPathForm('app.js'),
+      a.errors.cherryPickConflict(['app.js']),
+      a.errors.cherryPickConflict(['app.js', 'about.html']),
+      a.errors.cherryPickEmpty,
+      a.errors.cherryPickUnverified('README.md'),
+      a.errors.form('reset', '--keep', a.allowed.reset),
+      a.errors.form('cherry-pick', '-x', a.allowed.cherryPick),
     ]
     for (const text of samples) expect(text.startsWith('[тренажёр]'), text).toBe(true)
   })
@@ -82,6 +89,28 @@ describe('ru.appendix', () => {
       e.branchNotMerged(true),
       e.branchDeleted,
       e.branchDeletedUnderHead,
+      e.resetHard('master', 'abc1234'),
+      e.resetHard(null, 'abc1234'),
+      e.resetSoft('master', 'abc1234'),
+      e.resetSoft(null, 'abc1234'),
+      e.resetMixed('master', 'abc1234', false),
+      e.resetMixed(null, 'abc1234', true),
+      e.resetSameCommit,
+      e.resetViaReflog('HEAD@{1}', 'abc1234'),
+      e.resetLeftBehind(1),
+      e.resetLeftBehind(2),
+      e.resetLeftBehind(5),
+      e.resetRescued('master', 'abc1234'),
+      e.resetNoCommit,
+      e.cherryPickDone,
+      e.cherryPickDetached,
+      e.cherryPickRefusedEdit,
+      e.cherryPickRefusedStaged,
+      e.cherryPickRefusedUntracked,
+      e.cherryPickUsage,
+      e.cherryPickBadRevision,
+      e.reflogLimited(0),
+      e.reflogLimited(3),
     ]
     for (const text of texts) {
       expect(text.startsWith('[тренажёр]')).toBe(false)
@@ -104,9 +133,57 @@ describe('ru.appendix', () => {
     expect(e.stashNoBranch).toContain('(no branch)')
   })
 
+  it('речь о reset, cherry-pick и журнале: что двигается, три режима, копия с новым id, HEAD@{n} — перемещения, спасение брошенного коммита (target.md, места 13–15)', () => {
+    const e = a.explain
+    expect(e.resetHard('master', 'abc1234')).toContain('передвинул ветку master вместе с HEAD')
+    expect(e.resetHard(null, 'abc1234')).toContain('двигает только HEAD')
+    expect(e.resetHard(null, 'abc1234')).toContain('ветки остались на своих местах')
+    expect(e.resetSoft('master', 'abc1234')).toContain('Индекс и рабочий каталог не тронуты')
+    expect(e.resetMixed('master', 'abc1234', true)).toContain('рабочий каталог не тронут')
+    expect(e.resetMixed('master', 'abc1234', true)).toContain('Unstaged changes after reset')
+    expect(e.resetMixed('master', 'abc1234', false)).not.toContain('Unstaged changes after reset')
+    expect(e.resetViaReflog('HEAD@{1}', 'abc1234')).toContain('а не коммит назад')
+    expect(e.resetViaReflog('HEAD@{1}', 'abc1234')).toContain('git reflog')
+    expect(e.resetLeftBehind(1)).toContain('git reset --hard HEAD@{n}')
+    expect(e.resetLeftBehind(1)).toContain('git branch имя HEAD@{n}')
+    expect(e.cherryPickDone).toContain('новый id')
+    expect(e.cherryPickDone).toContain('оригинал остался на своём месте')
+    expect(e.cherryPickDetached).toContain('двигается только HEAD')
+    expect(e.cherryPickRefusedEdit).toContain('git checkout -- app.js')
+    expect(e.reflogLimited(0)).toContain('не ошибка')
+    expect(e.reflogLimited(3)).toContain('остаются прежними')
+    expect(a.errors.cherryPickConflict(['app.js'])).toContain('git cherry-pick --abort')
+    expect(a.errors.cherryPickConflict(['app.js'])).toContain('«app.js»')
+    expect(a.errors.cherryPickEmpty).toContain('--skip')
+  })
+
+  it('списки команд называют reset и cherry-pick, допустимые формы — режимы reset, один коммит cherry-pick, -<число> у журнала', () => {
+    for (const text of [a.errors.commandOutOfScope('rebase'), a.errors.gitUsageNoArgs]) {
+      expect(text).toContain('reset')
+      expect(text).toContain('cherry-pick')
+    }
+    expect(a.allowed.reset).toContain('--hard')
+    expect(a.allowed.cherryPick).toContain('один коммит')
+    expect(a.allowed.reflog).toContain('-<число>')
+    expect(a.allowed.log).toContain('git log -g --oneline')
+    expect(a.errors.revisionForm('reset', 'x')).toContain('HEAD@{n}')
+  })
+
+  it('миссии 5 и 6: тексты и подсказки из словаря (target.md, «Миссии»)', () => {
+    expect(a.missions.cherryPick.hint).toBe('git cherry-pick feature~1')
+    expect(a.missions.cherryPick.text).toContain('git checkout -- app.js')
+    expect(a.missions.rescueCommit.hint).toBe('git reset --hard HEAD~1 → git reflog → git reset --hard HEAD@{n}')
+    expect(a.missions.rescueCommit.text).toContain('журнал')
+  })
+
   it('число коммитов склоняется: 1 коммит, 2 коммита, 5 коммитов, 11 коммитов, 21 коммит', () => {
     const word = (n: number) => a.explain.leavingBehind(n, 'x').match(/Брошено: \d+ (\S+)\./)?.[1]
     expect([1, 2, 5, 11, 21, 22, 25].map(word)).toEqual(['коммит', 'коммита', 'коммитов', 'коммитов', 'коммит', 'коммита', 'коммитов'])
+  })
+
+  it('после reset число брошенных коммитов склоняется так же', () => {
+    const word = (n: number) => a.explain.resetLeftBehind(n).match(/на (\d+) (\S+):/)?.[2]
+    expect([1, 2, 5, 11, 21].map(word)).toEqual(['коммит', 'коммита', 'коммитов', 'коммитов', 'коммит'])
   })
 
   it('списки команд в отказах называют switch и reflog, а допустимые формы — переходы и -d', () => {

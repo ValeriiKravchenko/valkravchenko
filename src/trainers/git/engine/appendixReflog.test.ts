@@ -1,8 +1,9 @@
 // git reflog и ссылка HEAD@{n} (target.md, часть X, места 14 и 15; часть XII, «reflog: записи»).
-// Вывод сверен с section8-git-runs.txt (П8.1, П8.5, П8.15, П8.19) и detached-head-git-runs.txt (О1–О31).
+// Вывод сверен с section8-git-runs.txt (П8.1, П8.5, П8.15, П8.19), detached-head-git-runs.txt (О1–О31) и
+// appendix-g18g2-git-runs.txt (П8.79: `reflog -<n>` и `log -g --oneline -<n>`).
 import { describe, expect, it } from 'vitest'
 import { currentCommitId } from './appendixRepo'
-import { compareOutputs, fresh, protocolEntry, run, runAll, where, type IdMap } from './appendixProtocolKit'
+import { compareOutputs, fresh, protocolEntry, replayBlock, run, runAll, where, type IdMap } from './appendixProtocolKit'
 import { ru } from '../locales/ru'
 
 const ax = ru.appendix.explain
@@ -37,12 +38,68 @@ describe('git reflog', () => {
     expect(lines).toHaveLength(8)
   })
 
-  it('ключи и формы (show, -<n>, HEAD, --all) — отказ области: -<n> числится формой и желательным одновременно, тренажёр её не делает', () => {
-    for (const command of ['git reflog -1', 'git reflog -3', 'git reflog show', 'git reflog show feature', 'git reflog HEAD', 'git reflog --all', 'git log -g']) {
-      const r = run(fresh(), command)
+  it('ключи и формы (show, ссылка, --all, --oneline, длинный log -g) — отказ области, ничего не меняется', () => {
+    const s = fresh()
+    for (const command of ['git reflog show', 'git reflog show feature', 'git reflog HEAD', 'git reflog --all', 'git reflog --oneline', 'git reflog -3 --oneline', 'git reflog -1 HEAD', 'git reflog -x', 'git reflog -', 'git log -g', 'git log -g -2', 'git log -g --oneline master', 'git log -g --oneline --all', 'git log -g --oneline -x']) {
+      const r = run(s, command)
       expect(r.result.output.startsWith('[тренажёр]'), command).toBe(true)
       expect(r.result.exitCode, command).toBeUndefined()
+      expect({ head: r.state.head, branches: r.state.branches, reflog: r.state.reflog, index: r.state.index, working: r.state.working }, command).toEqual({ head: s.head, branches: s.branches, reflog: s.reflog, index: s.index, working: s.working })
     }
+  })
+})
+
+describe('git reflog -<n> и git log -g --oneline -<n> (target.md, часть X, место 14)', () => {
+  const lines = (command: string) => run(fresh(), command).result.output.split('\n')
+
+  it(`-<n> печатает n верхних записей, номера остаются прежними (${where('П8.79', 'git reflog -3')}, ${where('П8.5', 'git reflog -3')})`, () => {
+    const r = run(fresh(), 'git reflog -3')
+    expect(r.result).toMatchObject({ ok: true, exitCode: 0 })
+    expect(compareOutputs(protocolEntry('П8.79', 'git reflog -3').output, r.result.output, new Map() as IdMap)).toBeNull()
+    expect(lines('git reflog -3').map((l) => /HEAD@\{(\d+)\}/.exec(l)?.[1])).toEqual(['0', '1', '2'])
+  })
+
+  it(`-0 — пустой вывод и код 0; число больше длины журнала — весь журнал; ведущий нуль не мешает (${where('П8.79', 'git reflog -0')}, ${where('П8.79', 'git reflog -99')}, ${where('П8.79', 'git reflog -01')})`, () => {
+    expect(run(fresh(), 'git reflog -0').result).toMatchObject({ ok: true, output: '', exitCode: 0 })
+    expect(protocolEntry('П8.79', 'git reflog -0')).toMatchObject({ output: '', exitCode: 0 })
+    expect(lines('git reflog -99')).toHaveLength(6)
+    expect(lines('git reflog -7')).toHaveLength(6)
+    expect(lines('git reflog -6')).toHaveLength(6)
+    expect(lines('git reflog -01')).toHaveLength(1)
+  })
+
+  it(`при нескольких ключах действует последний (${where('П8.79', 'git reflog -1 -2')}, ${where('П8.79', 'git reflog -2 -1')})`, () => {
+    expect(lines('git reflog -1 -2')).toHaveLength(2)
+    expect(lines('git reflog -2 -1')).toHaveLength(1)
+  })
+
+  it(`git log -g --oneline печатает те же строки, что git reflog, ключи в любом порядке (${where('П8.79', 'git log -g --oneline -3')}, ${where('П8.5', 'git log -g --oneline -3')})`, () => {
+    const s = fresh()
+    const reflog = run(s, 'git reflog').result.output
+    expect(run(s, 'git log -g --oneline').result.output).toBe(reflog)
+    for (const command of ['git log -g --oneline -3', 'git log --oneline -g -3', 'git log -g -3 --oneline', 'git log -3 --oneline -g']) {
+      const r = run(s, command)
+      expect(r.result, command).toMatchObject({ ok: true, exitCode: 0 })
+      expect(r.result.output, command).toBe(run(s, 'git reflog -3').result.output)
+    }
+    expect(compareOutputs(protocolEntry('П8.79', 'git log -g --oneline -3').output, run(s, 'git log -g --oneline -3').result.output, new Map() as IdMap)).toBeNull()
+    expect(run(s, 'git log -g --oneline -0').result).toMatchObject({ ok: true, output: '', exitCode: 0 })
+    expect(run(s, 'git log -g --oneline -99').result.output).toBe(reflog)
+    expect(run(s, 'git log -g --oneline -01').result.output.split('\n')).toHaveLength(1)
+  })
+
+  it('в отсоединённом HEAD подписи начинаются с HEAD без стрелки, журнал растёт с каждым перемещением', () => {
+    const s = runAll(fresh(), ['git checkout --detach master~1', 'git reset --hard feature'])
+    const top = run(s, 'git reflog -2').result.output.split('\n')
+    expect(top[0]).toMatch(/^[0-9a-f]{7} \(HEAD, feature\) HEAD@\{0\}: reset: moving to feature$/)
+    expect(top[1]).toMatch(/^[0-9a-f]{7} HEAD@\{1\}: checkout: moving from master to master~1$/)
+  })
+
+  it('блок П8.79 проигрывается целиком; git log -0 вне журнала раздел по-прежнему не разбирает (отказ области)', () => {
+    const replay = replayBlock('П8.79', { refused: (e) => e.command === 'git log --oneline -0' })
+    const problems = replay.steps.filter((step) => step.mismatch !== null).map((step) => `${step.entry.file}:${step.entry.line} «${step.entry.command}» — ${step.mismatch}`)
+    expect(problems).toEqual([])
+    expect(replay.steps.length).toBeGreaterThan(15)
   })
 })
 
@@ -88,9 +145,14 @@ describe('HEAD@{n} как ссылка', () => {
     }
   })
 
-  it('reset с HEAD@{n} в этом потоке остаётся отказом области (команда reset не разбирается)', () => {
-    const r = run(s, 'git reset --hard HEAD@{1}')
-    expect(r.result.output).toBe(ru.appendix.errors.commandOutOfScope('reset'))
-    expect(r.result.exitCode).toBeUndefined()
+  it(`reset принимает HEAD@{n}: ветка встаёт на коммит записи, запись журнала называет ссылку как введена; за концом журнала — только N entries (${where('П8.5', 'git reset --hard HEAD@{1}')}, ${where('П8.69', 'git reset --hard HEAD@{99}')})`, () => {
+    const moved = run(s, 'git reset --hard HEAD@{1}')
+    expect(moved.result).toMatchObject({ ok: true, exitCode: 0 })
+    expect(moved.state.branches.master).toBe(base)
+    expect(moved.state.reflog[0]).toEqual({ id: base, message: 'reset: moving to HEAD@{1}' })
+    const far = run(s, 'git reset --hard HEAD@{99}')
+    expect(far.result).toMatchObject({ ok: false, output: "fatal: log for 'HEAD' only has 6 entries", exitCode: 128 })
+    expect(far.state.branches).toEqual(s.branches)
+    expect(far.state.reflog).toEqual(s.reflog)
   })
 })

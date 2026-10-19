@@ -1,5 +1,5 @@
 // ============================================================
-// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (первая часть): публичная точка
+// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (кроме rebase): публичная точка
 // входа движка. Аналог practicesSection.ts. Внутренние модули (appendix*.ts, sectionsCommon.ts,
 // detachedHead.ts) снаружи напрямую не импортируются: экран берёт всё отсюда.
 //
@@ -7,13 +7,18 @@
 // отказ git (вывод и код возврата в `exitCode`) и отказ области (без `exitCode`, вывод начинается
 // с метки «[тренажёр]») — обычные результаты.
 //
-// Шаг B, первая часть: HEAD может стоять на коммите (`state.head.kind === 'detached'`). Команды:
+// Шаг B (без rebase): HEAD может стоять на коммите (`state.head.kind === 'detached'`). Команды:
 // `git checkout` во всех формах перехода (ветка, тег, `tags/<тег>`, id, `<ссылка>~n`, `HEAD@{n}`,
 // `refs/heads/<ветка>`, `--detach [<ссылка>]`, `-`, `-b`, `HEAD`), `git switch` (`<ветка>`, `--detach
-// [<ссылка>]`, `-c <имя>`, `-`; на коммит и тег без `--detach` отказ git с кодом 128), `git reflog`,
-// `git branch -d/-D`. Ссылка `HEAD@{n}` принимается там же, где другие ссылки (`show`, `log`, `tag`,
-// `branch`, `checkout`, `switch`); за концом журнала — `fatal: log for 'HEAD' only has N entries`,
-// код 128. `reset`, `cherry-pick`, `rebase`, `merge` и `pull` отвечают отказом области.
+// [<ссылка>]`, `-c <имя>`, `-`; на коммит и тег без `--detach` отказ git с кодом 128), `git reflog [-<n>]`
+// и `git log -g --oneline [-<n>]`, `git branch -d/-D`, `git reset [--soft | --mixed | --hard] [<ссылка>]` (на ветке двигает
+// ветку, в отсоединённом HEAD только HEAD) и `git cherry-pick <ссылка>`. Ссылка `HEAD@{n}` принимается там же,
+// где другие ссылки (`show`, `log`, `tag`, `branch`, `checkout`, `switch`, `reset`, `cherry-pick`); за концом
+// журнала — `fatal: log for 'HEAD' only has N entries`, код 128. `rebase`, `merge` и `pull` отвечают отказом области.
+//
+// Исходы команды различаются по `CommandResult`: ответ git — с `exitCode` (0 — успех), отказ области — без `exitCode`,
+// вывод начинается с метки «[тренажёр]». Миссий шесть (`APPENDIX_MISSION_IDS`): 5 — `cherry-pick`, 6 — `reset --hard HEAD@{n}`
+// на брошенный коммит.
 // ============================================================
 import type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry } from './appendixTypes'
 import { executeAppendixCommand } from './appendixCommands'
@@ -166,7 +171,10 @@ export function getStashes(state: AppendixState): StashView[] {
   }))
 }
 
-/** Миссии шага A (1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное); засчитанная остаётся засчитанной. */
+/**
+ * Миссии (1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное, 5 — `git cherry-pick`,
+ * 6 — `git reset --hard HEAD@{n}` на брошенный коммит); засчитанная остаётся засчитанной.
+ */
 export function getAppendixMissions(state: AppendixState): AppendixMissionView[] {
   return getAppendixMissionsRaw(state)
 }

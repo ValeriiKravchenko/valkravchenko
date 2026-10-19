@@ -1,9 +1,9 @@
 // ============================================================
-// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (первая часть): разбор командной
+// Раздел 8 git-тренажёра («Приложение: пять важных тем»), шаги A и B (кроме rebase): разбор командной
 // строки и диспетчер. Две стороны, как в остальных разделах: шелл (shell.ts: слова, кавычки, голая `*`) и
 // git (appendix*.ts). Строки `fatal: …`, `error: …`, `hint: …` — буквальный вывод git 2.53.0 из
 // docs/git-trainer/reports/ (section8-git-runs.txt, appendix-g18e-git-runs.txt, appendix-g18e2-git-runs.txt,
-// appendix-g18g-git-runs.txt, detached-head-git-runs.txt), не переводятся и в
+// appendix-g18g-git-runs.txt, appendix-g18g2-git-runs.txt, detached-head-git-runs.txt), не переводятся и в
 // словарь не идут. Всё, что говорит сам тренажёр, лежит в ru.appendix и начинается с метки
 // [тренажёр] (target.md, часть III, правило 2).
 //
@@ -16,6 +16,8 @@ import { exited, refuse, type Outcome } from './appendixOutcome'
 import { handleAdd, handleBranch, handleCommit, handleDiff, handleStatus } from './appendixLocal'
 import { handleCheckout, handleSwitch } from './appendixSwitch'
 import { handleReflog } from './appendixReflog'
+import { handleReset } from './appendixReset'
+import { handleCherryPick } from './appendixCherryPick'
 import { handleLog } from './appendixLog'
 import { handleShow } from './appendixShow'
 import { handleStash } from './appendixStash'
@@ -75,6 +77,10 @@ function runHandled(state: AppendixState, sub: HandledCommand, args: readonly st
       return handleStash(state, args)
     case 'reflog':
       return handleReflog(state, args)
+    case 'reset':
+      return handleReset(state, args)
+    case 'cherry-pick':
+      return handleCherryPick(state, args)
   }
 }
 

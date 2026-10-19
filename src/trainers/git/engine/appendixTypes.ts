@@ -49,10 +49,13 @@ export interface AppendixStash {
   work: FileTree
 }
 
-/** Миссии шага A: 1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное. */
-export type AppendixMissionId = 'lightTag' | 'annotatedShow' | 'stashSave' | 'stashRestore'
+/**
+ * Миссии: 1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное (шаг A);
+ * 5 — `git cherry-pick`, создавший коммит, 6 — `git reset --hard HEAD@{n}` на брошенный коммит (шаг B).
+ */
+export type AppendixMissionId = 'lightTag' | 'annotatedShow' | 'stashSave' | 'stashRestore' | 'cherryPick' | 'rescueCommit'
 
-export const APPENDIX_MISSION_IDS: readonly AppendixMissionId[] = ['lightTag', 'annotatedShow', 'stashSave', 'stashRestore']
+export const APPENDIX_MISSION_IDS: readonly AppendixMissionId[] = ['lightTag', 'annotatedShow', 'stashSave', 'stashRestore', 'cherryPick', 'rescueCommit']
 
 /** Миссия для показа: текст и подсказка из словаря, отметка выполнения. */
 export interface AppendixMissionView {
