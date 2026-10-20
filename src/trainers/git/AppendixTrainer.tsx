@@ -1,5 +1,5 @@
 // ============================================================
-// Git trainer, section 8 (appendix), step A: screen. State lives in the engine
+// Git trainer, section 8 (appendix), steps A and B: screen. State lives in the engine
 // (engine/appendixSection.ts): this file only shows AppendixState and passes the player's
 // input to it. No git behaviour is decided here; git output, explanations and refusals come
 // from the engine history, the graph labels come ready from getCommits.
@@ -77,12 +77,16 @@ function Terminal({ state, onRun }: { state: AppendixState; onRun: (input: strin
 // ---------- Commit graph ----------
 //
 // The order and the labels (`HEAD -> master`, `tag: v1.0.0`, `feature`) come from getCommits as is.
+// A commit that no branch or tag reaches and that is not under HEAD comes back `faded`: it stays on
+// the graph, is shown dimmed and carries a remark from the dictionary, never by colour alone.
 
 function CommitGraph({ state }: { state: AppendixState }) {
   const items: CommitListItem[] = getCommits(state).map((c) => ({
     id: c.shortId,
     message: c.subject,
     tags: c.decorations,
+    faded: c.faded,
+    note: c.faded ? ui.commitGraph.fadedNote : undefined,
   }))
 
   return (

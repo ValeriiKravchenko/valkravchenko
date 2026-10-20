@@ -9,23 +9,6 @@ import { ru } from './locales/ru'
 
 const ui = ru.appendix.ui
 
-// To check the prompt format for an arbitrary id without running commands, the initial state can be
-// swapped for a detached one.
-const override = vi.hoisted(() => ({ detachedAt: null as string | null }))
-vi.mock('./engine/appendixSection', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./engine/appendixSection')>()
-  return {
-    ...original,
-    createAppendixSection: () => {
-      const state = original.createAppendixSection()
-      return override.detachedAt === null ? state : { ...state, head: { kind: 'detached' as const, id: override.detachedAt } }
-    },
-  }
-})
-afterEach(() => {
-  override.detachedAt = null
-})
-
 const renderScreen = () =>
   render(
     <MemoryRouter>
@@ -97,12 +80,13 @@ describe('AppendixTrainer', () => {
   })
 
   describe('prompt', () => {
-    it('shows the detached prompt with the first 7 characters of the commit id', () => {
-      const tip = initial().branches.master
-      override.detachedAt = tip
+    it('shows the detached prompt with the first 7 characters of the commit id after git switch --detach', async () => {
+      const user = userEvent.setup()
       renderScreen()
-      expect(screen.getByText(`(HEAD detached at ${tip.slice(0, 7)}) $`)).toBeInTheDocument()
-      expect(screen.getByText(/^\(HEAD detached at [0-9a-f]{7}\) \$$/)).toBeInTheDocument()
+      await run(user, 'git switch --detach')
+      const tip = initial().branches.master
+      expect(screen.getAllByText(`(HEAD detached at ${tip.slice(0, 7)}) $`).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^\(HEAD detached at [0-9a-f]{7}\) \$$/).length).toBeGreaterThan(0)
       expect(screen.queryByText('(master) $')).toBeNull()
     })
 
@@ -114,6 +98,15 @@ describe('AppendixTrainer', () => {
       const shortId = createAppendixSection().branches.master.slice(0, 7)
       expect(screen.getAllByText(ui.terminal.promptDetached(shortId)).length).toBeGreaterThan(0)
       expect(within(log()).getByText(/Note: switching to 'v1.0.0'\./)).toBeInTheDocument()
+    })
+
+    it('returns to the branch prompt after git switch <branch>', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git switch --detach')
+      expect(screen.queryByText('(master) $')).toBeNull()
+      await run(user, 'git switch master')
+      expect(screen.getAllByText('(master) $').length).toBeGreaterThan(0)
     })
   })
 
@@ -135,6 +128,112 @@ describe('AppendixTrainer', () => {
       const first = within(graph()).getAllByRole('listitem')[0]
       expect(within(first).getByText('HEAD -> master')).toBeInTheDocument()
       expect(within(first).getByText('tag: v1.0.0')).toBeInTheDocument()
+    })
+
+    it('marks a commit that no branch reaches as faded with a word from the dictionary', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      expect(graph().querySelector('[data-faded]')).toBeNull()
+      await run(user, 'git reset --hard HEAD~1')
+      const faded = graph().querySelector('[data-faded]')
+      expect(faded).not.toBeNull()
+      expect(within(faded as HTMLElement).getByText(ru.appendix.seed.readmeMessage)).toBeInTheDocument()
+      expect(within(faded as HTMLElement).getByText(ui.commitGraph.fadedNote, { exact: false })).toBeInTheDocument()
+    })
+
+    it('makes the rescued commit ordinary again', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git reset --hard HEAD~1')
+      expect(graph().querySelector('[data-faded]')).not.toBeNull()
+      await run(user, 'git reset --hard HEAD@{{1}')
+      expect(graph().querySelector('[data-faded]')).toBeNull()
+    })
+  })
+
+  describe('step B commands through the screen', () => {
+    it('runs git reset --hard and writes the engine answer into the history', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git reset --hard HEAD~1')
+      expect(within(log()).getByText(/HEAD is now at [0-9a-f]{7}/)).toBeInTheDocument()
+    })
+
+    it('runs git cherry-pick and writes the new commit subject into the history', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git cherry-pick feature~1')
+      expect(within(log()).getByText(/\[master [0-9a-f]{7}\] fix: опечатка в логе/)).toBeInTheDocument()
+    })
+
+    it('runs git reflog and writes the journal into the history', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git reflog')
+      expect(within(log()).getByText(/HEAD@\{0\}:/)).toBeInTheDocument()
+    })
+
+    it('runs git switch -c to create and move to a branch, then git branch -d to delete it', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git switch -c test')
+      expect(screen.getAllByText('(test) $').length).toBeGreaterThan(0)
+      await run(user, 'git switch master')
+      await run(user, 'git branch -d test')
+      expect(within(log()).getByText(/Deleted branch test/)).toBeInTheDocument()
+    })
+
+    it('runs git rebase and writes the final line into the history', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git checkout feature')
+      await run(user, 'git rebase master')
+      expect(within(log()).getByText(/Successfully rebased and updated refs\/heads\/feature\./)).toBeInTheDocument()
+    })
+  })
+
+  describe('verdicts and area refusals', () => {
+    it('shows a successful rebase without a failure mark', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git checkout feature')
+      await run(user, 'git rebase master')
+      expect(within(log()).getByText(/Successfully rebased and updated refs\/heads\/feature\./)).toBeInTheDocument()
+      expect(within(log()).queryByText(site.trainers.failedOutput)).toBeNull()
+    })
+
+    it('shows "up to date" as a success, not a failure', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git rebase master')
+      expect(within(log()).getByText(/Current branch master is up to date\./)).toBeInTheDocument()
+      expect(within(log()).queryByText(site.trainers.failedOutput)).toBeNull()
+    })
+
+    it('marks a git refusal (fatal: invalid upstream) as failed', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git rebase nope')
+      expect(within(log()).getByText(/fatal: invalid upstream 'nope'/)).toBeInTheDocument()
+      expect(within(log()).getByText(site.trainers.failedOutput)).toBeInTheDocument()
+    })
+
+    it('marks a git refusal (error: cannot rebase) as failed', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await user.click(screen.getByRole('button', { name: `${ui.files.editButton}: app.js` }))
+      await run(user, 'git rebase master')
+      expect(within(log()).getByText(/error: cannot rebase: You have unstaged changes\./)).toBeInTheDocument()
+      expect(within(log()).getByText(site.trainers.failedOutput)).toBeInTheDocument()
+    })
+
+    it('shows area refusals for rebase -i, merge and pull starting with the trainer marker', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git rebase -i master')
+      await run(user, 'git merge feature')
+      await run(user, 'git pull')
+      expect(within(log()).getAllByText(/\[тренажёр\]/).length).toBeGreaterThanOrEqual(3)
     })
   })
 
@@ -178,6 +277,30 @@ describe('AppendixTrainer', () => {
       expect(missionItem(3)).toHaveAttribute('data-done', 'false')
       await run(user, 'git stash pop')
       expect(missionItem(3)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('completes mission 5 with git cherry-pick', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git cherry-pick feature~1')
+      expect(missionItem(4)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('completes mission 6 with reset --hard HEAD~1 and reset --hard HEAD@{1}', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git reset --hard HEAD~1')
+      expect(missionItem(5)).toHaveAttribute('data-done', 'false')
+      await run(user, 'git reset --hard HEAD@{{1}')
+      expect(missionItem(5)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('completes mission 7 with git checkout feature and git rebase master', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await run(user, 'git checkout feature')
+      await run(user, 'git rebase master')
+      expect(missionItem(6)).toHaveAttribute('data-done', 'true')
     })
   })
 
@@ -265,6 +388,16 @@ describe('AppendixTrainer', () => {
     expect(screen.getByText('(master) $')).toBeInTheDocument()
     expect(within(graph()).queryByText('tag: v1.0.0')).toBeNull()
     expect(within(filesPanel()).getAllByRole('listitem')).toHaveLength(getWorkingFiles(initial()).length)
+  })
+
+  it('starts the section over and clears faded commits', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await run(user, 'git reset --hard HEAD~1')
+    expect(graph().querySelector('[data-faded]')).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: ui.resetButton }))
+    expect(graph().querySelector('[data-faded]')).toBeNull()
   })
 
   it('has no user strings of its own', () => {
