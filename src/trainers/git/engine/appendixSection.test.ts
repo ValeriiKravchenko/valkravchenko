@@ -20,12 +20,23 @@ import { ru } from '../locales/ru'
 describe('создание и сброс', () => {
   it('createAppendixSection и resetAppendixSection дают одно и то же исходное состояние', () => {
     expect(resetAppendixSection()).toEqual(createAppendixSection())
+    expect(resetAppendixSection()).toMatchObject({ unmerged: {}, operation: null })
   })
 
   it('сброс после игры возвращает чистое состояние, не связанное со старым', () => {
     const played = runAppendixCommand(createAppendixSection(), 'git tag v1').state
     expect(played.tags).not.toEqual({})
     expect(resetAppendixSection().tags).toEqual({})
+  })
+
+  it('сброс раздела посреди конфликта снимает неслитые пути и операцию', () => {
+    let played = editAppendixFile(createAppendixSection(), 'app.js')
+    played = runAppendixCommand(runAppendixCommand(played, 'git commit -am "master: v2"').state, 'git cherry-pick feature~1').state
+    expect(Object.keys(played.unmerged)).toEqual(['app.js'])
+    expect(played.operation).not.toBeNull()
+    const again = resetAppendixSection()
+    expect(again.unmerged).toEqual({})
+    expect(again.operation).toBeNull()
   })
 })
 

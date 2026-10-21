@@ -11,22 +11,35 @@
 // Отказы git (код возврата, ничего не меняется):
 // - без аргументов — usage, код 129 (П8.4);
 // - слова, которого нет среди ссылок, — `fatal: bad revision '<слово>'`, код 128 (П8.4, П8.76);
-// - в индексе есть подготовленная правка (любая, в любом файле, даже когда копия пуста) — `error: your local changes would be
-//   overwritten by cherry-pick.`, код 128 (П8.77, П8.80);
+// - неслитые пути (конфликт тайника или cherry-pick) — `Cherry-picking is not possible because you have unmerged files.`, код 128 (К4.2, К5.2);
+// - в индексе есть подготовленная правка (любая, в любом файле, даже когда копия пуста; в том числе посреди cherry-pick после `git add`) —
+//   `error: your local changes would be overwritten by cherry-pick.`, код 128 (П8.77, П8.80, К12.c4);
 // - файл, который меняет коммит, изменён в рабочем каталоге или совпадает с неотслеживаемым файлом — блоки `would be overwritten by
 //   merge` (изменённые файлы первым блоком, неотслеживаемые вторым, один `Aborting`), код 128 (П8.4, П8.10, П8.77, П8.80). Файл,
 //   удалённый в рабочем каталоге без `git rm`, git создаёт заново, ошибки нет (П8.80). Правка в файле, которого коммит не касается,
 //   не мешает и остаётся (П8.77).
-// Отказы области (ничего не меняется, кода возврата нет): конфликт, пустая копия (изменение уже есть в HEAD), ключи, несколько
-// ссылок, удаление файла коммитом при изменённом файле в рабочем каталоге. Состояния «cherry-pick идёт» тренажёр не моделирует.
+// Конфликт (часть XI, К5): `Auto-merging`, `CONFLICT (content)`, `error: could not apply`, подсказки, код 1; операция `cherry-pick`, неслитые
+// пути, метки `HEAD` и `<id7> (<тема>)` в файле, ветка и HEAD на месте, записи журнала нет. Пустая копия (изменение уже есть в HEAD) —
+// тоже незаконченная операция без неслитых путей: подсказка про `--skip`, статус, код 1 (П8.4). Выходы: `--continue` после `git add`
+// (`[<ветка> <id7>] <тема>`, запись `commit (cherry-pick): <тема>`, миссия 5; итог совпал с HEAD — та же подсказка, что у пустой копии,
+// К5.6), `--skip` и `--abort` (пусто, запись `reset: moving to <полный id>`, К5.3, К5.7, К7.3, К7.4). Без операции `--continue` и `--abort`
+// отвечают `error: no cherry-pick or revert in progress` (К5.3), `--skip` без операции — отказ области. Завершает операцию и
+// `git commit` (appendixLocal.ts, К5.5, К7.2, К7.11, К8.2).
+// Отказы области (ничего не меняется, кода возврата нет): ключи (в том числе `--quit`), несколько ссылок, удаление файла коммитом при
+// изменённом файле в рабочем каталоге, конфликт и пустая копия в отсоединённом HEAD, конфликт другого вида (оба создали, изменение
+// и удаление), конфликт вместе с правкой в тех же файлах, новый cherry-pick посреди незаконченного.
 // ============================================================
 import type { AppendixCommit, AppendixState, FileTree } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { markMission } from './appendixMissions'
 import { mergeTrees } from './branchRepo'
+import type { TreeMergeResult } from './branchRepo'
 import { compareBytes } from './appendixRefs'
+import { conflictForm, refusalOutcome, stateStatus, statusRefusal } from './appendixConflicts'
+import { recordCommit } from './appendixLocal'
 import { commitOf, currentCommitId, headTree, sameTree, subjectOf } from './appendixRepo'
 import { reflogShortOutput, resolveRevision } from './appendixRevisions'
+import { abortTo, conflictOutput, enterConflict } from './conflicts'
 import { advanceHead, commitLabel } from './detachedHead'
 import { fullCommitId, shortCommitId } from './sectionsCommon'
 import { has } from './util'
@@ -91,13 +104,85 @@ function overwriteRefusal(modified: readonly string[], untracked: readonly strin
   return [...parts, 'Aborting', 'fatal: cherry-pick failed'].join('\n')
 }
 
+/** Пустая копия, с начала (П8.4) или после разрешения (К5.6): подсказка git, за ней `git status`. */
+const EMPTY_HINT = [
+  'The previous cherry-pick is now empty, possibly due to conflict resolution.',
+  'If you wish to commit it anyway, use:',
+  '',
+  '    git commit --allow-empty',
+  '',
+  "Otherwise, please use 'git cherry-pick --skip'",
+]
+
+/** `--abort` и `--continue`, когда cherry-pick не идёт (К5.3). */
+const NO_CHERRY_PICK = ['error: no cherry-pick or revert in progress', 'fatal: cherry-pick failed'].join('\n')
+
 /** Дерево родителя коммита; у корневого коммита — пустое. */
 function parentTree(state: AppendixState, commit: AppendixCommit): FileTree {
   return commit.parents.length === 0 ? {} : commitOf(state, commit.parents[0]).tree
 }
 
+/** Операция идёт без неслитых путей и без изменений в индексе: ответ — подсказка и статус, код 1. */
+function emptyOutcome(state: AppendixState): Outcome {
+  const status = stateStatus(state, false)
+  if (!status.ok) return refuse(state, statusRefusal(status.reason, 'cherry-pick'))
+  return exited(state, [...EMPTY_HINT, status.output].join('\n'), 1, ru.conflicts.cherryPickEmpty)
+}
+
+/** Пути, которых касается копия: у них результат слияния отличается от HEAD (в том числе конфликтные). */
+function touchedPaths(head: FileTree, merged: TreeMergeResult): string[] {
+  return [...new Set([...Object.keys(head), ...Object.keys(merged.tree)])].filter((f) => head[f] !== merged.tree[f]).sort(compareBytes)
+}
+
+/** Конфликт (К5.1): метки в файле, неслитые пути, операция `cherry-pick`. */
+function conflictOutcome(state: AppendixState, picked: AppendixCommit, merged: TreeMergeResult, head: FileTree): Outcome {
+  if (state.head.kind === 'detached') return refuse(state, ae.cherryPickDetachedStop)
+  const otherKinds = merged.conflicts.filter((c) => c.kind !== 'content').map((c) => c.file)
+  if (otherKinds.length > 0) return refuse(state, ae.cherryPickConflictKind(otherKinds))
+  // Конфликт вместе с правкой в тех же файлах: порядок отказов git не сверен.
+  const dirty = touchedPaths(head, merged).filter((f) => (has(head, f) ? !has(state.working, f) || state.working[f] !== head[f] : has(state.working, f)))
+  if (dirty.length > 0) return refuse(state, ae.cherryPickConflictDirty(dirty))
+  const subject = picked.message.split('\n')[0]
+  const entered = enterConflict(
+    { ...state, operation: { kind: 'cherry-pick' as const, commit: picked.id } },
+    { ...merged, base: parentTree(state, picked), ours: head, theirs: picked.tree },
+    { top: 'HEAD', bottom: `${shortCommitId(picked.id)} (${subject})` },
+  )
+  const output = conflictOutput({ command: 'cherry-pick', merge: merged, commit: { id: picked.id, subject } })
+  return exited(entered, output, 1, ru.conflicts.cherryPickConflict(merged.conflicts.map((c) => c.file)))
+}
+
+/** `--continue` (К5.4, К5.6, К16.6): завершает cherry-pick, когда все пути добавлены. */
+function continuePick(state: AppendixState, operationCommit: string): Outcome {
+  const blocked = refusalOutcome(state, { name: 'commit' })
+  if (blocked !== null) return blocked
+  if (sameTree(state.index, headTree(state))) return emptyOutcome(state)
+  const picked = commitOf(state, operationCommit)
+  const subject = picked.message.split('\n')[0]
+  const made = recordCommit(state, picked.message, state.index, `commit (cherry-pick): ${subject}`)
+  return exited(markMission(made.state, 'cherryPick'), `[${commitLabel(state.head)} ${shortCommitId(made.commitId)}] ${subject}`, 0, ru.conflicts.cherryPickFinished)
+}
+
+/** `--abort` и `--skip` (К5.3, К5.7): файлы, которых касалась операция, возвращаются к HEAD; запись журнала `reset: moving to <полный id>` (К7.3, К7.4). */
+function endPick(state: AppendixState, flag: '--abort' | '--skip'): Outcome {
+  const aborted = abortTo(state, headTree(state))
+  const lost = Object.keys({ ...state.working, ...aborted.working }).filter((f) => state.working[f] !== aborted.working[f]).sort(compareBytes)
+  const id = currentCommitId(state)
+  const next: AppendixState = { ...aborted, reflog: [{ id, message: `reset: moving to ${id}` }, ...state.reflog] }
+  const notes = [flag === '--abort' ? ru.conflicts.cherryPickAborted : ru.conflicts.cherryPickSkipped]
+  if (lost.length > 0) notes.push(ru.conflicts.discardedEdit(lost))
+  return exited(next, '', 0, notes.join(' '))
+}
+
+function sequencerStep(state: AppendixState, flag: '--continue' | '--abort' | '--skip'): Outcome {
+  const operation = state.operation
+  if (operation === null) return flag === '--skip' ? refuse(state, ae.cherryPickSkipIdle) : exited(state, NO_CHERRY_PICK, 128)
+  return flag === '--continue' ? continuePick(state, operation.commit) : endPick(state, flag)
+}
+
 export function handleCherryPick(state: AppendixState, args: readonly string[]): Outcome {
   if (args.length === 0) return exited(state, USAGE, 129, ax.cherryPickUsage)
+  if (args.length === 1 && (args[0] === '--continue' || args[0] === '--abort' || args[0] === '--skip')) return sequencerStep(state, args[0])
   const options = args.filter((a) => a.startsWith('-'))
   if (options.length > 0 || args.length > 1) return refuse(state, ae.form('cherry-pick', options[0] ?? args.join(' '), ru.appendix.allowed.cherryPick))
 
@@ -107,17 +192,25 @@ export function handleCherryPick(state: AppendixState, args: readonly string[]):
   if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128, ax.reflogShortEntries)
   if (revision.kind === 'missing') return exited(state, `fatal: bad revision '${word}'`, 128, ax.cherryPickBadRevision)
 
+  // Неслитые пути запрещают cherry-pick (К4.2, К5.2).
+  const blocked = refusalOutcome(state, { name: 'cherry-pick' })
+  if (blocked !== null) return blocked
   const head = headTree(state)
   // Подготовленная правка останавливает cherry-pick раньше, чем разбор самой копии (П8.80: даже при пустой копии).
   if (!sameTree(state.index, head)) return exited(state, STAGED_REFUSAL, 128, ax.cherryPickRefusedStaged)
+  // Операция идёт, индекс чист (пустая копия): новый cherry-pick прогонами не сверен.
+  if (state.operation !== null) return conflictForm(state, `cherry-pick ${word}`)
 
   const picked = commitOf(state, revision.id)
   const merged = mergeTrees(parentTree(state, picked), head, picked.tree)
-  if (merged.conflicts.length > 0) return refuse(state, ae.cherryPickConflict(merged.conflicts.map((c) => c.file)))
-  if (sameTree(merged.tree, head)) return refuse(state, ae.cherryPickEmpty)
+  if (merged.conflicts.length > 0) return conflictOutcome(state, picked, merged, head)
+  if (sameTree(merged.tree, head)) {
+    if (state.head.kind === 'detached') return refuse(state, ae.cherryPickDetachedStop)
+    return emptyOutcome({ ...state, operation: { kind: 'cherry-pick', commit: picked.id } })
+  }
 
   // Файлы, которые копия меняет: у них результат отличается от HEAD.
-  const touched = [...new Set([...Object.keys(head), ...Object.keys(merged.tree)])].filter((f) => head[f] !== merged.tree[f]).sort(compareBytes)
+  const touched = touchedPaths(head, merged)
   const modified: string[] = []
   const untracked: string[] = []
   for (const file of touched) {

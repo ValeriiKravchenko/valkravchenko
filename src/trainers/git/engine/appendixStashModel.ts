@@ -18,6 +18,8 @@
 // правка — неподготовленной).
 // ============================================================
 import type { AppendixState, AppendixStash, FileTree } from './appendixTypes'
+import { mergeTrees } from './branchRepo'
+import type { ConflictMerge } from './conflicts'
 import { commitTree, currentCommitId, headTree, subjectOf } from './appendixRepo'
 import { compareBytes } from './appendixRefs'
 import { stashLabel } from './detachedHead'
@@ -91,47 +93,58 @@ export function removeStash(state: AppendixState, position: number): AppendixSta
  * - `applied` — слияние прошло: новые индекс и рабочий каталог;
  * - `localChanges` — файлы, которые слияние изменило бы, а в рабочем каталоге в них уже своя правка (П8.3, П8.51);
  * - `untracked` — файлы, которые слияние создало бы, а такой неотслеживаемый файл уже лежит (П8.49);
- * - `conflict` — файл изменён и в тайнике, и в индексе по-разному: git оставил бы конфликт (П8.3);
- * - `unverified` — сочетание, порядок сообщений которого не сверен (конфликт вместе с правкой, оба вида отказа, пересозданный файл).
+ * - `conflict` — файл изменён и в тайнике, и в индексе так, что построчное слияние не сходится (К4.1, К4.6): слияние
+ *   деревьев вместе с самими деревьями для `enterConflict`;
+ * - `conflictKind` — конфликт другого вида (оба создали файл, один удалил): правило области;
+ * - `unverified` — сочетание, порядок сообщений которого не сверен (оба вида отказа, конфликт вместе с неотслеживаемым
+ *   файлом, построчное слияние без конфликта, пересозданный файл).
+ * Правка того же файла в рабочем каталоге останавливает применение раньше конфликта: `localChanges` (К4.7).
  */
 export type ApplyPlan =
   | { kind: 'applied'; index: FileTree; working: FileTree }
   | { kind: 'localChanges'; files: string[] }
   | { kind: 'untracked'; files: string[] }
-  | { kind: 'conflict'; files: string[] }
+  | { kind: 'conflict'; merge: ConflictMerge }
+  | { kind: 'conflictKind'; files: string[] }
   | { kind: 'unverified' }
 
 export function planApply(state: AppendixState, entry: AppendixStash): ApplyPlan {
   if (hasRecreatedPath(state)) return { kind: 'unverified' }
   const base = commitTree(state, entry.base)
   const ours = state.index
+  const merged = mergeTrees(base, ours, entry.work)
+  const conflictFiles = merged.conflicts.map((c) => c.file)
+  // Построчное слияние одного файла без конфликта (правки в разных строках) прогонами тайника не сверено.
+  if (merged.conflicts.length === 0 && merged.autoMerged.length > 0) return { kind: 'unverified' }
   const paths = [...new Set([...Object.keys(base), ...Object.keys(ours), ...Object.keys(entry.work)])].sort(compareBytes)
 
   const changed: { path: string; result: string | undefined }[] = []
-  const conflicts: string[] = []
   for (const path of paths) {
     const b = valueOf(base, path)
     const o = valueOf(ours, path)
     const t = valueOf(entry.work, path)
-    if (t === b || o === t) continue
-    if (o === b) changed.push({ path, result: t })
-    else conflicts.push(path)
+    if (t === b || o === t || conflictFiles.includes(path)) continue
+    changed.push({ path, result: t })
   }
 
+  // Файлы, которых слияние касается: изменённые им и конфликтные.
   const localChanges: string[] = []
   const untracked: string[] = []
-  for (const { path } of changed) {
+  for (const path of [...changed.map((c) => c.path), ...conflictFiles].sort(compareBytes)) {
     if (has(ours, path)) {
       if (valueOf(state.working, path) !== ours[path]) localChanges.push(path)
     } else if (has(state.working, path)) {
       untracked.push(path)
     }
   }
-  const blocked = localChanges.length > 0 || untracked.length > 0
-  if (conflicts.length > 0) return blocked ? { kind: 'unverified' } : { kind: 'conflict', files: conflicts }
   if (localChanges.length > 0 && untracked.length > 0) return { kind: 'unverified' }
   if (localChanges.length > 0) return { kind: 'localChanges', files: localChanges }
-  if (untracked.length > 0) return { kind: 'untracked', files: untracked }
+  if (untracked.length > 0) return conflictFiles.length > 0 ? { kind: 'unverified' } : { kind: 'untracked', files: untracked }
+  if (merged.conflicts.length > 0) {
+    // Из трёх видов конфликта прогонялся один: изменили оба (К4.1).
+    const other = merged.conflicts.filter((c) => c.kind !== 'content').map((c) => c.file)
+    return other.length > 0 ? { kind: 'conflictKind', files: other } : { kind: 'conflict', merge: { ...merged, base, ours, theirs: entry.work } }
+  }
 
   const index: FileTree = { ...ours }
   const working: FileTree = { ...state.working }

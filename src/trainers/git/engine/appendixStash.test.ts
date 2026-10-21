@@ -308,21 +308,22 @@ describe('apply и pop', () => {
     expect(run(r.state, 'git status --short').result.output).toBe(' M app.js')
   })
 
-  it('тайник на feature конфликтует: отказ области, состояние и тайник на месте, миссия не засчитана (П8.3, место 12)', () => {
+  it('тайник на feature конфликтует: pop и apply применяют его с метками, тайник остаётся, миссия не засчитана (П8.3, К4.1, место 12)', () => {
     let s = run(edit(fresh()), 'git stash').state
     s = run(s, 'git checkout feature').state
     expect(run(s, 'git stash list').result.output).toMatch(/^stash@\{0\}: WIP on master: /)
     for (const command of ['git stash pop', 'git stash apply']) {
       const r = run(s, command)
-      refusal(r.result.output)
-      expect(r.result.exitCode).toBeUndefined()
-      expect(r.result.output).toContain('app.js')
-      expect(bare(r.state)).toEqual(bare(s))
+      expect(r.result.exitCode).toBe(1)
+      expect(r.result.output).toContain('CONFLICT (content): Merge conflict in app.js')
+      expect(r.result.output).toContain('both modified:   app.js')
+      expect(r.state.stashes).toHaveLength(1)
+      expect(Object.keys(r.state.unmerged)).toEqual(['app.js'])
       expect(r.state.missionsDone.stashRestore).toBe(false)
     }
     const log = protocolEntry('П8.3', 'git stash pop', 7)
     expect(log.output).toContain('CONFLICT (content): Merge conflict in app.js')
-    expect(run(s, 'git stash pop').result.output).not.toContain('CONFLICT')
+    expect(run(s, 'git stash pop').result.output).toContain('CONFLICT')
   })
 
   it('pop не возвращает подготовку: речь об этом сказана только для подготовленного (П8.3, место 11)', () => {

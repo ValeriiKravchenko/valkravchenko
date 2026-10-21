@@ -7,6 +7,7 @@
 // ============================================================
 import type { CommandResult, FileTree, HistoryEntry } from './types'
 import type { Head, LastCheckout } from './detachedHead'
+import type { ConflictOperation, UnmergedEntry } from './conflicts'
 
 export type { CommandResult, FileTree, HistoryEntry, Head, LastCheckout }
 
@@ -88,6 +89,14 @@ export interface AppendixState {
   reflog: ReflogEntry[]
   /** Стопка тайников, свежий первым (`stash@{0}`). */
   stashes: AppendixStash[]
+  /**
+   * Неслитые пути (часть XI): путь → три версии файла. Неслитого пути нет в `index`, но он отслеживаемый
+   * (проверки «известен git» его учитывают). Появляется при конфликте cherry-pick и `stash pop`/`apply`,
+   * уходит по `git add`, `reset`, `commit -a`, `checkout HEAD -- <файл>`, отмене и пропуску.
+   */
+  unmerged: Record<string, UnmergedEntry>
+  /** Незаконченная операция: `cherry-pick` с копируемым коммитом; `null` — операции нет (у тайника её нет и при конфликте). */
+  operation: ConflictOperation | null
   history: HistoryEntry[]
   /** Засчитанные миссии; значение, ставшее `true`, остаётся им (часть I, п. 2). */
   missionsDone: Record<AppendixMissionId, boolean>

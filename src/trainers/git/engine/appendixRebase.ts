@@ -24,6 +24,7 @@
 // ============================================================
 import type { AppendixCommit, AppendixState, FileTree } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
+import { conflictForm, refusalOutcome } from './appendixConflicts'
 import { markMission } from './appendixMissions'
 import { mergeTrees } from './branchRepo'
 import { compareBytes } from './appendixRefs'
@@ -90,9 +91,14 @@ export function handleRebase(state: AppendixState, args: readonly string[]): Out
   if (revision.kind === 'foreign' || revision.kind === 'reflogShort' || word.includes('@{')) return refuse(state, ae.revisionForm('rebase', word))
   if (revision.kind === 'missing') return exited(state, `fatal: invalid upstream '${word}'`, 128, ax.rebaseInvalidUpstream)
 
+  // Неслитые пути: `needs merge` и отказ из-за правок (К1.2, К4.2). Операция без неслитых путей: подготовленная правка отказывает, как обычно (К12.c5).
+  const blocked = refusalOutcome(state, { name: 'rebase' })
+  if (blocked !== null) return blocked
   const unstaged = hasUnstaged(state)
   const staged = !sameTree(state.index, headTree(state))
   if (unstaged || staged) return exited(state, dirtyOutput(unstaged, staged), 1, unstaged && staged ? ax.rebaseRefusedBoth : unstaged ? ax.rebaseRefusedUnstaged : ax.rebaseRefusedStaged)
+  // Операция идёт, а индекс и каталог чисты (пустой cherry-pick): ответ git не сверен.
+  if (state.operation !== null) return conflictForm(state, `rebase ${word}`)
 
   const upstream = revision.id
   const tip = currentCommitId(state)

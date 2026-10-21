@@ -126,7 +126,7 @@ interface Hunk {
  * тренажёра короткие — производительность не важна). Возвращает список
  * непересекающихся замен: base[bStart:bEnd] → other[start:end].
  */
-function computeHunks(base: string[], other: string[]): Hunk[] {
+export function computeHunks(base: string[], other: string[]): Hunk[] {
   const n = base.length
   const m = other.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
@@ -178,7 +178,7 @@ function computeHunks(base: string[], other: string[]): Hunk[] {
  * вставки — схлопнуться в одну (сверено: git 2.53.0 merge даёт "a\nX\nb\nO" одной вставкой X,
  * без дубля).
  */
-function hunksOverlap(h1: Hunk, h2: Hunk): boolean {
+export function hunksOverlap(h1: Hunk, h2: Hunk): boolean {
   return h1.bStart <= h2.bEnd && h2.bStart <= h1.bEnd
 }
 

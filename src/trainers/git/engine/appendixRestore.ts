@@ -24,7 +24,7 @@ const ae = ru.appendix.errors
 const ax = ru.appendix.explain
 
 /** Слово — путь, который раздел понимает: имя файла рабочего каталога без каталогов, масок и `:`. */
-function isPlainPath(path: string): boolean {
+export function isPlainPath(path: string): boolean {
   return !/[*?[\]/\\]/.test(path) && !path.startsWith(':') && path !== '.' && path !== '..' && path !== ''
 }
 
