@@ -1676,7 +1676,7 @@ export const ru = {
       switch: 'git switch <ветка>, git switch -c <имя>, git switch --detach [<ссылка>] и git switch -',
       reflog: 'git reflog и git reflog -<число>',
       reset: 'git reset [--soft | --mixed | --hard] [<ссылка>] (одна ссылка, без путей)',
-      cherryPick: 'git cherry-pick <ссылка> (один коммит, без ключей)',
+      cherryPick: 'git cherry-pick <ссылка> (один коммит, без ключей), git cherry-pick --continue, --skip и --abort',
       rebase: 'git rebase <ссылка> на ветке (одна ссылка, без ключей)',
       diff: 'git diff и git diff --staged (или --cached)',
       show: 'git show и git show <ссылка> (коммит, ветка или тег)',
@@ -1707,10 +1707,10 @@ export const ru = {
       stashRefForm: (token: string) =>
         `${TRAINER_MARKER} ссылка «${token}» на тайник в такой записи в разделе не разбирается. Здесь понятны stash@{n} и просто номер n, например stash@{1} или 1; номера показывает git stash list.`,
       stashMessageForm: `${TRAINER_MARKER} сообщение тайника с пробелами по краям, с повторяющимися пробелами, табуляцией или несколькими строками: git показал бы его в git stash list по-другому, чем сохранил, и такие сообщения в разделе не разбираются. Дай одну строку без лишних пробелов.`,
-      stashConflict: (command: string, files: readonly string[]) =>
-        `${TRAINER_MARKER} git stash ${command}: правка в тайнике и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Настоящий git применил бы тайник с конфликтом: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, а pop оставил бы тайник в стопке. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: файлы и тайник на месте. Без конфликта тайник применяется там, где файл остался таким, каким был при сохранении, — обычно на ветке, где тайник сделан.`,
       stashUnverified: (command: string) =>
-        `${TRAINER_MARKER} git stash ${command}: сочетание правок в рабочем каталоге и в тайнике (конфликт вместе с несохранённой правкой, оба вида отказа сразу, файл, удалённый из индекса и созданный заново) в разделе не разбирается. Ничего не изменено.`,
+        `${TRAINER_MARKER} git stash ${command}: сочетание правок в рабочем каталоге и в тайнике (конфликт вместе с неотслеживаемым файлом, оба вида отказа сразу, слияние строк одного файла без конфликта, файл, удалённый из индекса и созданный заново) в разделе не разбирается. Ничего не изменено.`,
+      stashConflictKind: (command: string, files: readonly string[]) =>
+        `${TRAINER_MARKER} git stash ${command}: ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} в тайнике и в текущем индексе созданы заново либо один из них удалён. Конфликты такого вида (add/add, изменение и удаление) в этой части раздела не разбираются. Ничего не изменено: файлы и тайник на месте.`,
       switchRefForm: (word: string) =>
         `${TRAINER_MARKER} git switch ${word}: HEAD и полное имя ветки (refs/heads/…) git switch называет в отказе по-особому, и эта строка в разделе не сверена. Перейти на ветку: git switch имя_ветки; поставить HEAD на коммит: git switch --detach ${word}. HEAD остался на месте.`,
       branchDeleteDuplicate: `${TRAINER_MARKER} одно и то же имя дважды в git branch -d: как git ответил бы на повтор, в разделе не сверено. Назови каждую ветку один раз.`,
@@ -1735,9 +1735,16 @@ export const ru = {
         `${TRAINER_MARKER} «${file}» — файл рабочего каталога, и git show принял бы это слово за путь. Фильтр по путям в разделе не разбирается.`,
       resetPathForm: (word: string) =>
         `${TRAINER_MARKER} «${word}» — файл рабочего каталога, и git reset принял бы это слово за путь (git reset файл убирает файл из индекса) либо потребовал бы «--», если так же называется ссылка. Формы с путями в разделе не разбираются. Ничего не изменено.`,
-      cherryPickConflict: (files: readonly string[]) =>
-        `${TRAINER_MARKER} git cherry-pick: копируемый коммит и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git cherry-pick --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
-      cherryPickEmpty: `${TRAINER_MARKER} git cherry-pick: изменение этого коммита уже есть в HEAD, копия вышла бы пустой. Настоящий git остановился бы (код возврата 1) и ждал бы git cherry-pick --skip или --abort; такое состояние тренажёр не моделирует, поэтому ничего не изменено.`,
+      cherryPickConflictKind: (files: readonly string[]) =>
+        `${TRAINER_MARKER} git cherry-pick: ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} коммит создаёт заново, а в HEAD он уже есть (или коммит удаляет файл, который изменён в HEAD). Конфликты такого вида (add/add, изменение и удаление) в этой части раздела не разбираются. Ничего не изменено: ветка, индекс и файлы на месте.`,
+      cherryPickConflictDirty: (files: readonly string[]) =>
+        `${TRAINER_MARKER} git cherry-pick: коммит даёт конфликт, а в ${files.length === 1 ? 'файле' : 'файлах'} ${files.map((f) => `«${f}»`).join(', ')} лежит твоя несохранённая правка или неотслеживаемый файл с тем же именем. Как git ответил бы на это сочетание, в разделе не сверено. Ничего не изменено. Сохрани правку коммитом, спрячь её (git stash) или верни файл (git checkout -- имя), потом повтори.`,
+      cherryPickDetachedStop: `${TRAINER_MARKER} git cherry-pick, который остановился бы (на конфликте или потому, что копия вышла бы пустой), в отсоединённом HEAD в этой части раздела не разбирается. Перейди на ветку (git switch имя) и повтори. Ничего не изменено.`,
+      cherryPickSkipIdle: `${TRAINER_MARKER} git cherry-pick --skip, когда cherry-pick не идёт, в разделе не разбирается: как git ответил бы, не сверено. Ничего не изменено.`,
+      conflictUntrackedStatus: (command: string) =>
+        `${TRAINER_MARKER} git ${command}: в рабочем каталоге есть неслитые пути и неотслеживаемый файл, а подготовленного нет. Итоговая строка git status для такого сочетания в разделе не сверена. Удали неотслеживаемый файл кнопкой 🗑 или разреши конфликт и повтори. Ничего не изменено.`,
+      conflictForm: (form: string) =>
+        `${TRAINER_MARKER} git ${form}: посреди незаконченного cherry-pick или конфликта тайника эта форма в разделе не разбирается, как git ответил бы, не сверено. Ничего не изменено. Закончи конфликт (исправь файл, git add, затем завершающая команда) или отмени его (git cherry-pick --abort; после тайника — git reset --hard).`,
       rebaseDetached: `${TRAINER_MARKER} git rebase в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git перенёс бы коммиты и напечатал бы «Successfully rebased and updated detached HEAD.»; двигался бы только HEAD, ветки остались бы на местах, а git status показал бы «HEAD detached from …». Перейди на ветку (git switch имя) и повтори. Ничего не изменено.`,
       rebaseConflict: (files: readonly string[]) =>
         `${TRAINER_MARKER} git rebase: переносимый коммит и новая основа изменили ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git rebase --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
@@ -1959,6 +1966,61 @@ export const ru = {
         title: 'Что попробовать',
       },
     },
+  },
+
+  /**
+   * Речь о конфликтах, общая для разделов (target.md, часть XI, «Речь при конфликте»). Вывода git здесь нет:
+   * он лежит в engine/conflicts.ts. Подставляемые в `getConflictView` ключи (`cherryPickFinish` и далее)
+   * — готовые строки без параметров. Выдуманных ошибок, строк `hint:` и совета `merge` в речи нет.
+   */
+  conflicts: {
+    cherryPickConflict: (files: readonly string[]) =>
+      `cherry-pick остановился на конфликте: текущая ветка и копируемый коммит изменили одни и те же строки ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')}. Остальное git применил сам, а здесь оставил обе версии с метками: вверху (HEAD) твоя ветка, внизу — копируемый коммит. Исправь файл (кнопки редактора или ✎), затем git add <файл> и git cherry-pick --continue. Пропустить коммит — git cherry-pick --skip, отменить всё — git cherry-pick --abort.`,
+    cherryPickEmpty:
+      'Итог совпал с HEAD: изменение этого коммита уже есть в ветке (или в файле оставлена только версия HEAD), поэтому копия вышла бы пустой. cherry-pick пустую копию сам не создаёт и остаётся незаконченным. Выход: git cherry-pick --skip пропустит коммит, git cherry-pick --abort отменит всё. Пустую копию создал бы git commit --allow-empty, но такая форма в разделе не разбирается.',
+    stashPopConflict: (files: readonly string[]) =>
+      `Тайник применился с конфликтом: правка из тайника и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Вверху (Updated upstream) текущая версия, внизу (Stashed changes) правка из тайника. Тайник остался в стопке: pop убирает его, только если всё прошло гладко. Исправь файл, git add <файл>, потом убери тайник сам: git stash drop. У тайника нет --abort: отменить можно командой git reset --hard или вернуть один файл командой git checkout HEAD -- <файл>.`,
+    stashApplyConflict: (files: readonly string[]) =>
+      `Тайник применился с конфликтом: правка из тайника и текущая версия ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')} изменены по-разному. Вверху (Updated upstream) текущая версия, внизу (Stashed changes) правка из тайника. apply тайник из стопки не убирает ни при каком исходе. Исправь файл, git add <файл>, потом убери тайник сам: git stash drop. У тайника нет --abort: отменить можно командой git reset --hard или вернуть один файл командой git checkout HEAD -- <файл>.`,
+    addedWithMarkers: (files: readonly string[]) =>
+      `git add принял ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} как есть: в ${files.length === 1 ? 'нём' : 'них'} остались строки <<<<<<<, ======= и >>>>>>>, а git их не проверяет. Если закоммитить сейчас, метки попадут в историю. Убрать их можно правкой файла и новым git add.`,
+    allAddedCherryPick:
+      'Неслитых путей не осталось, но cherry-pick ещё идёт: заверши его командой git cherry-pick --continue (или git commit). Пропустить коммит — git cherry-pick --skip, отменить — git cherry-pick --abort.',
+    allAddedStash: 'Правка разрешена и подготовлена. Тайник всё ещё в стопке: убери его командой git stash drop, когда он больше не нужен.',
+    cherryPickFinished:
+      'cherry-pick завершён: копия коммита создана с сообщением оригинала, у неё новый id. Настоящий git после первой строки печатает ещё Date: и сводку изменений; тренажёр их не печатает.',
+    cherryPickFinishedOwnMessage:
+      'cherry-pick завершён обычной командой git commit: копия создана с твоим сообщением вместо сообщения оригинала. Настоящий git после первой строки печатает ещё Date: и сводку изменений; тренажёр их не печатает.',
+    editorWouldOpen:
+      'Без -m настоящий git открыл бы текстовый редактор с подготовленным сообщением (темой копируемого коммита). Редактора в тренажёре нет, поэтому сообщение взято готовым.',
+    cherryPickSkipped: 'Коммит пропущен: cherry-pick закончился без копии. Файлы, которых он касался, вернулись к версии HEAD, ветка не двигалась.',
+    cherryPickAborted: 'cherry-pick отменён: файлы, которых он касался, вернулись к версии HEAD, ветка не двигалась, копии нет.',
+    discardedEdit: (files: readonly string[]) => `${files.length === 1 ? 'Файл' : 'Файлы'} ${files.map((f) => `«${f}»`).join(', ')} ${files.length === 1 ? 'вернулся' : 'вернулись'} к версии из HEAD: метки и всё, что ты в ${files.length === 1 ? 'нём' : 'них'} исправил, пропало.`,
+    checkoutHeadFile: (files: readonly string[], operationGoes: boolean) =>
+      `${files.length === 1 ? 'Файл' : 'Файлы'} ${files.map((f) => `«${f}»`).join(', ')} вернул${files.length === 1 ? 'ся' : 'ись'} к версии из HEAD и больше не неслитый${files.length === 1 ? '' : 'е'}, как после git add: метки и твоя правка пропали.${operationGoes ? ' Если неслитых путей не осталось, cherry-pick всё равно ещё идёт: пропусти коммит командой git cherry-pick --skip или отмени его командой git cherry-pick --abort.' : ''}`,
+    checkoutCancelled:
+      'checkout -b создал ветку и бросил cherry-pick: операция больше не идёт (git cherry-pick --abort теперь ответит, что отменять нечего), а метки и неслитые пути остались. Выход: исправь файл, git add и обычный git commit, либо git reset --hard (он выбросит правку).',
+    operationDroppedByStash:
+      'Правки спрятаны, и cherry-pick больше не идёт: git молча бросил его, потому что всё разрешено и подготовлено. git stash pop вернёт правку обычной неподготовленной правкой, а не продолжением cherry-pick.',
+    resetHardCleared: 'reset --hard снял конфликт: неслитых путей и незаконченной операции больше нет, файлы вернулись к версии коммита, твоя правка пропала.',
+    resetMixedCleared:
+      'reset (mixed) снял конфликт: неслитых путей и незаконченной операции больше нет, но файл с метками остался в каталоге неподготовленной правкой. Следующий коммит будет обычным: связи с cherry-pick у него нет.',
+    stashDropKeepsUnmerged:
+      'Тайник удалён из стопки, а неслитый путь остался: drop конфликт не трогает. Если правка из тайника ещё нужна, вернуть тайник обычными командами уже нельзя; разреши файл и git add.',
+    commitFinishedStashConflict: 'git commit -a добавил в индекс и неслитые пути с текстом из каталога, поэтому конфликт снят. Метки, если они остались в файле, попали в коммит. Тайник остался в стопке.',
+    choiceNote: (part: 'top' | 'bottom' | 'both', file: string, top: string, bottom: string, finish: string) => {
+      const kept = part === 'top' ? `часть «${top}»` : part === 'bottom' ? `часть «${bottom}»` : `обе части («${top}» и «${bottom}»)`
+      return `В файле «${file}» оставлена ${kept}. Это только правка текста, как в редакторе: git по-прежнему считает путь неслитым (git status --short покажет UU или AA). Дальше: git add ${file}, затем ${finish}.`
+    },
+    finishCherryPick: 'git cherry-pick --continue (или git commit)',
+    finishStash: 'git stash drop',
+    cherryPickFinish: 'Исправь файлы, добавь каждый командой git add <файл>, затем заверши командой git cherry-pick --continue (или git commit).',
+    cherryPickFinishAdded: 'Все пути добавлены: заверши cherry-pick командой git cherry-pick --continue (или git commit).',
+    cherryPickAbort: 'git cherry-pick --abort отменит всё, git cherry-pick --skip пропустит этот коммит.',
+    stashFinish: 'Исправь файлы, добавь каждый командой git add <файл>, потом убери тайник: git stash drop.',
+    stashAbort: 'У тайника нет --abort: git reset --hard вернёт всё как в HEAD, git checkout HEAD -- <файл> вернёт один файл.',
+    kindBothModified: 'оба изменили файл',
+    kindBothAdded: 'оба создали файл',
   },
 
   /**

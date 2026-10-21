@@ -16,6 +16,10 @@
 // где другие ссылки (`show`, `log`, `tag`, `branch`, `checkout`, `switch`, `reset`, `cherry-pick`); за концом
 // журнала — `fatal: log for 'HEAD' only has N entries`, код 128. `merge` и `pull` отвечают отказом области.
 //
+// Шаг C, часть 1 (target.md, часть XI): `git cherry-pick` с конфликтом, `--continue`, `--skip`, `--abort`, пустой cherry-pick и
+// `git stash pop`/`apply` с конфликтом. Для экрана: `getConflictFiles`, `chooseConflictPart`, `getConflictView`. Неслитые пути и
+// незаконченная операция лежат в `state.unmerged` и `state.operation`; `rebase` с конфликтом по-прежнему отказ области.
+//
 // Исходы команды различаются по `CommandResult`: ответ git — с `exitCode` (0 — успех), отказ области — без `exitCode`,
 // вывод начинается с метки «[тренажёр]». Миссий семь (`APPENDIX_MISSION_IDS`): 5 — `cherry-pick`, 6 — `reset --hard HEAD@{n}`
 // на брошенный коммит, 7 — `rebase`, перенёсший коммиты или перемотавший ветку.
@@ -25,11 +29,13 @@ import { executeAppendixCommand } from './appendixCommands'
 import { createFile as createFileRaw, deleteFile as deleteFileRaw, editFile as editFileRaw } from './appendixFileOps'
 import { getAppendixMissions as getAppendixMissionsRaw } from './appendixMissions'
 import { branchNames, createAppendixSection as createAppendixSectionRaw, decorationMap, fadedCommitIds, listWorkingFiles, subjectOf, tagNames } from './appendixRepo'
+import { choosePart, conflictFiles, conflictView } from './appendixConflicts'
+import type { ConflictFileView, ConflictView } from './appendixConflicts'
 import { compareBytes } from './appendixRefs'
 import { shortCommitId } from './sectionsCommon'
 import { has } from './util'
 
-export type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry }
+export type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, ConflictFileView, ConflictView, FileTree, Head, HistoryEntry }
 export { APPENDIX_MISSION_IDS } from './appendixTypes'
 
 /** Начальное состояние: `master` и `feature`, 4 коммита, HEAD на `master`, чистый рабочий каталог, тегов и тайников нет. */
@@ -177,4 +183,31 @@ export function getStashes(state: AppendixState): StashView[] {
  */
 export function getAppendixMissions(state: AppendixState): AppendixMissionView[] {
   return getAppendixMissionsRaw(state)
+}
+
+/**
+ * Файлы рабочего каталога с блоками меток (конфликт cherry-pick или тайника), по алфавиту путей: `path`, вид конфликта (`null`,
+ * если путь уже добавлен, а метки остались) и подписи верхней и нижней частей из первого блока файла (`HEAD` и
+ * `<id7> (<тема>)`; `Updated upstream` и `Stashed changes`). Нет блоков меток — пустой список.
+ */
+export function getConflictFiles(state: AppendixState): ConflictFileView[] {
+  return conflictFiles(state)
+}
+
+/**
+ * Кнопки редактора «Оставить часть …»: заменяет каждый блок меток файла выбранной частью (`top`, `bottom` или обе — `both`). Меняет
+ * только рабочую версию: `index` и `unmerged` остаются, `git status --short` по-прежнему `UU`. В журнал терминала пишется заметка
+ * тренажёра: что оставлено и какие команды дальше. Файла нет или в нём нет блоков меток — состояние не меняется.
+ */
+export function chooseConflictPart(state: AppendixState, path: string, part: 'top' | 'bottom' | 'both'): AppendixState {
+  return choosePart(state, path, part)
+}
+
+/**
+ * Состояние конфликта для рамки: `null`, если неслитых путей нет и операция не идёт. Иначе операция (`cherry-pick`; у тайника `null`),
+ * неслитые пути с видом, кодом `UU`/`AA` и ключом подписи вида, признак «все пути добавлены» (операция идёт, неслитых нет) и ключи
+ * словаря `ru.conflicts` со строками «чем завершить» и «чем отменить». Текст рамки пишет экран.
+ */
+export function getConflictView(state: AppendixState): ConflictView | null {
+  return conflictView(state)
 }

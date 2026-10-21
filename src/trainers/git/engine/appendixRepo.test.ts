@@ -29,6 +29,11 @@ describe('исходное состояние (target.md, часть X, «Исх
   const s = createAppendixSection()
   const seed = ru.appendix.seed
 
+  it('конфликтов нет: неслитых путей нет, операция не идёт (target.md, часть XI, «Контракт»)', () => {
+    expect(s.unmerged).toEqual({})
+    expect(s.operation).toBeNull()
+  })
+
   it('четыре коммита с 40-значными id в порядке создания: базовый, fix, «О проекте», README', () => {
     const commits = Object.values(s.commits)
     expect(commits.map((c) => c.message)).toEqual([seed.baseMessage, seed.fixMessage, seed.aboutMessage, seed.readmeMessage])

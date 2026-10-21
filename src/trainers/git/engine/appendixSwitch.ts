@@ -13,6 +13,9 @@
 // Вывод сверен с docs/git-trainer/reports/detached-head-git-runs.txt (О1–О31), section8-git-runs.txt (П8.15, П8.19),
 // appendix-g18e-git-runs.txt (П8.28, П8.32–П8.40) и appendix-g18g-git-runs.txt (П8.57–П8.68).
 //
+// Посреди cherry-pick и конфликта тайника (часть XI): проходят `-b <имя>` (у cherry-pick с предупреждением), `HEAD -- <файл>`, `-- <файл>`,
+// отказывают `<ветка>` и `-- <неслитый файл>`; остальное — отказ области (checkoutInConflict).
+//
 // Проверки git идут в таком порядке (П8.68): форма команды → ссылка → «нужна ветка» у `switch` → правки, которые
 // переход затёр бы. Ошибка игрока (отказ git) — результат с кодом возврата, не исключение.
 // ============================================================
@@ -22,7 +25,8 @@ import { commitTree, graphOf, headTree, refsOf, currentCommitId } from './append
 import { isValidBranchName } from './appendixRefs'
 import { BRANCH_INVALID, branchNameOutOfScope } from './appendixLocal'
 import { reflogShortOutput, resolveRevision } from './appendixRevisions'
-import { restoreFiles } from './appendixRestore'
+import { restoreFiles, isPlainPath } from './appendixRestore'
+import { conflictForm, hasUnmerged, inConflict, refusalOutcome } from './appendixConflicts'
 import { checkoutReflogEntry, orphans, previousPosition, switchOutput, type Refs, type SwitchMode, type SwitchTarget } from './detachedHead'
 import { checkSafety, shortCommitId } from './sectionsCommon'
 import { has } from './util'
@@ -257,7 +261,61 @@ function checkoutDetach(state: AppendixState, args: readonly string[]): Outcome 
   return detachAt(state, 'checkout', rest[0] ?? null)
 }
 
+/** `git checkout HEAD -- <файлы>` посреди конфликта: файл становится версией HEAD и перестаёт быть неслитым, молча (К4.5, К16.ch). */
+function restoreFromHead(state: AppendixState, paths: readonly string[]): Outcome {
+  const foreign = paths.find((p) => !isPlainPath(p))
+  if (foreign !== undefined) return refuse(state, ae.pathspecForm('checkout', foreign))
+  const head = headTree(state)
+  // Путь, которого нет в HEAD, git назвал бы иначе: этот ответ в протоколах не снят.
+  if (paths.some((p) => !has(head, p))) return conflictForm(state, `checkout HEAD -- ${paths.join(' ')}`)
+  const index: FileTree = { ...state.index }
+  const working: FileTree = { ...state.working }
+  const unmerged = { ...state.unmerged }
+  for (const p of paths) {
+    index[p] = head[p]
+    working[p] = head[p]
+    delete unmerged[p]
+  }
+  return exited({ ...state, index, working, unmerged }, '', 0, ru.conflicts.checkoutHeadFile([...new Set(paths)], state.operation !== null))
+}
+
+/**
+ * `git checkout` посреди cherry-pick или конфликта тайника. Проходят и отказывают формы из протокола: `-b <имя>`
+ * (К13.c, К13.s), `<ветка>` (К4.2, К5.2, К12.c1), `-- <файл>` (К4.2), `HEAD -- <файл>` (К4.5, К16.ch). Остальное и успешный
+ * переход, когда неслитых путей нет, а cherry-pick идёт, — отказ области: git при переходе бросает операцию, а печатает ли
+ * предупреждение, прогоном не сверено.
+ */
+function checkoutInConflict(state: AppendixState, args: readonly string[]): Outcome {
+  const unmerged = hasUnmerged(state)
+  if (args[0] === '-b' && args.length === 2) {
+    const made = createBranchAndSwitch(state, args[1], 'checkout')
+    if (made.result.exitCode !== 0 || state.operation === null) return made
+    if (!unmerged) return conflictForm(state, `checkout ${args.join(' ')}`)
+    const notes = [made.result.explanation, ru.conflicts.checkoutCancelled].filter((n): n is string => n !== null)
+    return exited({ ...made.state, operation: null }, `${made.result.output}\nwarning: cancelling a cherry picking in progress`, 0, notes.join(' '))
+  }
+  if (args[0] === '--') {
+    const paths = args.slice(1)
+    if (!unmerged) return checkoutPlain(state, args)
+    const refused = refusalOutcome(state, { name: 'checkout-paths', paths })
+    if (refused !== null) return refused
+    return paths.some((p) => has(state.unmerged, p)) ? conflictForm(state, `checkout ${args.join(' ')}`) : checkoutPlain(state, args)
+  }
+  if (args[0] === 'HEAD' && args[1] === '--' && args.length > 2 && unmerged) return restoreFromHead(state, args.slice(2))
+  if (unmerged) {
+    if (args.length === 1 && has(state.branches, args[0])) return refusalOutcome(state, { name: 'checkout-branch' }) as Outcome
+    return conflictForm(state, `checkout ${args.join(' ')}`)
+  }
+  const out = checkoutPlain(state, args)
+  const moved = out.state.head !== state.head || out.state.reflog !== state.reflog || args[0] === 'HEAD'
+  return out.result.exitCode === 0 && moved ? conflictForm(state, `checkout ${args.join(' ')}`) : out
+}
+
 export function handleCheckout(state: AppendixState, args: readonly string[]): Outcome {
+  return inConflict(state) ? checkoutInConflict(state, args) : checkoutPlain(state, args)
+}
+
+function checkoutPlain(state: AppendixState, args: readonly string[]): Outcome {
   if (args.length === 0) return refuse(state, ae.form('checkout', '', ALLOWED.checkout))
   if (args.includes('--detach')) return checkoutDetach(state, args)
   if (args[0] === '-b') {

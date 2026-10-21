@@ -2,7 +2,7 @@
 // Помощники тестов раздела 8 (шаг A). Читают протоколы прогонов настоящего git 2.53.0
 // (docs/git-trainer/reports/section8-git-runs.txt, блоки П8.1–П8.20, и appendix-g18e-git-runs.txt,
 // блоки П8.21–П8.40, appendix-g18e2-git-runs.txt, блоки П8.41–П8.56, appendix-g18g-git-runs.txt, блоки П8.57–П8.68, appendix-g18g2-git-runs.txt, блоки П8.69–П8.81, и appendix-g18g3-git-runs.txt, блоки П8.82–П8.88)
-// и detached-head-git-runs.txt, блоки О1–О31) и выдают команды блока с выводом и кодом возврата. Блок можно проиграть на
+// и detached-head-git-runs.txt, блоки О1–О31, и conflicts-git-runs.txt, блоки К1–К19) и выдают команды блока с выводом и кодом возврата. Блок можно проиграть на
 // движке целиком: id коммитов и объектов у git настоящие, у тренажёра свои, поэтому вывод
 // сверяется со скелетом, а соответствие «настоящий id → id тренажёра» запоминается и обязано
 // сохраняться до конца блока (один и тот же коммит не может получить два разных id). В приложение
@@ -15,6 +15,7 @@ import switchRuns from '../../../../docs/git-trainer/reports/appendix-g18g-git-r
 import resetRuns from '../../../../docs/git-trainer/reports/appendix-g18g2-git-runs.txt?raw'
 import rebaseRuns from '../../../../docs/git-trainer/reports/appendix-g18g3-git-runs.txt?raw'
 import detachedRuns from '../../../../docs/git-trainer/reports/detached-head-git-runs.txt?raw'
+import conflictRuns from '../../../../docs/git-trainer/reports/conflicts-git-runs.txt?raw'
 import { createAppendixSection, createAppendixFile, deleteAppendixFile, editAppendixFile, runAppendixCommand } from './appendixSection'
 import type { AppendixState, CommandResult } from './appendixSection'
 
@@ -25,20 +26,23 @@ export interface ProtocolEntry {
   exitCode: number
   /** Номер строки команды в файле протокола (с 1). */
   line: number
-  file: 'section8-git-runs.txt' | 'appendix-g18e-git-runs.txt' | 'appendix-g18e2-git-runs.txt' | 'appendix-g18g-git-runs.txt' | 'appendix-g18g2-git-runs.txt' | 'appendix-g18g3-git-runs.txt' | 'detached-head-git-runs.txt'
+  file: 'section8-git-runs.txt' | 'appendix-g18e-git-runs.txt' | 'appendix-g18e2-git-runs.txt' | 'appendix-g18g-git-runs.txt' | 'appendix-g18g2-git-runs.txt' | 'appendix-g18g3-git-runs.txt' | 'detached-head-git-runs.txt' | 'conflicts-git-runs.txt'
 }
+
+const HEADER = /^===== (П8\.\d+|О\d+|К\d+\.[0-9A-Za-z]+)\./
 
 function readBlocks(text: string, file: ProtocolEntry['file'], into: Map<string, ProtocolEntry[]>): void {
   const lines = text.split('\n')
   let current: ProtocolEntry[] | null = null
   for (let i = 0; i < lines.length; i++) {
-    const header = /^===== (П8\.\d+|О\d+)\./.exec(lines[i])
+    const header = HEADER.exec(lines[i])
     if (header) {
       current = []
       into.set(header[1], current)
       continue
     }
-    if (lines[i].startsWith('=====')) {
+    // Строка из одних `=` вне вывода команды — не заголовок блока (метка конфликта `=======` лежит внутри вывода).
+    if (lines[i].startsWith('=====') && !/^=+$/.test(lines[i])) {
       current = null
       continue
     }
@@ -47,11 +51,16 @@ function readBlocks(text: string, file: ProtocolEntry['file'], into: Map<string,
     const start = i + 1
     const out: string[] = []
     i++
-    while (i < lines.length && !/^\[exit \d+\]$/.test(lines[i])) {
+    // Метка кода возврата бывает приклеена к последней строке вывода (файл без перевода строки в конце): такая команда
+    // поглощает следующие до настоящей метки, но не заголовок следующего блока (К19.3 перед К7.11).
+    while (i < lines.length && !/^\[exit \d+\]$/.test(lines[i]) && !HEADER.test(lines[i])) {
       out.push(lines[i])
       i++
     }
-    current.push({ command, output: out.join('\n'), exitCode: Number(/\d+/.exec(lines[i] ?? '')?.[0] ?? -1), line: start, file })
+    const stoppedAtHeader = HEADER.test(lines[i] ?? '')
+    const exitCode = stoppedAtHeader ? -1 : Number(/\d+/.exec(lines[i] ?? '')?.[0] ?? -1)
+    if (stoppedAtHeader) i--
+    current.push({ command, output: out.join('\n'), exitCode, line: start, file })
   }
 }
 
@@ -63,6 +72,7 @@ readBlocks(switchRuns, 'appendix-g18g-git-runs.txt', blocks)
 readBlocks(resetRuns, 'appendix-g18g2-git-runs.txt', blocks)
 readBlocks(rebaseRuns, 'appendix-g18g3-git-runs.txt', blocks)
 readBlocks(detachedRuns, 'detached-head-git-runs.txt', blocks)
+readBlocks(conflictRuns, 'conflicts-git-runs.txt', blocks)
 
 /** Команды блока (`П8.21`) в порядке протокола. */
 export function protocolBlock(block: string): ProtocolEntry[] {

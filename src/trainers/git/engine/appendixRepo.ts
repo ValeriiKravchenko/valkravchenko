@@ -53,6 +53,8 @@ export function createAppendixSection(): AppendixState {
     tags: {},
     reflog,
     stashes: [],
+    unmerged: {},
+    operation: null,
     history: [],
     missionsDone: { lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false, cherryPick: false, rescueCommit: false, rebase: false },
     clock: 4,

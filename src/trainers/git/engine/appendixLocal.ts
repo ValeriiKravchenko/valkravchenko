@@ -7,19 +7,26 @@
 // (П8.1, П8.3); строки git — английские литералы и не переводятся. Всё, что отсюда не
 // воспроизводится, получает честный отказ области с меткой тренажёра (часть III, правило 1).
 //
+// Конфликты (target.md, часть XI; conflicts-git-runs.txt, К4, К5, К11, К16): `status` показывает неслитые пути и заголовок операции,
+// `add` разрешает неслитый путь, не глядя на метки (К1.7), `commit` при неслитых путях отказывает блоком A (К5.2), `commit -a` их
+// берёт (К11.c, К11.s), а при идущем cherry-pick `commit` и `commit -m` завершают его (К5.5, К8.2).
+//
 // Упрощения, названные в части X: после `git commit` нет диффстата и строк `create mode`; в
 // `git show` и `git diff` нет маркера `\ No newline at end of file` (файлы кончаются переводом
 // строки, поэтому вывод остаётся правдой); хэши блобов в строках `index` ненастоящие.
 // ============================================================
 import type { AppendixCommit, AppendixState, FileTree } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
-import { branchNames, currentCommitId, diffTrees, headTree, mayContainRename, refsOf, sameTree } from './appendixRepo'
+import { branchNames, commitOf, currentCommitId, diffTrees, headTree, mayContainRename, refsOf, sameTree } from './appendixRepo'
 import { isValidBranchName } from './appendixRefs'
 import { reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { advanceHead, branchListFirstLine, commitLabel, statusFirstLine } from './detachedHead'
 import { deleteBranches } from './appendixBranchDelete'
+import { hasUnmerged, refusalOutcome, conflictForm, stateStatus, statusRefusal } from './appendixConflicts'
+import { markMission } from './appendixMissions'
+import { markResolved, markerBlocks } from './conflicts'
 import { applyStageAll } from './commitFlags'
-import { formatStatusWithCommits, fullCommitId, shortCommitId } from './sectionsCommon'
+import { fullCommitId, shortCommitId } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
 
@@ -58,8 +65,8 @@ export function handleStatus(state: AppendixState, args: readonly string[]): Out
     else return refuse(state, ae.form('status', arg, ALLOWED.status))
   }
   const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), null) as string
-  const formatted = formatStatusWithCommits(first, headTree(state), state.index, state.working, { short })
-  if (!formatted.ok) return refuse(state, formatted.reason === 'renameDetection' ? ae.renameDetection('status') : ae.statusNestedPaths)
+  const formatted = stateStatus(state, short)
+  if (!formatted.ok) return refuse(state, statusRefusal(formatted.reason, 'status'))
   return exited(state, formatted.output, 0, detachedStatusNote(state, first))
 }
 
@@ -96,16 +103,28 @@ export function handleAdd(state: AppendixState, args: readonly string[]): Outcom
   if (!all && paths.length === 0) return exited(state, ADD_NOTHING_SPECIFIED, 0)
 
   const wholeTree = all || paths[0] === '.'
-  if (wholeTree) {
-    const known = new Set([...Object.keys(state.working), ...Object.keys(state.index)])
-    return exited({ ...state, index: stagePaths(state, [...known]) }, '', 0)
+  if (!wholeTree) {
+    const foreign = paths.find((p) => hasGlobChars(p) || p.includes('/') || p.startsWith(':') || p === '..')
+    if (foreign !== undefined) return refuse(state, ae.pathspecForm('add', foreign))
+    // Путь известен git, если он есть в рабочем каталоге, индексе или среди неслитых: удаление отслеживаемого файла тоже подготавливается (П8.27).
+    const missing = paths.find((p) => !has(state.working, p) && !has(state.index, p) && !has(state.unmerged, p))
+    if (missing !== undefined) return exited(state, `fatal: pathspec '${missing}' did not match any files`, 128)
   }
-  const foreign = paths.find((p) => hasGlobChars(p) || p.includes('/') || p.startsWith(':') || p === '..')
-  if (foreign !== undefined) return refuse(state, ae.pathspecForm('add', foreign))
-  // Путь известен git, если он есть в рабочем каталоге или индексе: удаление отслеживаемого файла тоже подготавливается (П8.27).
-  const missing = paths.find((p) => !has(state.working, p) && !has(state.index, p))
-  if (missing !== undefined) return exited(state, `fatal: pathspec '${missing}' did not match any files`, 128)
-  return exited({ ...state, index: stagePaths(state, paths) }, '', 0)
+  const selected = wholeTree ? [...new Set([...Object.keys(state.working), ...Object.keys(state.index), ...Object.keys(state.unmerged)])] : paths
+  // Неслитый путь `git add` разрешает, не глядя на метки (К1.7); остальные пути подготавливаются как обычно.
+  let next: AppendixState = { ...state, index: stagePaths(state, selected.filter((p) => !has(state.unmerged, p))) }
+  const resolved = selected.filter((p) => has(state.unmerged, p))
+  for (const path of resolved) next = markResolved(next, path)
+  return exited(next, '', 0, resolved.length === 0 ? null : explainResolved(next, resolved))
+}
+
+/** Речь после `git add` неслитых путей: метки остались в файле — предупреждение; иначе что делать дальше. */
+function explainResolved(state: AppendixState, resolved: readonly string[]): string | null {
+  const marked = resolved.filter((p) => has(state.working, p) && markerBlocks(state.working[p]).length > 0)
+  const notes: string[] = []
+  if (marked.length > 0) notes.push(ru.conflicts.addedWithMarkers(marked))
+  if (!hasUnmerged(state)) notes.push(state.operation !== null ? ru.conflicts.allAddedCherryPick : ru.conflicts.allAddedStash)
+  return notes.length === 0 ? null : notes.join(' ')
 }
 
 // ---------- git commit ----------
@@ -169,33 +188,27 @@ function parseCommitArgs(args: readonly string[]): CommitArgs {
   return parsed
 }
 
-export function handleCommit(state: AppendixState, args: readonly string[]): Outcome {
-  const parsed = parseCommitArgs(args)
-  if (parsed.refusal !== null) return refuse(state, parsed.refusal)
-  // `error: switch `m' requires a value` — весь вывод git, без usage (П8.26).
-  if (parsed.missingValue) return exited(state, "error: switch `m' requires a value", 129)
-
-  const head = headTree(state)
-  const nextIndex = parsed.all ? applyStageAll(state.index, state.working) : state.index
-  if (sameTree(head, nextIndex)) {
-    // Нечего коммитить: git печатает полный status и отвечает кодом 1, даже при пустом сообщении (П8.26).
-    // Status строится по индексу с учётом -a (он собирается во временный индекс), а сам индекс остаётся прежним (П8.33).
-    const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), null) as string
-    const formatted = formatStatusWithCommits(first, head, nextIndex, state.working, { short: false })
-    if (!formatted.ok) return refuse(state, formatted.reason === 'renameDetection' ? ae.renameDetection('commit') : ae.statusNestedPaths)
-    return exited(state, formatted.output, 1)
+/** Индекс `git commit -a`: отслеживаемые файлы берут рабочую версию, неслитые пути тоже (К11.c, К11.s). */
+function stageAllTracked(state: AppendixState): FileTree {
+  const next = applyStageAll(state.index, state.working)
+  for (const path of Object.keys(state.unmerged)) {
+    if (has(state.working, path)) next[path] = state.working[path]
   }
-  if (parsed.message === null) return refuse(state, ae.commitNeedsMessage)
-  const message = cleanMessage(parsed.message)
-  if (message.trim() === '') return exited(state, 'Aborting commit due to empty commit message.', 1, ax.commitEmptyMessage)
-  if (message.includes('\n')) return refuse(state, ae.form('commit', '-m <сообщение из нескольких строк>', ALLOWED.commit))
+  return next
+}
 
+/**
+ * Новый коммит на HEAD с деревом `tree`: на ветке двигается ветка, в отсоединённом HEAD — HEAD. Индекс
+ * становится `tree`, запись журнала HEAD — `reflogMessage`. Неслитых путей и операции в результате нет:
+ * коммит завершает операцию.
+ */
+export function recordCommit(state: AppendixState, message: string, tree: FileTree, reflogMessage: string): { state: AppendixState; commitId: string } {
   const parent = currentCommitId(state)
   const commit: AppendixCommit = {
-    id: fullCommitId(message, nextIndex, [parent], state.clock),
+    id: fullCommitId(message, tree, [parent], state.clock),
     parents: [parent],
     message,
-    tree: { ...nextIndex },
+    tree: { ...tree },
     clock: state.clock,
   }
   const moved = advanceHead(state.head, state.branches, commit.id)
@@ -204,12 +217,52 @@ export function handleCommit(state: AppendixState, args: readonly string[]): Out
     commits: { ...state.commits, [commit.id]: commit },
     branches: moved.branches,
     head: moved.head,
-    index: nextIndex,
-    reflog: [{ id: commit.id, message: `commit: ${message.split('\n')[0]}` }, ...state.reflog],
+    index: { ...tree },
+    unmerged: {},
+    operation: null,
+    reflog: [{ id: commit.id, message: reflogMessage }, ...state.reflog],
     clock: state.clock + 1,
   }
-  const note = state.head.kind === 'detached' ? `${ax.commitStatNotShown} ${ax.commitDetached}` : ax.commitStatNotShown
-  return exited(next, `[${commitLabel(state.head)} ${shortCommitId(commit.id)}] ${message}`, 0, note)
+  return { state: next, commitId: commit.id }
+}
+
+export function handleCommit(state: AppendixState, args: readonly string[]): Outcome {
+  const parsed = parseCommitArgs(args)
+  if (parsed.refusal !== null) return refuse(state, parsed.refusal)
+  // `error: switch `m' requires a value` — весь вывод git, без usage (П8.26).
+  if (parsed.missingValue) return exited(state, "error: switch `m' requires a value", 129)
+
+  // Неслитые пути запрещают коммит, кроме `-a`: он берёт их рабочую версию (К5.2, К11.c, К11.s).
+  if (!parsed.all) {
+    const refused = refusalOutcome(state, { name: 'commit' })
+    if (refused !== null) return refused
+  }
+  const head = headTree(state)
+  const nextIndex = parsed.all ? stageAllTracked(state) : state.index
+  const operation = state.operation
+  if (sameTree(head, nextIndex)) {
+    // Пустой итог посреди cherry-pick или конфликта: ответ git в протоколе есть только у `cherry-pick --continue` (К5.6).
+    if (operation !== null || hasUnmerged(state)) return conflictForm(state, 'commit')
+    // Нечего коммитить: git печатает полный status и отвечает кодом 1, даже при пустом сообщении (П8.26).
+    // Status строится по индексу с учётом -a (он собирается во временный индекс), а сам индекс остаётся прежним (П8.33).
+    const formatted = stateStatus({ ...state, index: nextIndex }, false)
+    if (!formatted.ok) return refuse(state, statusRefusal(formatted.reason, 'commit'))
+    return exited(state, formatted.output, 1)
+  }
+  // Посреди cherry-pick без -m сообщение готово: тема и текст копируемого коммита (К5.5); редактор git открыл бы, тренажёр его не открывает.
+  const prepared = operation === null ? null : commitOf(state, operation.commit).message
+  if (parsed.message === null && prepared === null) return refuse(state, ae.commitNeedsMessage)
+  const message = cleanMessage(parsed.message ?? (prepared as string))
+  if (message.trim() === '') return exited(state, 'Aborting commit due to empty commit message.', 1, ax.commitEmptyMessage)
+  if (message.includes('\n') && parsed.message !== null) return refuse(state, ae.form('commit', '-m <сообщение из нескольких строк>', ALLOWED.commit))
+
+  const subject = message.split('\n')[0]
+  const made = recordCommit(state, message, nextIndex, operation === null ? `commit: ${subject}` : `commit (cherry-pick): ${subject}`)
+  const notes: string[] = [state.head.kind === 'detached' ? `${ax.commitStatNotShown} ${ax.commitDetached}` : ax.commitStatNotShown]
+  if (operation !== null) notes.push(parsed.message === null ? `${ru.conflicts.cherryPickFinished} ${ru.conflicts.editorWouldOpen}` : ru.conflicts.cherryPickFinishedOwnMessage)
+  else if (hasUnmerged(state)) notes.push(ru.conflicts.commitFinishedStashConflict)
+  const next = operation === null ? made.state : markMission(made.state, 'cherryPick')
+  return exited(next, `[${commitLabel(state.head)} ${shortCommitId(made.commitId)}] ${subject}`, 0, notes.join(' '))
 }
 
 // ---------- git branch ----------

@@ -12,7 +12,7 @@ describe('ru.appendix', () => {
       a.errors.commandOutOfScope('rebase'),
       a.errors.stashRefForm('x'),
       a.errors.stashMessageForm,
-      a.errors.stashConflict('pop', ['app.js']),
+      a.errors.stashConflictKind('pop', ['app.js']),
       a.errors.stashUnverified('pop'),
       a.errors.form('stash', '-u', a.allowed.stash),
       a.errors.form('tag', '-n', a.allowed.tag),
@@ -39,9 +39,13 @@ describe('ru.appendix', () => {
       a.errors.logPathFilter('app.js'),
       a.errors.showPathFilter('app.js'),
       a.errors.resetPathForm('app.js'),
-      a.errors.cherryPickConflict(['app.js']),
-      a.errors.cherryPickConflict(['app.js', 'about.html']),
-      a.errors.cherryPickEmpty,
+      a.errors.cherryPickConflictKind(['app.js']),
+      a.errors.cherryPickConflictKind(['app.js', 'about.html']),
+      a.errors.cherryPickConflictDirty(['app.js']),
+      a.errors.cherryPickDetachedStop,
+      a.errors.cherryPickSkipIdle,
+      a.errors.conflictForm('stash pop'),
+      a.errors.conflictUntrackedStatus('status'),
       a.errors.cherryPickUnverified('README.md'),
       a.errors.form('reset', '--keep', a.allowed.reset),
       a.errors.form('cherry-pick', '-x', a.allowed.cherryPick),
@@ -152,9 +156,9 @@ describe('ru.appendix', () => {
     expect(e.cherryPickRefusedEdit).toContain('git checkout -- app.js')
     expect(e.reflogLimited(0)).toContain('не ошибка')
     expect(e.reflogLimited(3)).toContain('остаются прежними')
-    expect(a.errors.cherryPickConflict(['app.js'])).toContain('git cherry-pick --abort')
-    expect(a.errors.cherryPickConflict(['app.js'])).toContain('«app.js»')
-    expect(a.errors.cherryPickEmpty).toContain('--skip')
+    expect(ru.conflicts.cherryPickConflict(['app.js'])).toContain('git cherry-pick --abort')
+    expect(ru.conflicts.cherryPickConflict(['app.js'])).toContain('«app.js»')
+    expect(ru.conflicts.cherryPickEmpty).toContain('--skip')
   })
 
   it('списки команд называют reset и cherry-pick, допустимые формы — режимы reset, один коммит cherry-pick, -<число> у журнала', () => {
@@ -231,5 +235,78 @@ describe('ru.appendix', () => {
     expect(a.note.items[0]).toContain('Tagger')
     expect(a.note.items[1]).toContain('терминал')
     expect(a.note.items[2]).toContain('сводку')
+  })
+})
+
+describe('ru.conflicts: речь о конфликтах (target.md, часть XI, «Речь при конфликте»)', () => {
+  const c = ru.conflicts
+  const texts = (): string[] => [
+    c.cherryPickConflict(['app.js']),
+    c.cherryPickConflict(['app.js', 'about.html']),
+    c.cherryPickEmpty,
+    c.stashPopConflict(['app.js']),
+    c.stashApplyConflict(['app.js', 'README.md']),
+    c.addedWithMarkers(['app.js']),
+    c.addedWithMarkers(['a', 'b']),
+    c.allAddedCherryPick,
+    c.allAddedStash,
+    c.cherryPickFinished,
+    c.cherryPickFinishedOwnMessage,
+    c.editorWouldOpen,
+    c.cherryPickSkipped,
+    c.cherryPickAborted,
+    c.discardedEdit(['app.js']),
+    c.discardedEdit(['a', 'b']),
+    c.checkoutHeadFile(['app.js'], true),
+    c.checkoutHeadFile(['a', 'b'], false),
+    c.checkoutCancelled,
+    c.operationDroppedByStash,
+    c.resetHardCleared,
+    c.resetMixedCleared,
+    c.stashDropKeepsUnmerged,
+    c.commitFinishedStashConflict,
+    c.choiceNote('top', 'app.js', 'HEAD', 'ae28885 (fix)', c.finishCherryPick),
+    c.choiceNote('bottom', 'app.js', 'Updated upstream', 'Stashed changes', c.finishStash),
+    c.choiceNote('both', 'app.js', 'HEAD', 'ae28885 (fix)', c.finishCherryPick),
+    c.finishCherryPick,
+    c.finishStash,
+    c.cherryPickFinish,
+    c.cherryPickFinishAdded,
+    c.cherryPickAbort,
+    c.stashFinish,
+    c.stashAbort,
+    c.kindBothModified,
+    c.kindBothAdded,
+  ]
+
+  it('речь не начинается с метки и не выглядит как вывод git: ни error:, ни hint:', () => {
+    for (const text of texts()) {
+      expect(text.startsWith('[тренажёр]'), text).toBe(false)
+      expect(text, text).not.toMatch(/^(fatal|error|usage|hint|warning):/m)
+      expect(text, text).not.toMatch(/Auto-merging|CONFLICT \(|needs merge/)
+    }
+  })
+
+  it('совета merge нет; тайник отвечает на git stash drop, reset --hard и checkout HEAD --, без --abort', () => {
+    for (const text of texts()) expect(text, text).not.toMatch(/git merge/)
+    expect(c.stashPopConflict(['app.js'])).toContain('git stash drop')
+    expect(c.stashPopConflict(['app.js'])).toContain('git reset --hard')
+    expect(c.stashPopConflict(['app.js'])).toContain('git checkout HEAD -- <файл>')
+    expect(c.stashPopConflict(['app.js'])).toContain('нет --abort')
+    expect(c.stashPopConflict(['app.js'])).not.toContain('кнопками справа')
+    expect(c.stashPopConflict(['app.js'])).toContain('остался в стопке')
+  })
+
+  it('cherry-pick называет git add, --continue, --skip и --abort; метка вверху — HEAD, внизу — копируемый коммит', () => {
+    const text = c.cherryPickConflict(['app.js'])
+    for (const word of ['git add <файл>', 'git cherry-pick --continue', 'git cherry-pick --skip', 'git cherry-pick --abort', 'вверху (HEAD)', 'внизу']) expect(text).toContain(word)
+    expect(c.addedWithMarkers(['app.js'])).toContain('git их не проверяет')
+  })
+
+  it('отказы области нового конфликта начинаются с метки [тренажёр] и не выглядят как ошибка git', () => {
+    for (const text of [a.errors.cherryPickConflictKind(['a.txt']), a.errors.stashConflictKind('pop', ['a.txt']), a.errors.conflictForm('checkout -'), a.errors.conflictUntrackedStatus('status'), a.errors.cherryPickDetachedStop]) {
+      expect(text.startsWith('[тренажёр]'), text).toBe(true)
+      expect(text).not.toMatch(/^(fatal|error|usage|hint):/)
+    }
   })
 })

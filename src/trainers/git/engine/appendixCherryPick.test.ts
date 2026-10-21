@@ -30,15 +30,13 @@ function expectReplay(block: string | readonly string[], options: ReplayOptions 
 }
 
 describe('блоки протокола П8.75–П8.80 и О18 проигрываются на движке', () => {
-  it('П8.75: ссылки, запись журнала, граф; повтор уже применённого — отказ области', () =>
-    expectReplay('П8.75', { refused: (e) => e.command === 'git cherry-pick HEAD@{1}' }))
+  // Повтор уже применённого: вне терминала git печатает статус раньше подсказки (порядок строк stdout и stderr); тренажёр — как на терминале, подсказка первой (П8.4, К5.6), поэтому строки сверяются как набор.
+  it('П8.75: ссылки, запись журнала, граф; повтор уже применённого — подсказка и статус, код 1', () =>
+    expectReplay('П8.75', { unordered: (e) => e.command === 'git cherry-pick HEAD@{1}' }))
   it('П8.76: аннотированный тег, id7, полный id, ошибки', () => expectReplay('П8.76'))
   it('П8.77: правка в файле коммита, посторонний файл, подготовленная правка, неотслеживаемый файл', () => expectReplay('П8.77'))
-  it('П8.78: пустая копия и конфликт — отказ области (git остановился бы), дальше всё как было', () =>
-    expectReplay('П8.78', {
-      refused: (e) => ['git cherry-pick HEAD', 'git cherry-pick HEAD~1', 'git cherry-pick master', 'git cherry-pick feature~1', 'git cherry-pick --abort'].includes(e.command),
-      skip: (e) => e.command === 'git status --short',
-    }))
+  it('П8.78: пустая копия и конфликт — cherry-pick остановился, --abort возвращает всё как было', () =>
+    expectReplay('П8.78', { unordered: (e) => ['git cherry-pick HEAD', 'git cherry-pick HEAD~1', 'git cherry-pick master'].includes(e.command) }))
   it('П8.80: правки в нескольких местах, файл удалён в каталоге, удаление файла коммитом', () => expectReplay('П8.80'))
   it('О18: cherry-pick в отсоединённом HEAD', () => expectReplay('О18'))
 })
@@ -276,22 +274,25 @@ describe('правки в рабочем каталоге и в индексе (
   })
 })
 
-describe('отказ области: конфликт, пустая копия, ключи, несколько ссылок (target.md, часть X, «Что НЕ входит»)', () => {
+describe('cherry-pick останавливается: конфликт и пустая копия; отказ области: ключи, несколько ссылок (target.md, часть XI и часть X, «Что НЕ входит»)', () => {
   const conflict = () => play(fresh(), ['edit app.js', 'git commit -am "Правка"'])
 
-  it(`конфликт: git остановился бы (${where('П8.78', 'git cherry-pick feature~1')}); тренажёр отвечает отказом области, ветка, индекс и файлы на месте`, () => {
+  it(`конфликт: код 1, операция и неслитый путь, ветка и коммиты на месте, миссия не засчитана (${where('П8.78', 'git cherry-pick feature~1')})`, () => {
     const s = conflict()
     const r = run(s, 'git cherry-pick feature~1')
-    refusal(r.result.output)
-    expect(r.result.exitCode).toBeUndefined()
-    expect(r.result.output).toBe(ae.cherryPickConflict(['app.js']))
-    expect(r.result.output).toContain('git cherry-pick --abort')
-    expect(core(r.state)).toEqual(core(s))
+    expect(r.result.exitCode).toBe(1)
+    expect(r.result.output.startsWith('Auto-merging app.js\nCONFLICT (content): Merge conflict in app.js\nerror: could not apply ')).toBe(true)
+    expect(r.state.operation).not.toBeNull()
+    expect(Object.keys(r.state.unmerged)).toEqual(['app.js'])
+    expect(r.state.branches).toEqual(s.branches)
+    expect(r.state.commits).toEqual(s.commits)
+    expect(r.state.reflog).toEqual(s.reflog)
     expect(r.state.missionsDone.cherryPick).toBe(false)
     expect(protocolEntry('П8.78', 'git cherry-pick feature~1').output).toContain('CONFLICT (content): Merge conflict in app.js')
+    expect(protocolEntry('П8.78', 'git cherry-pick feature~1').exitCode).toBe(1)
   })
 
-  it(`пустая копия — изменение уже есть в HEAD: HEAD, master, уже применённый коммит, корневой коммит (${where('П8.78', 'git cherry-pick HEAD')}, ${where('П8.75', 'git cherry-pick HEAD@{1}')})`, () => {
+  it(`пустая копия — изменение уже есть в HEAD: HEAD, master, уже применённый коммит, корневой коммит — код 1, операция идёт без неслитых путей (${where('П8.78', 'git cherry-pick HEAD')}, ${where('П8.75', 'git cherry-pick HEAD@{1}')})`, () => {
     const applied = runAll(fresh(), ['git cherry-pick feature~1'])
     for (const [s, line] of [
       [fresh(), 'git cherry-pick HEAD'],
@@ -301,17 +302,19 @@ describe('отказ области: конфликт, пустая копия, 
       [applied, 'git cherry-pick feature~1'],
     ] as const) {
       const r = run(s, line)
-      refusal(r.result.output)
-      expect(r.result.output, line).toBe(ae.cherryPickEmpty)
-      expect(r.result.exitCode, line).toBeUndefined()
+      expect(r.result.exitCode, line).toBe(1)
+      expect(r.result.output, line).toContain('The previous cherry-pick is now empty, possibly due to conflict resolution.')
+      expect(r.result.output, line).toContain("Otherwise, please use 'git cherry-pick --skip'")
+      expect(r.state.operation, line).not.toBeNull()
+      expect(r.state.unmerged, line).toEqual({})
       expect(core(r.state), line).toEqual(core(s))
     }
     expect(protocolEntry('П8.78', 'git cherry-pick HEAD').exitCode).toBe(1)
   })
 
-  it('ключи, несколько коммитов, служебные формы (--continue, --skip, --abort, --quit) — отказ области: ключи из usage не unknown switch', () => {
+  it('ключи, несколько коммитов, `--quit` и формы с лишними словами — отказ области: ключи из usage не unknown switch', () => {
     const s = fresh()
-    for (const line of ['git cherry-pick -x feature', 'git cherry-pick -n feature', 'git cherry-pick -e feature', 'git cherry-pick -m 1 feature', 'git cherry-pick --continue', 'git cherry-pick --skip', 'git cherry-pick --abort', 'git cherry-pick --quit', 'git cherry-pick feature~1 feature', 'git cherry-pick -- feature', 'git cherry-pick feature..master']) {
+    for (const line of ['git cherry-pick -x feature', 'git cherry-pick -n feature', 'git cherry-pick -e feature', 'git cherry-pick -m 1 feature', 'git cherry-pick --quit', 'git cherry-pick --continue now', 'git cherry-pick --abort feature', 'git cherry-pick feature~1 feature', 'git cherry-pick -- feature', 'git cherry-pick feature..master']) {
       const r = run(s, line)
       refusal(r.result.output)
       expect(r.result.exitCode, line).toBeUndefined()
@@ -320,8 +323,19 @@ describe('отказ области: конфликт, пустая копия, 
     }
   })
 
+  it('--continue, --skip и --abort без идущего cherry-pick: ответ git (код 128) или, для --skip, отказ области (К5.3)', () => {
+    const s = fresh()
+    for (const flag of ['--continue', '--abort']) {
+      const r = run(s, `git cherry-pick ${flag}`)
+      expect(r.result.output).toBe('error: no cherry-pick or revert in progress\nfatal: cherry-pick failed')
+      expect(r.result.exitCode).toBe(128)
+      expect(core(r.state)).toEqual(core(s))
+    }
+    refusal(run(s, 'git cherry-pick --skip').result.output)
+  })
+
   it('отказ области не печатает вывода git и не выглядит как ошибка git', () => {
-    for (const out of [ae.cherryPickConflict(['app.js']), ae.cherryPickConflict(['a', 'b']), ae.cherryPickEmpty, ae.cherryPickUnverified('x'), ae.form('cherry-pick', '-x', ru.appendix.allowed.cherryPick)]) {
+    for (const out of [ae.cherryPickConflictKind(['a']), ae.cherryPickConflictKind(['a', 'b']), ae.cherryPickConflictDirty(['app.js']), ae.cherryPickDetachedStop, ae.cherryPickSkipIdle, ae.cherryPickUnverified('x'), ae.form('cherry-pick', '-x', ru.appendix.allowed.cherryPick)]) {
       refusal(out)
       expect(out).not.toMatch(/^(fatal|error|usage|hint):/)
     }
