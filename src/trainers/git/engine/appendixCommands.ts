@@ -7,8 +7,9 @@
 // словарь не идут. Всё, что говорит сам тренажёр, лежит в ru.appendix и начинается с метки
 // [тренажёр] (target.md, часть III, правило 2).
 //
-// Шаг C, часть 1 (target.md, часть XI): посреди cherry-pick и конфликта тайника `git switch` и `git diff` при неслитых
-// путях получают отказ области до выполнения; остальные команды раздела сверяются с таблицей «Что запрещено» в своих обработчиках
+// Шаг C (target.md, часть XI): посреди cherry-pick и конфликта тайника `git switch` и `git diff` при неслитых
+// путях получают отказ области до выполнения; посреди rebase `git switch <ветка>` — отказ git `cannot switch branch while rebasing` (О10),
+// остальные формы `switch` — отказ области. Остальные команды раздела сверяются с таблицей «Что запрещено» в своих обработчиках
 // через `refusal` из conflicts.ts (appendixConflicts.ts).
 //
 // Граница области (часть III, правило 1). Воспроизводятся только формы, сверенные прогонами; любая
@@ -26,10 +27,11 @@ import { handleRebase } from './appendixRebase'
 import { handleLog } from './appendixLog'
 import { handleShow } from './appendixShow'
 import { handleStash } from './appendixStash'
-import { conflictForm, hasUnmerged, inConflict } from './appendixConflicts'
+import { conflictForm, hasUnmerged, inConflict, refusalOutcome } from './appendixConflicts'
 import { handleTag } from './appendixTags'
 import { globMatches } from './appendixRefs'
 import { isHandledCommand, isRealGitCommand, type HandledCommand } from './appendixScope'
+import { has } from './util'
 import { gitNotACommand, isGlobalGitOption } from './branchScope'
 import { findShellRefusal, shellRefusalText, shellTokenize, type ShellToken } from './shell'
 import { ru } from '../locales/ru'
@@ -59,6 +61,10 @@ function unexpandableGlob(tokens: readonly ShellToken[], files: readonly string[
 
 function runHandled(state: AppendixState, sub: HandledCommand, args: readonly string[]): Outcome {
   // Посреди cherry-pick и конфликта тайника `git switch` (в том числе `-c`) и `git diff` при неслитых путях (`diff --cc`) в разделе не разбираются.
+  if (sub === 'switch' && args.length === 1 && has(state.branches, args[0])) {
+    const whileRebasing = refusalOutcome(state, { name: 'switch-branch' })
+    if (whileRebasing !== null) return exited(state, whileRebasing.result.output, 128, ru.conflicts.switchWhileRebasing)
+  }
   if ((sub === 'switch' && inConflict(state)) || (sub === 'diff' && hasUnmerged(state))) return conflictForm(state, [sub, ...args].join(' '))
   switch (sub) {
     case 'status':

@@ -1,8 +1,8 @@
 // ============================================================
-// Раздел 8 git-тренажёра, шаг B: `git rebase <ссылка>` на ветке (target.md, часть X, места 16–19, «Движок», «Упрощения»,
-// «Миссии»; часть XII, «reflog: записи»). Коммиты ветки, которых нет в `<ссылке>`, переносятся поверх неё с новыми id; ветка
+// Раздел 8 git-тренажёра, шаги B и C: `git rebase <ссылка>` на ветке (target.md, часть X, места 16–19, «Движок», «Упрощения»,
+// «Миссии»; часть XI, шаг C; часть XII, «reflog: записи»). Коммиты ветки, которых нет в `<ссылке>`, переносятся поверх неё с новыми id; ветка
 // переезжает на последний перенесённый коммит, старые коммиты остаются в журнале и бледнеют (`fadedCommitIds`). Прогоны:
-// section8-git-runs.txt (П8.6–П8.12, П8.16–П8.18) и appendix-g18g3-git-runs.txt (П8.82–П8.88).
+// section8-git-runs.txt (П8.6–П8.12, П8.16–П8.18), appendix-g18g3-git-runs.txt (П8.82–П8.88) и conflicts-git-runs.txt (К6, К14).
 //
 // Вывод успеха — итоговая строка `Successfully rebased and updated refs/heads/<ветка>.` Строки хода `Rebasing (k/n)<CR>` тренажёр не
 // печатает (на терминале их затирает следующая строка, опасное место 16). Исходы:
@@ -17,20 +17,25 @@
 // неподготовленная правка (в том числе удалённый отслеживаемый файл), подготовленная правка или обе — `error: cannot rebase: …`, код 1,
 // раньше «up to date» (П8.12, П8.82); без аргументов — блок про отсутствие отслеживания, код 1, правки не влияют (П8.12, П8.88).
 // Неотслеживаемый файл, не совпадающий с файлом результата, не мешает и остаётся (П8.12, П8.82).
-// Отказы области (кода возврата нет): конфликт; перенос, после которого коммит пуст; все свои коммиты уже применены (git при этом
+// Конфликт (К6.1, К14.3): перенос останавливается, коммиты переносятся по одному, HEAD отсоединён, ветка на старом месте;
+// остановку, `--continue`, `--skip` и `--abort` ведёт appendixRebaseConflict.ts. Посреди rebase новый `git rebase <ссылка>` — блок
+// `fatal: It seems that there is already a rebase-merge directory…`, код 128 (К6.2).
+// Отказы области (кода возврата нет): конфликт, вида которого или числа шагов прогоны не показывают (appendixRebaseConflict.ts);
+// перенос, после которого коммит пуст; все свои коммиты уже применены (git при этом
 // переводит ветку на `<ссылку>`, П8.86, но состояние не заявлено в части X); неотслеживаемый файл на пути файла результата;
-// ссылка `HEAD@{n}` и другие слова вне грамматики appendixRevisions.ts; ключи, несколько слов, `rebase` в отсоединённом HEAD (S8-71, П8.12, П8.18 — решение владельца, желательное).
+// ссылка `HEAD@{n}` и другие слова вне грамматики appendixRevisions.ts; ключи (кроме `--continue`, `--skip`, `--abort`), несколько слов,
+// `rebase` в отсоединённом HEAD, в том числе с конфликтом (S8-71, П8.12, П8.18 — решение владельца, желательное).
 // Успех, который не «up to date», засчитывает миссию 7.
 // ============================================================
 import type { AppendixCommit, AppendixState, FileTree } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
-import { conflictForm, refusalOutcome } from './appendixConflicts'
+import { conflictForm, isRebasing, refusalOutcome } from './appendixConflicts'
 import { markMission } from './appendixMissions'
-import { mergeTrees } from './branchRepo'
+import { hasUnstaged, pickOnto, plural, rebaseStep, stopOnConflict } from './appendixRebaseConflict'
 import { compareBytes } from './appendixRefs'
 import { commitOf, currentCommitId, fadedCommitIds, headTree, reachableFrom, sameTree, subjectOf } from './appendixRepo'
 import { resolveRevision } from './appendixRevisions'
-import { fullCommitId, shortCommitId } from './sectionsCommon'
+import { shortCommitId } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
 
@@ -55,11 +60,6 @@ function noTrackingOutput(branch: string): string {
 
 const SKIPPED_HINTS = ['hint: use --reapply-cherry-picks to include skipped commits', 'hint: Disable this message with "git config set advice.skippedCherryPicks false"']
 
-/** Неподготовленные правки: отслеживаемый (есть в индексе) файл в рабочем каталоге изменён или удалён. */
-function hasUnstaged(state: AppendixState): boolean {
-  return Object.keys(state.index).some((path) => !has(state.working, path) || state.working[path] !== state.index[path])
-}
-
 /** Отказ из-за правок (П8.12, П8.82): неподготовленная, подготовленная или обе. */
 function dirtyOutput(unstaged: boolean, staged: boolean): string {
   const first = unstaged ? 'error: cannot rebase: You have unstaged changes.' : 'error: cannot rebase: Your index contains uncommitted changes.'
@@ -74,11 +74,25 @@ function patchKey(state: AppendixState, commit: AppendixCommit): string {
   return JSON.stringify(changes)
 }
 
-function plural(count: number): string {
-  return count % 10 === 1 && count % 100 !== 11 ? 'коммит' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'коммита' : 'коммитов'
+const STEP_FLAGS: readonly string[] = ['--continue', '--skip', '--abort']
+
+/** `git rebase …` посреди rebase: выходы `--continue`, `--skip`, `--abort`; новый `rebase <ссылка>` — блок о каталоге rebase-merge (К6.2). */
+function duringRebase(state: AppendixState, args: readonly string[]): Outcome {
+  const options = args.filter((a) => a.startsWith('-'))
+  if (args.length === 1 && STEP_FLAGS.includes(args[0])) return rebaseStep(state, args[0] as '--continue' | '--skip' | '--abort')
+  if (args.length === 0) return conflictForm(state, 'rebase')
+  if (options.length > 0 || args.length > 1) return refuse(state, ae.form('rebase', options[0] ?? args.join(' '), ru.appendix.allowed.rebase))
+  // Блок о каталоге rebase-merge прогнан с названной веткой; для слова, которого нет среди ссылок, порядок проверок git не сверен.
+  const revision = resolveRevision(state, args[0])
+  if (revision.kind !== 'commit') return conflictForm(state, `rebase ${args[0]}`)
+  const running = refusalOutcome(state, { name: 'rebase' }) as Outcome
+  return exited(state, running.result.output, 128, ru.conflicts.rebaseAlreadyRunning)
 }
 
 export function handleRebase(state: AppendixState, args: readonly string[]): Outcome {
+  if (isRebasing(state)) return duringRebase(state, args)
+  // `--continue` и `--abort`, когда rebase не идёт, отвечают одинаково на ветке и в отсоединённом HEAD (К6.3, К6.7).
+  if (args.length === 1 && STEP_FLAGS.includes(args[0])) return rebaseStep(state, args[0] as '--continue' | '--skip' | '--abort')
   if (state.head.kind === 'detached') return refuse(state, ae.rebaseDetached)
   const branch = state.head.name
   if (args.length === 0) return exited(state, noTrackingOutput(branch), 1, ax.rebaseNoTracking)
@@ -118,20 +132,19 @@ export function handleRebase(state: AppendixState, args: readonly string[]): Out
   const picked = own.filter((c) => !applied.has(patchKey(state, c)))
   if (own.length > 0 && picked.length === 0) return refuse(state, ae.rebaseAllApplied)
 
-  // Перенос: трёхстороннее слияние коммит за коммитом поверх `upstream`.
+  // Перенос: трёхстороннее слияние коммит за коммитом поверх `upstream`; на конфликте перенос останавливается (К6.1, К14.3).
   const created: AppendixCommit[] = []
   let parent = upstream
   let tree = commitOf(state, upstream).tree
-  for (const commit of picked) {
-    const before: FileTree = commitOf(state, commit.parents[0]).tree
-    const merged = mergeTrees(before, tree, commit.tree)
-    if (merged.conflicts.length > 0) return refuse(state, ae.rebaseConflict(merged.conflicts.map((c) => c.file)))
-    if (sameTree(merged.tree, tree)) return refuse(state, ae.rebaseEmpty(subjectOf(state, commit.id)))
-    const clock = state.clock + created.length
-    const copy: AppendixCommit = { id: fullCommitId(commit.message, merged.tree, [parent], clock), parents: [parent], message: commit.message, tree: { ...merged.tree }, clock }
-    created.push(copy)
-    parent = copy.id
-    tree = copy.tree
+  for (const [at, commit] of picked.entries()) {
+    const result = pickOnto(commit, commitOf(state, commit.parents[0]).tree, parent, tree, state.clock + created.length)
+    if (result.kind === 'conflict') {
+      return stopOnConflict({ state, branch, upstream, startMessage: `rebase (start): checkout ${word}`, picked, at, skipped: skipped.length, created, merged: result.merged, before: result.before, tree })
+    }
+    if (result.kind === 'empty') return refuse(state, ae.rebaseEmpty(subjectOf(state, commit.id)))
+    created.push(result.copy)
+    parent = result.copy.id
+    tree = result.copy.tree
   }
 
   // Рабочий каталог: отслеживаемые файлы берут содержимое результата, неотслеживаемые остаются; совпадение с файлом результата — отказ области.

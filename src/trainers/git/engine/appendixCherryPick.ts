@@ -114,9 +114,6 @@ const EMPTY_HINT = [
   "Otherwise, please use 'git cherry-pick --skip'",
 ]
 
-/** `--abort` и `--continue`, когда cherry-pick не идёт (К5.3). */
-const NO_CHERRY_PICK = ['error: no cherry-pick or revert in progress', 'fatal: cherry-pick failed'].join('\n')
-
 /** Дерево родителя коммита; у корневого коммита — пустое. */
 function parentTree(state: AppendixState, commit: AppendixCommit): FileTree {
   return commit.parents.length === 0 ? {} : commitOf(state, commit.parents[0]).tree
@@ -176,7 +173,8 @@ function endPick(state: AppendixState, flag: '--abort' | '--skip'): Outcome {
 
 function sequencerStep(state: AppendixState, flag: '--continue' | '--abort' | '--skip'): Outcome {
   const operation = state.operation
-  if (operation === null) return flag === '--skip' ? refuse(state, ae.cherryPickSkipIdle) : exited(state, NO_CHERRY_PICK, 128)
+  // `--abort` и `--continue`, когда cherry-pick не идёт (К5.3), в том числе посреди rebase (К6.2).
+  if (operation === null || operation.kind !== 'cherry-pick') return flag === '--skip' ? refuse(state, ae.cherryPickSkipIdle) : (refusalOutcome(state, { name: 'cherry-pick-step' }) as Outcome)
   return flag === '--continue' ? continuePick(state, operation.commit) : endPick(state, flag)
 }
 
@@ -196,6 +194,8 @@ export function handleCherryPick(state: AppendixState, args: readonly string[]):
   const blocked = refusalOutcome(state, { name: 'cherry-pick' })
   if (blocked !== null) return blocked
   const head = headTree(state)
+  // Посреди rebase без неслитых путей ответ git на новый cherry-pick не сверен.
+  if (state.operation !== null && state.operation.kind === 'rebase') return conflictForm(state, `cherry-pick ${word}`)
   // Подготовленная правка останавливает cherry-pick раньше, чем разбор самой копии (П8.80: даже при пустой копии).
   if (!sameTree(state.index, head)) return exited(state, STAGED_REFUSAL, 128, ax.cherryPickRefusedStaged)
   // Операция идёт, индекс чист (пустая копия): новый cherry-pick прогонами не сверен.

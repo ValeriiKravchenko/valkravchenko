@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   APPENDIX_MISSION_IDS,
+  chooseConflictPart,
   createAppendixFile,
   createAppendixSection,
   deleteAppendixFile,
@@ -9,6 +10,8 @@ import {
   getAppendixMissions,
   getBranches,
   getCommits,
+  getConflictFiles,
+  getConflictView,
   getFileContent,
   getTags,
   getWorkingFiles,
@@ -201,6 +204,26 @@ describe('отсоединённый HEAD в публичном API (шаг B)',
       expect(r?.exitCode, command).toBeUndefined()
       expect(r?.output.startsWith('[тренажёр]'), command).toBe(true)
     }
+  })
+})
+
+describe('rebase с конфликтом в публичном API (шаг C)', () => {
+  const step = (state: ReturnType<typeof createAppendixSection>, line: string) => runAppendixCommand(state, line).state
+
+  it('остановка: операция rebase в getConflictView, граф с отсоединённым HEAD и веткой на старом месте, метки в getConflictFiles', () => {
+    let s = editAppendixFile(createAppendixSection(), 'app.js')
+    for (const line of ['git commit -am "master: v2"', 'git checkout feature']) s = step(s, line)
+    const stopped = runAppendixCommand(s, 'git rebase master')
+    expect(stopped.result?.exitCode).toBe(1)
+    const after = stopped.state
+    expect(getConflictView(after)).toMatchObject({ operation: 'rebase', headIsNewBase: true, allAdded: false, finishKey: 'rebaseFinish', abortKey: 'rebaseAbort' })
+    expect(getBranches(after).some((b) => b.current)).toBe(false)
+    expect(getCommits(after).find((c) => c.id === after.branches.master)?.decorations).toEqual(['HEAD', 'master'])
+    expect(getConflictFiles(after)).toMatchObject([{ path: 'app.js', kind: 'both-modified', topLabel: 'HEAD' }])
+    const done = step(step(chooseConflictPart(after, 'app.js', 'both'), 'git add app.js'), 'git rebase --continue')
+    expect(getConflictView(done)).toBeNull()
+    expect(getBranches(done).find((b) => b.current)?.name).toBe('feature')
+    expect(getAppendixMissions(done).find((m) => m.id === 'rebase')?.done).toBe(true)
   })
 })
 

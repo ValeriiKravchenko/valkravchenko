@@ -1677,7 +1677,7 @@ export const ru = {
       reflog: 'git reflog и git reflog -<число>',
       reset: 'git reset [--soft | --mixed | --hard] [<ссылка>] (одна ссылка, без путей)',
       cherryPick: 'git cherry-pick <ссылка> (один коммит, без ключей), git cherry-pick --continue, --skip и --abort',
-      rebase: 'git rebase <ссылка> на ветке (одна ссылка, без ключей)',
+      rebase: 'git rebase <ссылка> на ветке (одна ссылка, без ключей); посреди остановки — git rebase --continue, --skip и --abort',
       diff: 'git diff и git diff --staged (или --cached)',
       show: 'git show и git show <ссылка> (коммит, ветка или тег)',
       log: 'git log, git log --oneline, -<число>, --all, git log <ссылка> и git log -g --oneline [-<число>] (ключи в любом порядке)',
@@ -1744,10 +1744,14 @@ export const ru = {
       conflictUntrackedStatus: (command: string) =>
         `${TRAINER_MARKER} git ${command}: в рабочем каталоге есть неслитые пути и неотслеживаемый файл, а подготовленного нет. Итоговая строка git status для такого сочетания в разделе не сверена. Удали неотслеживаемый файл кнопкой 🗑 или разреши конфликт и повтори. Ничего не изменено.`,
       conflictForm: (form: string) =>
-        `${TRAINER_MARKER} git ${form}: посреди незаконченного cherry-pick или конфликта тайника эта форма в разделе не разбирается, как git ответил бы, не сверено. Ничего не изменено. Закончи конфликт (исправь файл, git add, затем завершающая команда) или отмени его (git cherry-pick --abort; после тайника — git reset --hard).`,
+        `${TRAINER_MARKER} git ${form}: посреди незаконченного cherry-pick, rebase или конфликта тайника эта форма в разделе не разбирается, как git ответил бы, не сверено. Ничего не изменено. Закончи конфликт (исправь файл, git add, затем завершающая команда) или отмени его (git cherry-pick --abort, git rebase --abort; после тайника — git reset --hard).`,
       rebaseDetached: `${TRAINER_MARKER} git rebase в отсоединённом HEAD в этой части раздела не разбирается. Настоящий git перенёс бы коммиты и напечатал бы «Successfully rebased and updated detached HEAD.»; двигался бы только HEAD, ветки остались бы на местах, а git status показал бы «HEAD detached from …». Перейди на ветку (git switch имя) и повтори. Ничего не изменено.`,
-      rebaseConflict: (files: readonly string[]) =>
-        `${TRAINER_MARKER} git rebase: переносимый коммит и новая основа изменили ${files.length === 1 ? 'файл' : 'файлы'} ${files.map((f) => `«${f}»`).join(', ')} по-разному. Настоящий git остановился бы на конфликте: в файле остались бы строки <<<<<<<, ======= и >>>>>>>, и он ждал бы решения; отменить всё можно командой git rebase --abort. Конфликты в этой части раздела не разбираются, поэтому ничего не изменено: ветка, индекс и файлы на месте.`,
+      rebaseConflictKind: (files: readonly string[]) =>
+        `${TRAINER_MARKER} git rebase: переносимый коммит и новая основа по-разному обошлись с ${files.length === 1 ? 'файлом' : 'файлами'} ${files.map((f) => `«${f}»`).join(', ')}: один изменил, другая удалила. Конфликты вида «изменение и удаление» в этой части раздела не разбираются. Ничего не изменено: ветка, индекс и файлы на месте.`,
+      rebaseStopUnverified: `${TRAINER_MARKER} git rebase: на этом переносе git остановился бы на конфликте, но такую остановку раздел не разбирает: сверены остановки, когда сделан один коммит (остался один или ни одного) или сделано два (не осталось ни одного), без пропущенных применённых коммитов. Ничего не изменено: ветка, индекс и файлы на месте.`,
+      rebaseNextConflict: (subject: string) =>
+        `${TRAINER_MARKER} git rebase: после этого шага перенос остановился бы на следующем конфликте (коммит «${subject}»). Вторая остановка подряд в этой части раздела не разбирается. Ничего не изменено: rebase остался на прежней остановке.`,
+      rebaseSkipIdle: `${TRAINER_MARKER} git rebase --skip, когда rebase не идёт, в разделе не разбирается: как git ответил бы, не сверено. Ничего не изменено.`,
       rebaseEmpty: (subject: string) =>
         `${TRAINER_MARKER} git rebase: после переноса коммит «${subject}» ничего бы не менял, потому что его изменение уже есть в новой основе. Как git поступил бы с таким коммитом, в разделе не разбирается. Ничего не изменено.`,
       rebaseAllApplied: `${TRAINER_MARKER} git rebase: изменения всех коммитов ветки уже есть в новой основе (например, после git cherry-pick), переносить нечего. Как выглядит этот исход, в разделе не разбирается. Ничего не изменено.`,
@@ -1996,8 +2000,51 @@ export const ru = {
     cherryPickSkipped: 'Коммит пропущен: cherry-pick закончился без копии. Файлы, которых он касался, вернулись к версии HEAD, ветка не двигалась.',
     cherryPickAborted: 'cherry-pick отменён: файлы, которых он касался, вернулись к версии HEAD, ветка не двигалась, копии нет.',
     discardedEdit: (files: readonly string[]) => `${files.length === 1 ? 'Файл' : 'Файлы'} ${files.map((f) => `«${f}»`).join(', ')} ${files.length === 1 ? 'вернулся' : 'вернулись'} к версии из HEAD: метки и всё, что ты в ${files.length === 1 ? 'нём' : 'них'} исправил, пропало.`,
-    checkoutHeadFile: (files: readonly string[], operationGoes: boolean) =>
-      `${files.length === 1 ? 'Файл' : 'Файлы'} ${files.map((f) => `«${f}»`).join(', ')} вернул${files.length === 1 ? 'ся' : 'ись'} к версии из HEAD и больше не неслитый${files.length === 1 ? '' : 'е'}, как после git add: метки и твоя правка пропали.${operationGoes ? ' Если неслитых путей не осталось, cherry-pick всё равно ещё идёт: пропусти коммит командой git cherry-pick --skip или отмени его командой git cherry-pick --abort.' : ''}`,
+    checkoutHeadFile: (files: readonly string[], operation: 'cherry-pick' | 'rebase' | null) =>
+      `${files.length === 1 ? 'Файл' : 'Файлы'} ${files.map((f) => `«${f}»`).join(', ')} вернул${files.length === 1 ? 'ся' : 'ись'} к версии из HEAD и больше не неслитый${files.length === 1 ? '' : 'е'}, как после git add: метки и твоя правка пропали.${
+        operation === 'cherry-pick'
+          ? ' Если неслитых путей не осталось, cherry-pick всё равно ещё идёт: пропусти коммит командой git cherry-pick --skip или отмени его командой git cherry-pick --abort.'
+          : operation === 'rebase'
+            ? ' Если неслитых путей не осталось, rebase всё равно ещё идёт: продолжи командой git rebase --continue (если файлы совпали с новой базой, этот коммит выпадет молча), пропусти коммит командой git rebase --skip или отмени rebase командой git rebase --abort.'
+            : ''
+      }`,
+    rebaseConflict: (files: readonly string[], branch: string) =>
+      `rebase остановился на конфликте: новая база и твой коммит изменили одни и те же строки ${files.length === 1 ? 'файла' : 'файлов'} ${files.map((f) => `«${f}»`).join(', ')}. Остальное git применил сам, а здесь оставил обе версии с метками: вверху (HEAD) — новая база, внизу — твой коммит; у rebase всегда так. Сейчас HEAD отсоединён и стоит на новой базе, а ветка ${branch} пока на старом месте и переедет только в самом конце. Исправь файл (кнопки редактора или ✎), затем git add <файл> и git rebase --continue. Пропустить этот коммит — git rebase --skip, отменить всё — git rebase --abort. Настоящий git перед конфликтом печатает строки «Rebasing (k/n)»; на терминале их затирает следующая строка, и тренажёр их не печатает.`,
+    rebaseAlreadyRunning:
+      'rebase уже идёт: git нашёл каталог rebase-merge и не начинает новый. Закончи текущий: git rebase --continue (после git add), git rebase --skip или git rebase --abort.',
+    rebaseStatusNote: (branch: string, headOnBranch: boolean) =>
+      headOnBranch
+        ? `Ветка создана командой git checkout -b, но rebase ветки ${branch} всё ещё идёт: заголовок «You are currently rebasing …» остался, а строки «interactive rebase in progress» в статусе уже нет.`
+        : `Пока идёт rebase, HEAD не стоит на ветке, поэтому git вместо «On branch …» пишет заголовок rebase. Строки «pick …» называют исходные коммиты ветки ${branch}, а не их копии; «onto» — новая база. Ветка ${branch} никуда не делась: она стоит на старом месте и переедет в конце.`,
+    rebaseBranchNote: (branch: string) =>
+      `Пока идёт rebase, HEAD не на ветке, поэтому звёздочка стоит у строки «(no branch, rebasing ${branch})». Ветка ${branch} на месте: она переедет на перенесённые коммиты только в конце.`,
+    rebaseCommitMid: (noMessage: boolean, tookUnmerged: boolean) =>
+      `Коммит сделан посреди rebase: это обычный коммит в отсоединённом HEAD, rebase от этого не кончился. ${tookUnmerged ? 'git commit -a взял и неслитые пути, а строки меток, если они остались в файле, попали в коммит. ' : ''}git status теперь пишет «editing a commit while rebasing», а git rebase --continue перенесёт остальные коммиты (записи rebase (continue) в журнале не будет). ${noMessage ? 'Без -m настоящий git открыл бы редактор с сообщением переносимого коммита; тренажёр берёт его готовым. ' : ''}Настоящий git после первой строки печатает ещё сводку изменений; тренажёр её не печатает.`,
+    rebaseContinued: (subject: string) =>
+      `Из разрешённого файла создан коммит «${subject}» с сообщением исходного коммита; остальные коммиты перенесены, ветка переехала на последний. Настоящий git по ходу печатает ещё строки «Rebasing (k/n)» и сводку изменений; тренажёр их не печатает.`,
+    rebaseContinuedCommitted:
+      'Коммит посреди остановки уже сделан, поэтому --continue ничего нового не коммитил: остальные коммиты перенесены, ветка переехала на последний. Настоящий git по ходу печатает ещё строки «Rebasing (k/n)»; тренажёр их не печатает.',
+    rebaseContinuedIdle:
+      'Файлы чистые и ничего не подготовлено (например, после git reset --hard), поэтому --continue коммита не делал: этот коммит в историю не попал. Остальные коммиты перенесены, ветка переехала на последний.',
+    rebaseDropped: (subject: string) =>
+      `Итог совпал с новой базой (например, оставлена только верхняя часть HEAD), поэтому коммит «${subject}» молча выброшен: в новой истории его нет, и git об этом не пишет. Остальные коммиты перенесены, ветка переехала на последний. Старый коммит остался в журнале (git reflog).`,
+    rebaseSkipped: (subject: string) =>
+      `Коммит «${subject}» пропущен: в новой истории его нет, файлы вернулись к версии HEAD. Остальные коммиты перенесены, ветка переехала на последний.`,
+    rebaseAborted: (branch: string) =>
+      `rebase отменён: HEAD снова на ветке ${branch}, а ветка, коммиты и файлы такие же, как до rebase. Копии, которые rebase успел сделать, остались в журнале, но на графе бледные.`,
+    rebaseCheckoutBranch: (branch: string) =>
+      `checkout -b создал ветку и поставил на неё HEAD, а rebase ветки ${branch} продолжается: у rebase операция не бросается, предупреждения нет. Метки и неслитые пути остались, git status теперь начинается с «On branch …». Выходы из rebase (--continue, --skip, --abort) с HEAD на другой ветке в тренажёре не разбираются.`,
+    switchWhileRebasing:
+      'git switch посреди rebase отказывает: пока идёт rebase, ветки не переключают. Закончи rebase (git rebase --continue, --skip или --abort). Подсказка про --quit в выводе git относится к форме вне раздела.',
+    allAddedRebase: 'Неслитых путей не осталось, но rebase ещё идёт: продолжи командой git rebase --continue. Пропустить коммит — git rebase --skip, отменить всё — git rebase --abort.',
+    resetHardRebase:
+      'reset --hard убрал метки и вернул файлы к версии HEAD, но rebase от этого не отменился: git status пишет «editing a commit while rebasing», а коммит, на котором была остановка, выпал из хода. git rebase --continue или git rebase --skip доведут rebase до конца без этого коммита, git rebase --abort вернёт всё как было.',
+    resetMixedRebase:
+      'reset (mixed) снял неслитые пути, но rebase не отменился (git status пишет «editing a commit while rebasing»), а файл с метками остался в каталоге неподготовленной правкой. git rebase --abort вернёт всё как было.',
+    finishRebase: 'git rebase --continue',
+    rebaseFinish: 'Исправь файлы, добавь каждый командой git add <файл>, затем продолжи командой git rebase --continue.',
+    rebaseFinishAdded: 'Все пути добавлены: продолжи командой git rebase --continue.',
+    rebaseAbort: 'git rebase --abort отменит всё, git rebase --skip пропустит этот коммит.',
     checkoutCancelled:
       'checkout -b создал ветку и бросил cherry-pick: операция больше не идёт (git cherry-pick --abort теперь ответит, что отменять нечего), а метки и неслитые пути остались. Выход: исправь файл, git add и обычный git commit, либо git reset --hard (он выбросит правку).',
     operationDroppedByStash:

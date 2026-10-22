@@ -7,9 +7,11 @@
 // (П8.1, П8.3); строки git — английские литералы и не переводятся. Всё, что отсюда не
 // воспроизводится, получает честный отказ области с меткой тренажёра (часть III, правило 1).
 //
-// Конфликты (target.md, часть XI; conflicts-git-runs.txt, К4, К5, К11, К16): `status` показывает неслитые пути и заголовок операции,
-// `add` разрешает неслитый путь, не глядя на метки (К1.7), `commit` при неслитых путях отказывает блоком A (К5.2), `commit -a` их
-// берёт (К11.c, К11.s), а при идущем cherry-pick `commit` и `commit -m` завершают его (К5.5, К8.2).
+// Конфликты (target.md, часть XI; conflicts-git-runs.txt, К4–К6, К7.8, К11, К16): `status` показывает неслитые пути и заголовок операции,
+// `add` разрешает неслитый путь, не глядя на метки (К1.7), `commit` при неслитых путях отказывает блоком A (К5.2, К6.4), `commit -a` их
+// берёт (К11.c, К11.s, К11.b), а при идущем cherry-pick `commit` и `commit -m` завершают его (К5.5, К8.2). Посреди rebase `commit`
+// после `git add` делает обычный коммит в отсоединённом HEAD, rebase продолжается (К6.4, К7.8), `git branch` первой строкой пишет
+// `* (no branch, rebasing <ветка>)` (К6.1, О10).
 //
 // Упрощения, названные в части X: после `git commit` нет диффстата и строк `create mode`; в
 // `git show` и `git diff` нет маркера `\ No newline at end of file` (файлы кончаются переводом
@@ -22,7 +24,7 @@ import { isValidBranchName } from './appendixRefs'
 import { reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { advanceHead, branchListFirstLine, commitLabel, statusFirstLine } from './detachedHead'
 import { deleteBranches } from './appendixBranchDelete'
-import { hasUnmerged, refusalOutcome, conflictForm, stateStatus, statusRefusal } from './appendixConflicts'
+import { hasUnmerged, isRebasing, operationInput, refusalOutcome, conflictForm, stateStatus, statusRefusal } from './appendixConflicts'
 import { markMission } from './appendixMissions'
 import { markResolved, markerBlocks } from './conflicts'
 import { applyStageAll } from './commitFlags'
@@ -49,8 +51,8 @@ function isNameSpec(spec: string): boolean {
 }
 
 /** Пояснение к первой строке `git status` в отсоединённом HEAD: `at` или `from`, полное имя ветки, потерянное имя. */
-function detachedStatusNote(state: AppendixState, first: string): string | null {
-  const match = /^HEAD detached (at|from) (.+)$/.exec(first)
+function detachedStatusNote(state: AppendixState, first: string | null): string | null {
+  const match = first === null ? null : /^HEAD detached (at|from) (.+)$/.exec(first)
   if (state.head.kind !== 'detached' || match === null) return null
   const notes = [match[1] === 'at' ? ax.statusDetachedAt : ax.statusDetachedFrom]
   if (match[2].startsWith('refs/heads/')) notes.push(ax.statusRefsHeads)
@@ -64,10 +66,12 @@ export function handleStatus(state: AppendixState, args: readonly string[]): Out
     if (arg === '-s' || arg === '--short') short = true
     else return refuse(state, ae.form('status', arg, ALLOWED.status))
   }
-  const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), null) as string
+  const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), operationInput(state))
   const formatted = stateStatus(state, short)
   if (!formatted.ok) return refuse(state, statusRefusal(formatted.reason, 'status'))
-  return exited(state, formatted.output, 0, detachedStatusNote(state, first))
+  const operation = state.operation
+  const note = operation !== null && operation.kind === 'rebase' ? ru.conflicts.rebaseStatusNote(operation.branch, state.head.kind === 'branch') : detachedStatusNote(state, first)
+  return exited(state, formatted.output, 0, note)
 }
 
 // ---------- git add ----------
@@ -123,7 +127,7 @@ function explainResolved(state: AppendixState, resolved: readonly string[]): str
   const marked = resolved.filter((p) => has(state.working, p) && markerBlocks(state.working[p]).length > 0)
   const notes: string[] = []
   if (marked.length > 0) notes.push(ru.conflicts.addedWithMarkers(marked))
-  if (!hasUnmerged(state)) notes.push(state.operation !== null ? ru.conflicts.allAddedCherryPick : ru.conflicts.allAddedStash)
+  if (!hasUnmerged(state)) notes.push(state.operation === null ? ru.conflicts.allAddedStash : state.operation.kind === 'rebase' ? ru.conflicts.allAddedRebase : ru.conflicts.allAddedCherryPick)
   return notes.length === 0 ? null : notes.join(' ')
 }
 
@@ -240,8 +244,12 @@ export function handleCommit(state: AppendixState, args: readonly string[]): Out
   const head = headTree(state)
   const nextIndex = parsed.all ? stageAllTracked(state) : state.index
   const operation = state.operation
+  const rebase = operation !== null && operation.kind === 'rebase' ? operation : null
+  const picking = operation !== null && operation.kind === 'cherry-pick' ? operation : null
+  // Коммит посреди rebase, когда HEAD ушёл на другую ветку (`git checkout -b`), прогонами не сверен.
+  if (rebase !== null && state.head.kind === 'branch') return conflictForm(state, 'commit')
   if (sameTree(head, nextIndex)) {
-    // Пустой итог посреди cherry-pick или конфликта: ответ git в протоколе есть только у `cherry-pick --continue` (К5.6).
+    // Пустой итог посреди cherry-pick, rebase или конфликта: ответ git в протоколе есть только у `cherry-pick --continue` (К5.6).
     if (operation !== null || hasUnmerged(state)) return conflictForm(state, 'commit')
     // Нечего коммитить: git печатает полный status и отвечает кодом 1, даже при пустом сообщении (П8.26).
     // Status строится по индексу с учётом -a (он собирается во временный индекс), а сам индекс остаётся прежним (П8.33).
@@ -249,19 +257,24 @@ export function handleCommit(state: AppendixState, args: readonly string[]): Out
     if (!formatted.ok) return refuse(state, statusRefusal(formatted.reason, 'commit'))
     return exited(state, formatted.output, 1)
   }
-  // Посреди cherry-pick без -m сообщение готово: тема и текст копируемого коммита (К5.5); редактор git открыл бы, тренажёр его не открывает.
-  const prepared = operation === null ? null : commitOf(state, operation.commit).message
+  // Посреди cherry-pick без -m сообщение готово: тема и текст копируемого коммита (К5.5); посреди остановки rebase — сообщение переносимого
+  // коммита (К6.4, К7.8). Редактор git открыл бы, тренажёр его не открывает. После `git reset` или другого коммита посреди rebase записи нет.
+  const prepared =
+    picking !== null ? commitOf(state, picking.commit).message : rebase !== null && rebase.mergeMsg ? commitOf(state, rebase.done[rebase.done.length - 1].id).message : null
   if (parsed.message === null && prepared === null) return refuse(state, ae.commitNeedsMessage)
   const message = cleanMessage(parsed.message ?? (prepared as string))
   if (message.trim() === '') return exited(state, 'Aborting commit due to empty commit message.', 1, ax.commitEmptyMessage)
   if (message.includes('\n') && parsed.message !== null) return refuse(state, ae.form('commit', '-m <сообщение из нескольких строк>', ALLOWED.commit))
 
   const subject = message.split('\n')[0]
-  const made = recordCommit(state, message, nextIndex, operation === null ? `commit: ${subject}` : `commit (cherry-pick): ${subject}`)
+  const made = recordCommit(state, message, nextIndex, picking === null ? `commit: ${subject}` : `commit (cherry-pick): ${subject}`)
   const notes: string[] = [state.head.kind === 'detached' ? `${ax.commitStatNotShown} ${ax.commitDetached}` : ax.commitStatNotShown]
-  if (operation !== null) notes.push(parsed.message === null ? `${ru.conflicts.cherryPickFinished} ${ru.conflicts.editorWouldOpen}` : ru.conflicts.cherryPickFinishedOwnMessage)
+  if (picking !== null) notes.push(parsed.message === null ? `${ru.conflicts.cherryPickFinished} ${ru.conflicts.editorWouldOpen}` : ru.conflicts.cherryPickFinishedOwnMessage)
+  else if (rebase !== null) notes.push(ru.conflicts.rebaseCommitMid(parsed.message === null, hasUnmerged(state)))
   else if (hasUnmerged(state)) notes.push(ru.conflicts.commitFinishedStashConflict)
-  const next = operation === null ? made.state : markMission(made.state, 'cherryPick')
+  // Коммит посреди rebase операцию не завершает: rebase продолжается, запись о коммите ушла (К6.4, К11.b).
+  const afterCommit: AppendixState = rebase === null ? made.state : { ...made.state, operation: { ...rebase, mergeMsg: false, committed: true } }
+  const next = picking === null ? afterCommit : markMission(afterCommit, 'cherryPick')
   return exited(next, `[${commitLabel(state.head)} ${shortCommitId(made.commitId)}] ${subject}`, 0, notes.join(' '))
 }
 
@@ -281,21 +294,31 @@ export function branchNameOutOfScope(state: AppendixState, name: string): string
   return null
 }
 
+function branchOfRebase(state: AppendixState): string {
+  return state.operation !== null && state.operation.kind === 'rebase' ? state.operation.branch : ''
+}
+
 export function handleBranch(state: AppendixState, args: readonly string[]): Outcome {
   const dashAt = args.indexOf('--')
   const options = dashAt < 0 ? args.filter((a) => a.startsWith('-')) : args.slice(0, dashAt)
   const names = dashAt < 0 ? args.filter((a) => !a.startsWith('-')) : args.slice(dashAt + 1)
   // `-d` и `-D` удаляют ветки, имён может быть сколько угодно (П8.63); остальные ключи в разделе не разбираются.
-  if (options.length === 1 && (options[0] === '-d' || options[0] === '-D')) return deleteBranches(state, names, options[0] === '-D')
+  if (options.length === 1 && (options[0] === '-d' || options[0] === '-D')) {
+    // Ветка, с которой начат rebase, нужна `--abort` и `--continue`: как git ответил бы на её удаление посреди rebase, не сверено.
+    const rebasing = state.operation !== null && state.operation.kind === 'rebase' ? state.operation.branch : null
+    if (rebasing !== null && names.includes(rebasing)) return conflictForm(state, `branch ${options[0]} ${rebasing}`)
+    return deleteBranches(state, names, options[0] === '-D')
+  }
   if (options.length > 0) return refuse(state, ae.form('branch', options[0], ALLOWED.branch))
   if (names.length > 2) return refuse(state, ae.form('branch', names.join(' '), ALLOWED.branch))
 
   if (names.length === 0) {
     const refs = refsOf(state)
-    const detached = branchListFirstLine(state.head, state.lastCheckout, refs, null, null)
+    const detached = branchListFirstLine(state.head, state.lastCheckout, refs, operationInput(state), null)
     const current = state.head.kind === 'branch' ? state.head.name : null
     const rows = branchNames(state).map((n) => `${n === current ? '* ' : '  '}${n}`)
-    return exited(state, (detached === null ? rows : [detached, ...rows]).join('\n'), 0, detached === null ? null : ax.branchListDetached)
+    const note = detached === null ? null : isRebasing(state) ? ru.conflicts.rebaseBranchNote(branchOfRebase(state)) : ax.branchListDetached
+    return exited(state, (detached === null ? rows : [detached, ...rows]).join('\n'), 0, note)
   }
 
   const [name, start] = names

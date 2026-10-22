@@ -262,24 +262,11 @@ describe('отказы git (П8.12, П8.82, П8.88)', () => {
   })
 })
 
-describe('отказы области (часть X, «Что НЕ входит»; S8-66, S8-67, S8-71)', () => {
+describe('отказы области (часть X, «Что НЕ входит»; S8-67, S8-71)', () => {
   const onFeature = () => play(fresh(), ['git checkout feature'])
 
-  it('конфликт: речь про git rebase --abort, без совета merge, ничего не меняется (S8-66, места 17 и 19)', () => {
-    const s = play(onFeature(), [])
-    const conflicted = play(s, ['git checkout master', 'edit app.js', 'git commit -am "master: v2"', 'git checkout feature'])
-    const r = run(conflicted, 'git rebase master')
-    refusal(r.result.output)
-    expect(r.result.exitCode).toBeUndefined()
-    expect(r.result.ok).toBe(false)
-    expect(r.result.output).toContain('git rebase --abort')
-    expect(r.result.output).toContain('«app.js»')
-    expect(r.result.output).not.toMatch(/merge/)
-    expect(core(r.state)).toEqual(core(conflicted))
-  })
-
-  it('ключи и лишние слова: отказ формы (rebase -i, --onto, --continue, --skip, --abort, --quit, --reapply-cherry-picks)', () => {
-    for (const line of ['git rebase -i master', 'git rebase --onto master feature', 'git rebase --continue', 'git rebase --skip', 'git rebase --abort', 'git rebase --quit', 'git rebase --reapply-cherry-picks master', 'git rebase master feature']) {
+  it('ключи и лишние слова: отказ формы (rebase -i, --onto, --quit, --reapply-cherry-picks, несколько слов)', () => {
+    for (const line of ['git rebase -i master', 'git rebase --onto master feature', 'git rebase --quit', 'git rebase --reapply-cherry-picks master', 'git rebase master feature']) {
       const s = onFeature()
       const r = run(s, line)
       refusal(r.result.output)

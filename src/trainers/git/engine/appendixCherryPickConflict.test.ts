@@ -42,7 +42,7 @@ describe('конфликт cherry-pick (К5.1)', () => {
     const entry = protocolEntry('К5.1', 'git cherry-pick ae28885')
     expect(compareOutputs(entry.output, r.result.output, new Map())).toBeNull()
     expect(r.result.output.split('\n')).toHaveLength(entry.output.split('\n').length)
-    expect(r.result.output).toContain(`error: could not apply ${r.state.operation?.commit.slice(0, 7)}... ${seed.fixMessage}`)
+    expect(r.result.output).toContain(`error: could not apply ${(r.state.operation as { commit: string }).commit.slice(0, 7)}... ${seed.fixMessage}`)
   })
 
   it('состояние: операция, неслитый путь, метки, ветка и HEAD на месте, записи журнала нет, миссия не засчитана', () => {
@@ -329,7 +329,7 @@ describe('итог совпал с HEAD (К5.6) и пустой cherry-pick с �
   it(`--continue: подсказка про --allow-empty и --skip, затем git status, код 1; операция остаётся (${where('К5.6', 'git cherry-pick --continue')})`, () => {
     const ids: IdMap = new Map()
     const before = matchesHead()
-    expect(run(before, 'git status').result.output).toBe(protocolEntry('К5.6', 'git status').output.replace(/ae28885/, before.operation?.commit.slice(0, 7) ?? ''))
+    expect(run(before, 'git status').result.output).toBe(protocolEntry('К5.6', 'git status').output.replace(/ae28885/, (before.operation as { commit: string }).commit.slice(0, 7)))
     const s = same(before, 'К5.6', 'git cherry-pick --continue', ids)
     expect(s.operation).toEqual(before.operation)
     expect(s.commits).toEqual(before.commits)
@@ -543,6 +543,7 @@ describe('кнопки редактора и виды для экрана', () =
     const view = getConflictView(picking())
     expect(view).toEqual({
       operation: 'cherry-pick',
+      headIsNewBase: false,
       unmerged: [{ path: 'app.js', kind: 'both-modified', code: 'UU', kindKey: 'kindBothModified' }],
       allAdded: false,
       finishKey: 'cherryPickFinish',

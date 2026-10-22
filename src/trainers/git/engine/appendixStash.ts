@@ -147,6 +147,8 @@ function save(state: AppendixState, message: string | null): Outcome {
   if (refused !== null) return refused
   if (!hasTrackedChanges(state)) return state.operation !== null ? conflictForm(state, 'stash') : exited(state, 'No local changes to save', 0, ax.stashNothing)
   if (hasRecreatedPath(state)) return refuse(state, ae.stashUnverified('push'))
+  // Посреди rebase без неслитых путей ответ git на тайник не сверен: он не должен молча бросить rebase.
+  if (state.operation !== null && state.operation.kind === 'rebase') return conflictForm(state, 'stash')
   // Посреди cherry-pick без неслитых путей тайник проходит и молча бросает операцию (К12.c6).
   const saved = markMission({ ...saveStash(state, message), operation: null }, 'stashSave')
   const notes = [state.head.kind === 'detached' ? `${ax.stashSaved} ${ax.stashNoBranch}` : ax.stashSaved]

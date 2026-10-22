@@ -76,6 +76,7 @@ describe('stash pop с конфликтом (К4.1)', () => {
     expect(next.history[next.history.length - 1]).toEqual({ kind: 'note', text: rc.choiceNote('bottom', 'app.js', 'Updated upstream', 'Stashed changes', rc.finishStash) })
     expect(getConflictView(s)).toEqual({
       operation: null,
+      headIsNewBase: false,
       unmerged: [{ path: 'app.js', kind: 'both-modified', code: 'UU', kindKey: 'kindBothModified' }],
       allAdded: false,
       finishKey: 'stashFinish',

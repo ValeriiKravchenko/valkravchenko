@@ -16,13 +16,15 @@
 // где другие ссылки (`show`, `log`, `tag`, `branch`, `checkout`, `switch`, `reset`, `cherry-pick`); за концом
 // журнала — `fatal: log for 'HEAD' only has N entries`, код 128. `merge` и `pull` отвечают отказом области.
 //
-// Шаг C, часть 1 (target.md, часть XI): `git cherry-pick` с конфликтом, `--continue`, `--skip`, `--abort`, пустой cherry-pick и
-// `git stash pop`/`apply` с конфликтом. Для экрана: `getConflictFiles`, `chooseConflictPart`, `getConflictView`. Неслитые пути и
-// незаконченная операция лежат в `state.unmerged` и `state.operation`; `rebase` с конфликтом по-прежнему отказ области.
+// Шаг C (target.md, часть XI): `git cherry-pick` с конфликтом, `--continue`, `--skip`, `--abort`, пустой cherry-pick,
+// `git stash pop`/`apply` с конфликтом и `git rebase <ссылка>` с конфликтом (`--continue`, `--skip`, `--abort`). Для экрана:
+// `getConflictFiles`, `chooseConflictPart`, `getConflictView`. Неслитые пути и незаконченная операция лежат в `state.unmerged` и
+// `state.operation`. Посреди rebase HEAD отсоединён (`state.head.kind === 'detached'`), ветка стоит на старом месте: `getCommits` и
+// `getBranches` отдают такой граф без особых случаев. Rebase с конфликтом, начатый с отсоединённого HEAD, по-прежнему отказ области.
 //
 // Исходы команды различаются по `CommandResult`: ответ git — с `exitCode` (0 — успех), отказ области — без `exitCode`,
 // вывод начинается с метки «[тренажёр]». Миссий семь (`APPENDIX_MISSION_IDS`): 5 — `cherry-pick`, 6 — `reset --hard HEAD@{n}`
-// на брошенный коммит, 7 — `rebase`, перенёсший коммиты или перемотавший ветку.
+// на брошенный коммит, 7 — `rebase`, перенёсший коммиты или перемотавший ветку (в том числе `rebase --continue` или `--skip` после остановки на конфликте).
 // ============================================================
 import type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry } from './appendixTypes'
 import { executeAppendixCommand } from './appendixCommands'
@@ -186,9 +188,9 @@ export function getAppendixMissions(state: AppendixState): AppendixMissionView[]
 }
 
 /**
- * Файлы рабочего каталога с блоками меток (конфликт cherry-pick или тайника), по алфавиту путей: `path`, вид конфликта (`null`,
+ * Файлы рабочего каталога с блоками меток (конфликт cherry-pick, rebase или тайника), по алфавиту путей: `path`, вид конфликта (`null`,
  * если путь уже добавлен, а метки остались) и подписи верхней и нижней частей из первого блока файла (`HEAD` и
- * `<id7> (<тема>)`; `Updated upstream` и `Stashed changes`). Нет блоков меток — пустой список.
+ * `<id7> (<тема>)`; у rebase то же, вверху HEAD — новая база; `Updated upstream` и `Stashed changes`). Нет блоков меток — пустой список.
  */
 export function getConflictFiles(state: AppendixState): ConflictFileView[] {
   return conflictFiles(state)
@@ -204,9 +206,10 @@ export function chooseConflictPart(state: AppendixState, path: string, part: 'to
 }
 
 /**
- * Состояние конфликта для рамки: `null`, если неслитых путей нет и операция не идёт. Иначе операция (`cherry-pick`; у тайника `null`),
- * неслитые пути с видом, кодом `UU`/`AA` и ключом подписи вида, признак «все пути добавлены» (операция идёт, неслитых нет) и ключи
- * словаря `ru.conflicts` со строками «чем завершить» и «чем отменить». Текст рамки пишет экран.
+ * Состояние конфликта для рамки: `null`, если неслитых путей нет и операция не идёт. Иначе операция (`cherry-pick` или `rebase`; у тайника
+ * `null`), признак `headIsNewBase` (у rebase верхняя часть блока меток — новая база, нижняя — свой коммит), неслитые пути с видом, кодом
+ * `UU`/`AA` и ключом подписи вида, признак «все пути добавлены» (операция идёт, неслитых нет) и ключи словаря `ru.conflicts` со строками
+ * «чем завершить» и «чем отменить». Текст рамки пишет экран.
  */
 export function getConflictView(state: AppendixState): ConflictView | null {
   return conflictView(state)
