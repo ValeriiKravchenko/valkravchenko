@@ -257,8 +257,9 @@ describe('ru.conflicts: речь о конфликтах (target.md, часть 
     c.cherryPickAborted,
     c.discardedEdit(['app.js']),
     c.discardedEdit(['a', 'b']),
-    c.checkoutHeadFile(['app.js'], true),
-    c.checkoutHeadFile(['a', 'b'], false),
+    c.checkoutHeadFile(['app.js'], 'cherry-pick'),
+    c.checkoutHeadFile(['a', 'b'], null),
+    c.checkoutHeadFile(['app.js'], 'rebase'),
     c.checkoutCancelled,
     c.operationDroppedByStash,
     c.resetHardCleared,
@@ -277,6 +278,29 @@ describe('ru.conflicts: речь о конфликтах (target.md, часть 
     c.stashAbort,
     c.kindBothModified,
     c.kindBothAdded,
+    c.rebaseConflict(['app.js'], 'feature'),
+    c.rebaseConflict(['app.js', 'about.html'], 'feature'),
+    c.rebaseAlreadyRunning,
+    c.rebaseStatusNote('feature', false),
+    c.rebaseStatusNote('feature', true),
+    c.rebaseBranchNote('feature'),
+    c.rebaseCommitMid(true, true),
+    c.rebaseCommitMid(false, false),
+    c.rebaseContinued('fix: опечатка в логе'),
+    c.rebaseContinuedCommitted,
+    c.rebaseContinuedIdle,
+    c.rebaseDropped('fix: опечатка в логе'),
+    c.rebaseSkipped('fix: опечатка в логе'),
+    c.rebaseAborted('feature'),
+    c.rebaseCheckoutBranch('feature'),
+    c.switchWhileRebasing,
+    c.allAddedRebase,
+    c.resetHardRebase,
+    c.resetMixedRebase,
+    c.finishRebase,
+    c.rebaseFinish,
+    c.rebaseFinishAdded,
+    c.rebaseAbort,
   ]
 
   it('речь не начинается с метки и не выглядит как вывод git: ни error:, ни hint:', () => {
@@ -303,8 +327,29 @@ describe('ru.conflicts: речь о конфликтах (target.md, часть 
     expect(c.addedWithMarkers(['app.js'])).toContain('git их не проверяет')
   })
 
+  it('rebase: вверху новая база, внизу свой коммит; git add, --continue, --skip, --abort; ветка переедет в конце; совета про merge нет (опасное место 3, место 19)', () => {
+    const text = c.rebaseConflict(['app.js'], 'feature')
+    for (const word of ['git add <файл>', 'git rebase --continue', 'git rebase --skip', 'git rebase --abort', 'вверху (HEAD) — новая база', 'внизу — твой коммит', 'переедет только в самом конце']) expect(text).toContain(word)
+    for (const value of [text, c.rebaseAlreadyRunning, c.allAddedRebase, c.rebaseFinish, c.rebaseFinishAdded, c.rebaseAbort, c.resetHardRebase]) expect(value).not.toMatch(/git merge/)
+    expect(text).not.toMatch(/merge/i)
+    expect(c.resetHardRebase).toContain('rebase от этого не отменился')
+    expect(c.rebaseDropped('fix: опечатка в логе')).toContain('«fix: опечатка в логе»')
+    expect(c.rebaseCheckoutBranch('feature')).toContain('предупреждения нет')
+    expect(c.rebaseStatusNote('feature', false)).toContain('стоит на старом месте')
+  })
+
   it('отказы области нового конфликта начинаются с метки [тренажёр] и не выглядят как ошибка git', () => {
-    for (const text of [a.errors.cherryPickConflictKind(['a.txt']), a.errors.stashConflictKind('pop', ['a.txt']), a.errors.conflictForm('checkout -'), a.errors.conflictUntrackedStatus('status'), a.errors.cherryPickDetachedStop]) {
+    for (const text of [
+      a.errors.cherryPickConflictKind(['a.txt']),
+      a.errors.stashConflictKind('pop', ['a.txt']),
+      a.errors.conflictForm('checkout -'),
+      a.errors.conflictUntrackedStatus('status'),
+      a.errors.cherryPickDetachedStop,
+      a.errors.rebaseConflictKind(['a.txt']),
+      a.errors.rebaseStopUnverified,
+      a.errors.rebaseNextConflict('fix'),
+      a.errors.rebaseSkipIdle,
+    ]) {
       expect(text.startsWith('[тренажёр]'), text).toBe(true)
       expect(text).not.toMatch(/^(fatal|error|usage|hint):/)
     }

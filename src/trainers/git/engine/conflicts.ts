@@ -10,9 +10,9 @@
 // литералы из docs/git-trainer/reports/conflicts-git-runs.txt (К1–К19), не переводятся и в
 // словарь не идут; речь о конфликте лежит в ru.conflicts.
 //
-// Что реализовано сейчас: операция `cherry-pick` и тайник (операции нет), виды конфликта
+// Что реализовано сейчас: операции `cherry-pick` и `rebase`, тайник (операции нет), виды конфликта
 // `both-modified` (UU) и `both-added` (AA). Тип `ConflictOperation` — объединение по `kind`:
-// остальные операции (rebase, а позже merge и revert) добавляются новыми ветками объединения, а
+// остальные операции (позже merge и revert) добавляются новыми ветками объединения, а
 // функции модуля расширяются по `kind`. Ответ git на конфликт, которого здесь нет (модификация
 // и удаление, `merge`, `revert`), модуль не выдумывает: вызывающая команда обязана отказать
 // областью раньше (`enterConflict` на таком конфликте бросает исключение — нарушение условия вызова).
@@ -36,11 +36,35 @@ export interface UnmergedEntry {
   theirs?: string
 }
 
+/** Шаг rebase: коммит исходной ветки (полный id) и его тема. Строки `pick <id7> # <тема>` в `git status` называют исходные коммиты, а не копии. */
+export interface RebaseStep {
+  id: string
+  subject: string
+}
+
 /**
- * Незаконченная операция. `cherry-pick` — копируемый коммит (полный id). Другие виды добавляются
- * новыми ветками объединения.
+ * Идущий rebase (К6.1, П8.11). `branch` — ветка, с которой он начат (она остаётся на старом месте до конца), `origHead` — её
+ * исходный конец (туда возвращает `--abort`), `onto` — новая база. `done` — шаги, уже начатые (последний — тот, на котором остановка),
+ * `todo` — оставшиеся. `mergeMsg` — осталась подготовленная после конфликта запись о коммите: пока она есть, `git status` пишет
+ * «all conflicts fixed», после `git commit`, `git reset` и `git reset --hard` её нет и git пишет «editing a commit» (К6.4, К6.6, К10.b).
+ * `committed` — посреди остановки уже сделан коммит (К6.4, К11.b).
  */
-export type ConflictOperation = { kind: 'cherry-pick'; commit: string }
+export interface RebaseOperation {
+  kind: 'rebase'
+  branch: string
+  origHead: string
+  onto: string
+  done: RebaseStep[]
+  todo: RebaseStep[]
+  mergeMsg: boolean
+  committed: boolean
+}
+
+/**
+ * Незаконченная операция. `cherry-pick` — копируемый коммит (полный id), `rebase` — см. `RebaseOperation`. Другие виды
+ * добавляются новыми ветками объединения.
+ */
+export type ConflictOperation = { kind: 'cherry-pick'; commit: string } | RebaseOperation
 
 /** То, что модуль читает и меняет в состоянии раздела. */
 export interface ConflictState {
@@ -309,6 +333,14 @@ function compareBytes(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+const REBASE_HINTS = [
+  'hint: Resolve all conflicts manually, mark them as resolved with',
+  'hint: "git add/rm <conflicted_files>", then run "git rebase --continue".',
+  'hint: You can instead skip this commit: run "git rebase --skip".',
+  'hint: To abort and get back to the state before "git rebase", run "git rebase --abort".',
+  'hint: Disable this message with "git config set advice.mergeConflict false"',
+]
+
 const CHERRY_PICK_HINTS = [
   'hint: After resolving the conflicts, mark them with',
   'hint: "git add/rm <pathspec>", then run',
@@ -320,17 +352,18 @@ const CHERRY_PICK_HINTS = [
 ]
 
 export interface ConflictOutputInput {
-  /** Команда: `cherry-pick` или `stash` (pop и apply печатают одно и то же до статуса). */
-  command: 'cherry-pick' | 'stash'
+  /** Команда: `cherry-pick`, `rebase` или `stash` (pop и apply печатают одно и то же до статуса). */
+  command: 'cherry-pick' | 'rebase' | 'stash'
   merge: Pick<TreeMergeResult, 'autoMerged' | 'conflicts'>
-  /** Копируемый коммит для строки `error: could not apply` (у cherry-pick). */
+  /** Копируемый (переносимый) коммит для строки `error: could not apply` (у cherry-pick и rebase). */
   commit?: { id: string; subject: string }
 }
 
 /**
  * Вывод команды при конфликте до статуса и без кода возврата (он везде 1): по паре
  * `Auto-merging` и `CONFLICT` на путь в порядке байтов пути (К4.1, К5.1, К18.1), у cherry-pick
- * дальше `error: could not apply` и подсказки. Речи нет.
+ * дальше `error: could not apply` и подсказки, у rebase — `error: could not apply`, другие подсказки и строка
+ * `Could not apply <id7>... # <тема>` (К6.1, К14.3). Строки хода `Rebasing (k/n)` не печатаются. Речи нет.
  */
 export function conflictOutput(input: ConflictOutputInput): string {
   const kinds = new Map(input.merge.conflicts.map((c) => [c.file, c.kind]))
@@ -343,6 +376,10 @@ export function conflictOutput(input: ConflictOutputInput): string {
   }
   if (input.command === 'cherry-pick' && input.commit !== undefined) {
     lines.push(`error: could not apply ${shortCommitId(input.commit.id)}... ${input.commit.subject}`, ...CHERRY_PICK_HINTS)
+  }
+  if (input.command === 'rebase' && input.commit !== undefined) {
+    const id = shortCommitId(input.commit.id)
+    lines.push(`error: could not apply ${id}... ${input.commit.subject}`, ...REBASE_HINTS, `Could not apply ${id}... # ${input.commit.subject}`)
   }
   return lines.join('\n')
 }
@@ -364,25 +401,63 @@ export interface StatusParts {
   header: string[]
   /** Раздел `Unmerged paths:` без пустой строки после него; пусто, если неслитых нет. */
   unmerged: string[]
-  /** Подсказка `(use "git restore --staged <file>..." to unstage)`: при cherry-pick её нет, у тайника и без операции есть (К5.1, К5.4, К4.1, К13.c). */
+  /** Подсказка `(use "git restore --staged <file>..." to unstage)`: при cherry-pick её нет, у rebase, тайника и без операции есть (К5.1, К5.4, П8.11, К6.3, К4.1, К13.c). */
   restoreStagedHint: boolean
   /** Строки `git status --short` для неслитых путей. */
   short: { path: string; code: 'UU' | 'AA' }[]
 }
 
+/** Условия, от которых зависит заголовок: на ветке ли HEAD (после `git checkout -b` посреди rebase, К13.b). */
+export interface StatusOptions {
+  /** HEAD стоит на ветке, а не отсоединён: у rebase пропадает строка `interactive rebase in progress; onto …`. */
+  headOnBranch?: boolean
+}
+
+function pickLine(step: RebaseStep): string {
+  return `   pick ${shortCommitId(step.id)} # ${step.subject}`
+}
+
+/**
+ * Заголовок rebase (П8.11, К6.3, К6.4, К13.b, К14.3). Сверены сочетания «сделан один шаг, остался один» (П8.11), «сделан один, не осталось»
+ * (К3.5) и «сделано два, не осталось» (К14.3); остальные числа шагов модуль не печатает — нарушение условия вызова.
+ */
+function rebaseHeader(op: RebaseOperation, unmergedCount: number, headOnBranch: boolean): string[] {
+  if (op.done.length < 1 || op.done.length > 2 || op.todo.length > 1) throw new Error('число шагов rebase в git status не сверено прогонами: команда обязана отказать областью раньше')
+  const onto = shortCommitId(op.onto)
+  const lines: string[] = headOnBranch ? [] : [`interactive rebase in progress; onto ${onto}`]
+  lines.push(op.done.length === 1 ? 'Last command done (1 command done):' : 'Last commands done (2 commands done):', ...op.done.map(pickLine))
+  if (op.todo.length === 0) lines.push('No commands remaining.')
+  else lines.push('Next command to do (1 remaining command):', ...op.todo.map(pickLine), '  (use "git rebase --edit-todo" to view and edit)')
+  if (unmergedCount === 0 && !op.mergeMsg) {
+    lines.push(
+      `You are currently editing a commit while rebasing branch '${op.branch}' on '${onto}'.`,
+      '  (use "git commit --amend" to amend the current commit)',
+      '  (use "git rebase --continue" once you are satisfied with your changes)',
+    )
+    return lines
+  }
+  lines.push(`You are currently rebasing branch '${op.branch}' on '${onto}'.`)
+  if (unmergedCount === 0) lines.push('  (all conflicts fixed: run "git rebase --continue")')
+  else lines.push('  (fix conflicts and then run "git rebase --continue")', '  (use "git rebase --skip" to skip this patch)', '  (use "git rebase --abort" to check out the original branch)')
+  return lines
+}
+
 /** Части `git status`, зависящие от конфликта. Остальной статус строит раздел. */
-export function statusBlock(state: Pick<ConflictState, 'unmerged' | 'operation'>): StatusParts {
+export function statusBlock(state: Pick<ConflictState, 'unmerged' | 'operation'>, options: StatusOptions = {}): StatusParts {
   const paths = Object.keys(state.unmerged).sort(compareBytes)
-  const restoreStagedHint = state.operation === null
+  const operation = state.operation
+  const restoreStagedHint = operation === null || operation.kind !== 'cherry-pick'
   const header: string[] = []
-  if (state.operation !== null) {
+  if (operation !== null && operation.kind === 'cherry-pick') {
     const done = paths.length === 0
     header.push(
-      `You are currently cherry-picking commit ${shortCommitId(state.operation.commit)}.`,
+      `You are currently cherry-picking commit ${shortCommitId(operation.commit)}.`,
       done ? '  (all conflicts fixed: run "git cherry-pick --continue")' : '  (fix conflicts and run "git cherry-pick --continue")',
       '  (use "git cherry-pick --skip" to skip this patch)',
       '  (use "git cherry-pick --abort" to cancel the cherry-pick operation)',
     )
+  } else if (operation !== null) {
+    header.push(...rebaseHeader(operation, paths.length, options.headOnBranch === true))
   }
   const unmerged =
     paths.length === 0
@@ -405,7 +480,11 @@ const BLOCK_A = [
   'fatal: Exiting because of an unresolved conflict.',
 ]
 
-/** Команда раздела, для которой таблица «Что запрещено» знает отказ при неслитых путях. */
+/**
+ * Команда раздела, для которой таблица «Что запрещено» и матрица «`--abort` и `--continue` не своей команды» знают отказ.
+ * `rebase-step` и `cherry-pick-step` — `--continue` или `--abort` команды, чьей операции нет; `rebase-continue` —
+ * `--continue` при неслитых путях; `switch-branch` — `git switch <ветка>` посреди rebase.
+ */
 export type RefusedCommand =
   | { name: 'commit' }
   | { name: 'cherry-pick' }
@@ -416,20 +495,53 @@ export type RefusedCommand =
   | { name: 'stash-apply' }
   | { name: 'reset-soft' }
   | { name: 'rebase' }
+  | { name: 'rebase-continue' }
+  | { name: 'rebase-step' }
+  | { name: 'cherry-pick-step' }
+  | { name: 'switch-branch' }
 
 export interface Refusal {
   output: string
   exitCode: number
 }
 
+/** Вход `refusal`: неслитые пути и операция (она нужна командам, чей отказ зависит от идущей операции). */
+export type RefusalState = Pick<ConflictState, 'unmerged'> & { operation?: ConflictOperation | null }
+
+/** Новый `rebase`, пока идёт rebase (К6.2): блок кончается пустой строкой. */
+const REBASE_RUNNING = [
+  'fatal: It seems that there is already a rebase-merge directory, and',
+  'I wonder if you are in the middle of another rebase.  If that is the',
+  'case, please try',
+  '\tgit rebase (--continue | --abort | --skip)',
+  'If that is not the case, please',
+  '\trm -fr ".git/rebase-merge"',
+  'and run me again.  I am stopping in case you still have something',
+  'valuable there.',
+  '',
+].join('\n')
+
 /**
- * Отказ git посреди конфликта (К1.2, К4.2, К5.2, К16.2): `null`, если неслитых путей нет или
- * команда с ними проходит. Не решает, в области ли команда: раздел спрашивает это раньше. Состояния
- * «операция идёт, неслитых нет» таблица не знает отдельно от раздела: их отказы зависят от индекса
- * и HEAD, которых у модуля нет. Форма `checkout -- <пути>` отказывает только когда неслитые все
- * пути (смешанный список прогонами не сверен: раздел отвечает отказом области).
+ * Отказ git посреди конфликта (К1.2, К4.2, К5.2, К6.2, К16.2): `null`, если команда проходит. Не решает, в области ли
+ * команда: раздел спрашивает это раньше. Часть отказов зависит только от неслитых путей, часть — от идущей операции
+ * (`rebase`, `rebase-step`, `cherry-pick-step`, `switch-branch`): они отвечают и без неслитых путей. Состояния
+ * «операция идёт, неслитых нет» таблица не знает отдельно от раздела: их отказы зависят от индекса и HEAD, которых у
+ * модуля нет. Форма `checkout -- <пути>` отказывает только когда неслитые все пути (смешанный список прогонами не
+ * сверен: раздел отвечает отказом области).
  */
-export function refusal(command: RefusedCommand, state: Pick<ConflictState, 'unmerged'>): Refusal | null {
+export function refusal(command: RefusedCommand, state: RefusalState): Refusal | null {
+  const operation = state.operation ?? null
+  const rebasing = operation !== null && operation.kind === 'rebase'
+  switch (command.name) {
+    case 'rebase-step':
+      return rebasing ? null : { output: 'fatal: no rebase in progress', exitCode: 128 }
+    case 'cherry-pick-step':
+      return operation !== null && operation.kind === 'cherry-pick' ? null : { output: ['error: no cherry-pick or revert in progress', 'fatal: cherry-pick failed'].join('\n'), exitCode: 128 }
+    case 'switch-branch':
+      return rebasing ? { output: ['fatal: cannot switch branch while rebasing', 'Consider "git rebase --quit" or "git worktree add".'].join('\n'), exitCode: 128 } : null
+    case 'rebase':
+      if (rebasing) return { output: REBASE_RUNNING, exitCode: 128 }
+  }
   const files = Object.keys(state.unmerged).sort(compareBytes)
   if (files.length === 0) return null
   const needsMerge = files.map((f) => `${f}: needs merge`)
@@ -457,5 +569,9 @@ export function refusal(command: RefusedCommand, state: Pick<ConflictState, 'unm
         output: [...needsMerge, 'error: cannot rebase: You have unstaged changes.', 'error: additionally, your index contains uncommitted changes.', 'error: Please commit or stash them.'].join('\n'),
         exitCode: 1,
       }
+    case 'rebase-continue':
+      return { output: [...needsMerge, 'You must edit all merge conflicts and then', 'mark them as resolved using git add'].join('\n'), exitCode: 1 }
+    default:
+      return null
   }
 }

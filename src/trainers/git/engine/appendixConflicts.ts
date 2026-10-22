@@ -1,12 +1,12 @@
 // ============================================================
-// Раздел 8 git-тренажёра, шаг C (часть 1): связка команд раздела с общим модулем конфликтов
+// Раздел 8 git-тренажёра, шаг C: связка команд раздела с общим модулем конфликтов
 // (conflicts.ts; target.md, часть XI). Здесь то, что знает модель раздела (HEAD, ветки, ссылки),
 // а модуль конфликтов не знает: `git status` с неслитыми путями и заголовком операции, отказы git
 // посреди конфликта как исход команды, отказ области для форм, которых нет в протоколе, и виды для
 // экрана (`getConflictFiles`, `chooseConflictPart`, `getConflictView`).
 //
-// Прогоны: docs/git-trainer/reports/conflicts-git-runs.txt (К4, К5, К10–К13, К16) и
-// section8-git-runs.txt (П8.4). Вывод git — английские литералы из модуля конфликтов; речь лежит в
+// Прогоны: docs/git-trainer/reports/conflicts-git-runs.txt (К4, К5, К6, К10–К14, К16) и
+// section8-git-runs.txt (П8.4, П8.11). Вывод git — английские литералы из модуля конфликтов; речь лежит в
 // ru.conflicts и ru.appendix.errors.
 // ============================================================
 import type { AppendixState, FileTree, HistoryEntry } from './appendixTypes'
@@ -14,7 +14,7 @@ import { exited, refuse, type Outcome } from './appendixOutcome'
 import { compareBytes } from './appendixRefs'
 import { headTree, refsOf } from './appendixRepo'
 import { editorChoice, markerBlocks, refusal, shortCode, statusBlock, type ConflictKind, type RefusedCommand } from './conflicts'
-import { statusFirstLine } from './detachedHead'
+import { statusFirstLine, type OperationInput } from './detachedHead'
 import { formatStatusWithCommits, type CommitStatusResult } from './sectionsCommon'
 import { has } from './util'
 import { ru } from '../locales/ru'
@@ -26,6 +26,15 @@ export const hasUnmerged = (state: AppendixState): boolean => Object.keys(state.
 
 /** Идёт конфликт или незаконченная операция. */
 export const inConflict = (state: AppendixState): boolean => hasUnmerged(state) || state.operation !== null
+
+/** Идёт rebase (не обязательно с неслитыми путями). */
+export const isRebasing = (state: AppendixState): boolean => state.operation !== null && state.operation.kind === 'rebase'
+
+/** Операция в виде, который читают `statusFirstLine` и `branchListFirstLine` (detachedHead.ts): только rebase меняет первую строку. */
+export function operationInput(state: AppendixState): OperationInput {
+  const operation = state.operation
+  return operation !== null && operation.kind === 'rebase' ? { kind: 'rebase', branch: operation.branch } : null
+}
 
 /** Отказ области для формы, которой нет в протоколе (посреди незаконченной операции или конфликта). */
 export function conflictForm(state: AppendixState, form: string): Outcome {
@@ -68,12 +77,14 @@ const NO_CHANGES_ADDED = 'no changes added to commit (use "git add" and/or "git 
  * неотслеживаемым файлом без подготовленного прогонами не сверены: результат `unmergedUntracked`.
  */
 export function stateStatus(state: AppendixState, short: boolean): StateStatus {
-  const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), null) as string
-  const parts = statusBlock(state)
-  if (parts.header.length === 0 && parts.unmerged.length === 0) return formatStatusWithCommits(first, headTree(state), state.index, state.working, { short })
+  // `null`, когда HEAD отсоединён и идёт rebase: первой строкой стоит заголовок rebase (П8.11).
+  const first = statusFirstLine(state.head, state.lastCheckout, refsOf(state), operationInput(state))
+  const parts = statusBlock(state, { headOnBranch: state.head.kind === 'branch' })
+  if (parts.header.length === 0 && parts.unmerged.length === 0) return formatStatusWithCommits(first as string, headTree(state), state.index, state.working, { short })
 
   const hidden = Object.keys(state.unmerged)
-  const base = formatStatusWithCommits(first, without(headTree(state), hidden), state.index, without(state.working, hidden), { short })
+  const lead = first === null ? '' : `${first}\n`
+  const base = formatStatusWithCommits(first ?? '', without(headTree(state), hidden), state.index, without(state.working, hidden), { short })
   if (!base.ok) return base
 
   if (short) {
@@ -85,7 +96,7 @@ export function stateStatus(state: AppendixState, short: boolean): StateStatus {
 
   const stagedExists = base.output.endsWith('\n')
   const blocks = base.output
-    .slice(first.length + 1)
+    .slice((first ?? '').length + 1)
     .replace(/\n$/, '')
     .split('\n\n')
   const isSummary = (b: string) => /^(no changes added to commit|nothing added to commit|nothing to commit)/.test(b)
@@ -98,7 +109,7 @@ export function stateStatus(state: AppendixState, short: boolean): StateStatus {
     summary = NO_CHANGES_ADDED
   }
   const list = [parts.header.join('\n'), staged, parts.unmerged.join('\n'), ...others, summary].filter((b): b is string => b !== undefined && b !== '')
-  return { ok: true, output: `${first}\n${list.join('\n\n')}${stagedExists ? '\n' : ''}` }
+  return { ok: true, output: `${lead}${list.join('\n\n')}${stagedExists ? '\n' : ''}` }
 }
 
 // ---------- виды для экрана ----------
@@ -132,16 +143,21 @@ export function choosePart(state: AppendixState, path: string, part: 'top' | 'bo
   if (!has(state.working, path)) return state
   const blocks = markerBlocks(state.working[path])
   if (blocks.length === 0) return state
-  const finish = state.operation !== null ? rc.finishCherryPick : rc.finishStash
+  const finish = state.operation === null ? rc.finishStash : state.operation.kind === 'rebase' ? rc.finishRebase : rc.finishCherryPick
   const entry: HistoryEntry = { kind: 'note', text: rc.choiceNote(part, path, blocks[0].top, blocks[0].bottom, finish) }
   return { ...state, working: { ...state.working, [path]: editorChoice(state.working[path], part) }, history: [...state.history, entry] }
 }
 
-type ViewKey = Extract<keyof typeof ru.conflicts, 'cherryPickFinish' | 'cherryPickFinishAdded' | 'cherryPickAbort' | 'stashFinish' | 'stashAbort' | 'kindBothModified' | 'kindBothAdded'>
+type ViewKey = Extract<
+  keyof typeof ru.conflicts,
+  'cherryPickFinish' | 'cherryPickFinishAdded' | 'cherryPickAbort' | 'rebaseFinish' | 'rebaseFinishAdded' | 'rebaseAbort' | 'stashFinish' | 'stashAbort' | 'kindBothModified' | 'kindBothAdded'
+>
 
 export interface ConflictView {
   /** Идущая операция; `null` у тайника. */
-  operation: 'cherry-pick' | null
+  operation: 'cherry-pick' | 'rebase' | null
+  /** Только у rebase: HEAD здесь — новая база (верхняя часть блока меток), а свой коммит — нижняя (К6.1). Для речи рядом с кнопками. */
+  headIsNewBase: boolean
   /** Неслитые пути по алфавиту: вид, код `git status --short` и ключ подписи вида в `ru.conflicts`. */
   unmerged: { path: string; kind: ConflictKind; code: 'UU' | 'AA'; kindKey: ViewKey }[]
   /** Операция идёт, неслитых нет (после `git add` всех путей). */
@@ -156,12 +172,13 @@ export function conflictView(state: AppendixState): ConflictView | null {
   if (!inConflict(state)) return null
   const paths = Object.keys(state.unmerged).sort(compareBytes)
   const allAdded = paths.length === 0
-  const picking = state.operation !== null
+  const operation = state.operation === null ? null : state.operation.kind
   return {
-    operation: picking ? 'cherry-pick' : null,
+    operation,
+    headIsNewBase: operation === 'rebase',
     unmerged: paths.map((path) => ({ path, kind: state.unmerged[path].kind, code: shortCode(state.unmerged[path]), kindKey: state.unmerged[path].kind === 'both-added' ? 'kindBothAdded' : 'kindBothModified' })),
     allAdded,
-    finishKey: picking ? (allAdded ? 'cherryPickFinishAdded' : 'cherryPickFinish') : 'stashFinish',
-    abortKey: picking ? 'cherryPickAbort' : 'stashAbort',
+    finishKey: operation === 'rebase' ? (allAdded ? 'rebaseFinishAdded' : 'rebaseFinish') : operation === 'cherry-pick' ? (allAdded ? 'cherryPickFinishAdded' : 'cherryPickFinish') : 'stashFinish',
+    abortKey: operation === 'rebase' ? 'rebaseAbort' : operation === 'cherry-pick' ? 'cherryPickAbort' : 'stashAbort',
   }
 }

@@ -18,6 +18,8 @@
 //   и ни из одного тега. В отсоединённом HEAD ветка не двигается, и миссию команда не засчитывает.
 // - Посреди cherry-pick и конфликта тайника (часть XI): `--hard` и mixed снимают неслитые пути и операцию (К4.3, К5.7, К10.c, К10.s);
 //   `--soft` отказывает (`Cannot do a soft reset in the middle of a merge.`, код 128, К5.9).
+// - Посреди rebase (К6.6, К10.b, К14.1): `--hard` и mixed без ссылки (или с `HEAD`) снимают неслитые пути, но rebase не снимают —
+//   запись о коммите ушла, `git status` пишет «editing a commit»; `--soft` с неслитыми путями отказывает (К10.b); остальные ссылки — отказ области.
 // Брошенные коммиты не удаляются (бледнеют на графе, `fadedCommitIds`).
 // ============================================================
 import type { AppendixState, FileTree } from './appendixTypes'
@@ -92,6 +94,10 @@ export function handleReset(state: AppendixState, args: readonly string[]): Outc
   }
 
   const effective: ResetMode = mode ?? 'mixed'
+  const operation = state.operation
+  const rebase = operation !== null && operation.kind === 'rebase' ? operation : null
+  // Посреди rebase прогнаны формы без ссылки (К6.6, К10.b); `reset <ссылка>` сдвинул бы HEAD с места остановки.
+  if (rebase !== null && (words.length > 0 && words[0] !== 'HEAD')) return conflictForm(state, ['reset', ...args].join(' '))
   // Посреди конфликта `--soft` отказывает (К5.9, К10.c, К10.s); если операция идёт, а неслитых путей нет, ответ git не сверен.
   if (effective === 'soft') {
     const refused = refusalOutcome(state, { name: 'reset-soft' })
@@ -111,9 +117,9 @@ export function handleReset(state: AppendixState, args: readonly string[]): Outc
     branches: moved.branches,
     index,
     working,
-    // `--hard` и mixed снимают конфликт и незаконченную операцию (К5.7, К10.c, К10.s, К4.3).
+    // `--hard` и mixed снимают конфликт и незаконченную операцию (К5.7, К10.c, К10.s, К4.3); rebase остаётся, запись о коммите уходит (К6.6, К10.b).
     unmerged: {},
-    operation: null,
+    operation: rebase === null ? null : { ...rebase, mergeMsg: false },
     reflog: sameInDetached ? state.reflog : [{ id: targetId, message: `reset: moving to ${word}` }, ...state.reflog],
   }
 
@@ -128,7 +134,8 @@ export function handleReset(state: AppendixState, args: readonly string[]): Outc
   // Миссия 6: ветка вернулась на коммит, на который до этого не указывала ни одна ветка и ни один тег.
   const rescued = hard && branch !== null && HEAD_AT.test(word) && fadedCommitIds(state).has(targetId)
   if (rescued) notes.push(ax.resetRescued(branch, short))
-  if (inConflict(state)) notes.push(hard ? ru.conflicts.resetHardCleared : ru.conflicts.resetMixedCleared)
+  if (rebase !== null) notes.push(hard ? ru.conflicts.resetHardRebase : ru.conflicts.resetMixedRebase)
+  else if (inConflict(state)) notes.push(hard ? ru.conflicts.resetHardCleared : ru.conflicts.resetMixedCleared)
   const left = leftBehind(state, next)
   if (left > 0) notes.push(ax.resetLeftBehind(left))
   return exited(rescued ? markMission(next, 'rescueCommit') : next, output, 0, notes.join(' '))

@@ -4,7 +4,7 @@
 // Id в протоколе настоящие: тесты подставляют те, что в тексте протокола, чтобы сверка шла посимвольно.
 import { describe, expect, it } from 'vitest'
 import { protocolEntry } from './appendixProtocolKit'
-import { abortTo, conflictOutput, editorChoice, enterConflict, markResolved, markerBlocks, mergeFileWithMarkers, refusal, shortCode, statusBlock, type ConflictMerge, type ConflictState } from './conflicts'
+import { abortTo, conflictOutput, editorChoice, enterConflict, markResolved, markerBlocks, mergeFileWithMarkers, refusal, shortCode, statusBlock, type ConflictMerge, type ConflictState, type RebaseOperation } from './conflicts'
 import { mergeFileContent, mergeTrees } from './branchRepo'
 import { ru } from '../locales/ru'
 
@@ -266,6 +266,124 @@ describe('statusBlock и shortCode (часть XI, «git status»)', () => {
 
   it('нет ни операции, ни неслитых путей — частей нет', () => {
     expect(statusBlock({ unmerged: {}, operation: null })).toEqual({ header: [], unmerged: [], restoreStagedHint: true, short: [] })
+  })
+})
+
+describe('rebase: вывод остановки, заголовок статуса, отказы (часть XI; К6, К13.b, К14.3, П8.11)', () => {
+  const id = (short: string) => short.padEnd(40, '0')
+  const step = (short: string, subject: string) => ({ id: id(short), subject })
+  const fix = step('a48b638', 'fix: опечатка в логе')
+  const about = step('c290621', 'Добавить страницу «О проекте»')
+  const op = (over: Partial<RebaseOperation> = {}): RebaseOperation => ({ kind: 'rebase', branch: 'feature', origHead: id('c290621'), onto: id('2e13bdd'), done: [fix], todo: [about], mergeMsg: true, committed: false, ...over })
+  const conflicted = { 'app.js': { kind: 'both-modified' as const } }
+  const status = (block: string, command = 'git status') => protocolEntry(block, command).output.split('\n')
+
+  it('conflictOutput: Auto-merging, CONFLICT, error: could not apply, пять строк hint и `Could not apply <id7>... # <тема>` (К6.1, П8.11)', () => {
+    const merge = mergeOf({ 'app.js': seed.appBase }, { 'app.js': 'console.log("v2");\n' }, { 'app.js': seed.appFixed })
+    const output = conflictOutput({ command: 'rebase', merge, commit: fix })
+    const expected = protocolEntry('К6.1', 'git rebase master').output.replace(/^Rebasing \(1\/2\)<CR>/, '')
+    expect(output).toBe(expected.replaceAll('871ab0c', 'a48b638'))
+    expect(protocolEntry('П8.11', 'git rebase master').output).toContain('hint: Resolve all conflicts manually, mark them as resolved with')
+    expect(output.split('\n')).toHaveLength(9)
+  })
+
+  it('conflictOutput: add/add на последнем коммите, строка `Auto-merging` и `CONFLICT (add/add)` (К14.3)', () => {
+    const merge = mergeOf({}, { 'about.html': '<h1>About</h1>\n' }, { 'about.html': '<h1>О проекте</h1>\n' })
+    const output = conflictOutput({ command: 'rebase', merge, commit: about })
+    const expected = protocolEntry('К14.3', 'git rebase master').output.replace(/^Rebasing \(1\/2\)<CR>Rebasing \(2\/2\)<CR>/, '')
+    expect(output).toBe(expected.replaceAll('f2c0279', 'c290621'))
+  })
+
+  it('заголовок с неслитым путём: pick сделанного и оставшегося, три подсказки, раздел с restore --staged (П8.11, О10)', () => {
+    const parts = statusBlock({ unmerged: conflicted, operation: op() })
+    const expected = status('П8.11')
+    expect(parts.header).toEqual(expected.slice(0, 10))
+    expect(parts.unmerged).toEqual(expected.slice(11, 15))
+    expect(parts.restoreStagedHint).toBe(true)
+    expect(status('О10').slice(7, 10)).toEqual(parts.header.slice(7))
+  })
+
+  it('все пути добавлены: три подсказки заменены одной `all conflicts fixed` (К6.3)', () => {
+    const parts = statusBlock({ unmerged: {}, operation: op() })
+    const expected = status('К6.3')
+    expect(parts.header).toEqual([...expected.slice(0, 7), expected[7]].map((line) => line.replace('542be3b', '2e13bdd').replace('871ab0c', 'a48b638').replace('b3fa05e', 'c290621')))
+    expect(parts.header).toHaveLength(8)
+  })
+
+  it('запись о коммите ушла (после commit, reset, reset --hard): `editing a commit` и две подсказки (К6.4, К6.6, К10.b)', () => {
+    const parts = statusBlock({ unmerged: {}, operation: op({ mergeMsg: false }) })
+    const expected = status('К6.6', 'git status')
+    expect(parts.header).toEqual(expected.slice(0, 9).map((line) => line.replace('3546b3e', '2e13bdd').replace('de1bafa', 'a48b638').replace('ccaa5e5', 'c290621')))
+    expect(parts.header.slice(6)).toEqual(status('К10.b').slice(6, 9).map((line) => line.replace('8405d75', '2e13bdd')))
+  })
+
+  it('шагов не осталось: `No commands remaining.` вместо `Next command…` и `(use "git rebase --edit-todo"…)`; сделано два: `Last commands done (2 commands done):` (К14.3)', () => {
+    const first = step('91abab0', 'fix: опечатка в логе')
+    const last = step('f2c0279', 'Добавить страницу «О проекте»')
+    const parts = statusBlock({ unmerged: { 'about.html': { kind: 'both-added' } }, operation: op({ onto: id('080bc61'), done: [first, last], todo: [] }) })
+    expect(parts.header).toEqual(status('К14.3').slice(0, 9))
+    expect(parts.unmerged[parts.unmerged.length - 1]).toBe('\tboth added:      about.html')
+    expect(parts.short).toEqual([{ path: 'about.html', code: 'AA' }])
+    const single = statusBlock({ unmerged: conflicted, operation: op({ todo: [] }) }).header
+    expect(single.slice(1, 4)).toEqual(['Last command done (1 command done):', '   pick a48b638 # fix: опечатка в логе', 'No commands remaining.'])
+    expect(protocolEntry('К3.5', 'git status').output).toContain('Last command done (1 command done):\n   pick 368ff08 # Ещё строка\nNo commands remaining.')
+  })
+
+  it('HEAD на ветке после checkout -b: строки `interactive rebase in progress` нет, остальное то же (К13.b)', () => {
+    const header = statusBlock({ unmerged: conflicted, operation: op() }, { headOnBranch: true }).header
+    expect(header).toEqual(status('К13.b').slice(1, 10).map((line) => line.replace('023e640', 'a48b638').replace('ee9a707', 'c290621').replace('b010cba', '2e13bdd')))
+  })
+
+  it('число шагов, которого нет в прогонах, — нарушение условия вызова: исключение', () => {
+    expect(() => statusBlock({ unmerged: conflicted, operation: op({ done: [fix, about, fix] }) })).toThrow()
+    expect(() => statusBlock({ unmerged: conflicted, operation: op({ todo: [about, about] }) })).toThrow()
+  })
+
+  it('rebase --continue при неслитых путях: `needs merge` и две строки, код 1 (К6.2)', () => {
+    const entry = protocolEntry('К6.2', 'git rebase --continue')
+    expect(refusal({ name: 'rebase-continue' }, { unmerged: conflicted, operation: op() })).toEqual({ output: entry.output, exitCode: entry.exitCode })
+    expect(refusal({ name: 'rebase-continue' }, { unmerged: {}, operation: op() })).toBeNull()
+  })
+
+  it('новый rebase <база>, пока идёт rebase: блок о каталоге rebase-merge с пустой строкой в конце, код 128, и при неслитых путях, и без них (К6.2)', () => {
+    const entry = protocolEntry('К6.2', 'git rebase master')
+    const expected = { output: entry.output, exitCode: 128 }
+    expect(refusal({ name: 'rebase' }, { unmerged: conflicted, operation: op() })).toEqual(expected)
+    expect(refusal({ name: 'rebase' }, { unmerged: {}, operation: op({ mergeMsg: false }) })).toEqual(expected)
+    expect(entry.output.endsWith('valuable there.\n')).toBe(true)
+  })
+
+  it('матрица `--abort` и `--continue` не своей команды: rebase без операции — `fatal: no rebase in progress`; cherry-pick без операции — две строки (К6.3, К6.7, К6.2)', () => {
+    const noRebase = protocolEntry('К6.7', 'git rebase --continue')
+    expect(refusal({ name: 'rebase-step' }, { unmerged: {}, operation: null })).toEqual({ output: noRebase.output, exitCode: noRebase.exitCode })
+    expect(protocolEntry('К6.3', 'git rebase --abort').output).toBe(noRebase.output)
+    // чужая операция и конфликт тайника отвечают так же «по признаку»
+    expect(refusal({ name: 'rebase-step' }, { unmerged: {}, operation: { kind: 'cherry-pick', commit: id('ae28885') } })?.output).toBe(noRebase.output)
+    expect(refusal({ name: 'rebase-step' }, { unmerged: conflicted })?.output).toBe(noRebase.output)
+    expect(refusal({ name: 'rebase-step' }, { unmerged: conflicted, operation: op() })).toBeNull()
+    const noPick = protocolEntry('К6.2', 'git cherry-pick --abort')
+    expect(refusal({ name: 'cherry-pick-step' }, { unmerged: conflicted, operation: op() })).toEqual({ output: noPick.output, exitCode: noPick.exitCode })
+    expect(protocolEntry('К6.7', 'git cherry-pick --continue').output).toBe(noPick.output)
+    expect(refusal({ name: 'cherry-pick-step' }, { unmerged: {}, operation: null })?.output).toBe(noPick.output)
+    expect(refusal({ name: 'cherry-pick-step' }, { unmerged: conflicted, operation: { kind: 'cherry-pick', commit: id('ae28885') } })).toBeNull()
+  })
+
+  it('switch <ветка> посреди rebase: `cannot switch branch while rebasing` и строка про --quit, код 128 (О10)', () => {
+    const entry = protocolEntry('О10', 'git switch master')
+    expect(refusal({ name: 'switch-branch' }, { unmerged: conflicted, operation: op() })).toEqual({ output: entry.output, exitCode: entry.exitCode })
+    expect(refusal({ name: 'switch-branch' }, { unmerged: conflicted, operation: null })).toBeNull()
+    expect(refusal({ name: 'switch-branch' }, { unmerged: {}, operation: { kind: 'cherry-pick', commit: id('ae28885') } })).toBeNull()
+  })
+
+  it('прочие отказы таблицы не зависят от вида операции: commit, checkout <ветка>, stash, stash pop, reset --soft, cherry-pick (К6.2, К6.4, К10.b, К16.b)', () => {
+    const state = { unmerged: conflicted, operation: op() }
+    expect(refusal({ name: 'commit' }, state)?.output).toBe(protocolEntry('К6.4', 'git commit -m x').output)
+    expect(refusal({ name: 'checkout-branch' }, state)?.output).toBe(protocolEntry('К6.2', 'git checkout master').output)
+    expect(refusal({ name: 'stash' }, state)?.output).toBe(protocolEntry('К6.2', 'git stash').output)
+    expect(refusal({ name: 'stash-pop' }, state)?.output).toBe(protocolEntry('К16.b', 'git stash pop').output)
+    expect(refusal({ name: 'stash-apply' }, state)?.output).toBe(protocolEntry('К16.b', 'git stash apply').output)
+    expect(refusal({ name: 'reset-soft' }, state)?.output).toBe(protocolEntry('К10.b', 'git reset --soft HEAD').output)
+    expect(refusal({ name: 'cherry-pick' }, state)?.output).toBe(protocolEntry('К6.2', 'git cherry-pick master').output)
   })
 })
 

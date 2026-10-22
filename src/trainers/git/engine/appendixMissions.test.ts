@@ -1,10 +1,11 @@
 // Миссии раздела 8 (target.md, часть X, «Миссии»): 1 — лёгкий тег, 2 — git show аннотированного тега, 3 — спрятать правку,
-// 4 — вернуть спрятанное (шаг A), 5 — cherry-pick, 6 — спасти коммит через reset --hard HEAD@{n} (шаг B, без rebase).
+// 4 — вернуть спрятанное (шаг A), 5 — cherry-pick, 6 — спасти коммит через reset --hard HEAD@{n} (шаг B), 7 — rebase (в том числе по --continue и --skip после конфликта, шаг C).
 // По событию; засчитанная остаётся засчитанной (часть I, п. 2).
 import { describe, expect, it } from 'vitest'
 import { getAppendixMissions, markMission } from './appendixMissions'
 import { APPENDIX_MISSION_IDS } from './appendixTypes'
 import { fresh, run, runAll } from './appendixProtocolKit'
+import { chooseConflictPart, editAppendixFile } from './appendixSection'
 import { ru } from '../locales/ru'
 
 describe('список миссий', () => {
@@ -67,6 +68,16 @@ describe('зачёт по событию', () => {
   it('отказ области и ошибки миссий не засчитывают', () => {
     const s = runAll(fresh(), ['git tag -a v1', 'git tag -s v1', 'git tag v1 nosuch', 'git tag "a b"', 'git stash'])
     expect(s.missionsDone).toEqual({ lightTag: false, annotatedShow: false, stashSave: false, stashRestore: false, cherryPick: false, rescueCommit: false, rebase: false })
+  })
+
+  it('миссия 7: rebase с остановкой на конфликте засчитывается по --continue и --skip, но не по остановке и не по --abort (К6.3, К6.5, К6.6)', () => {
+    const stopped = run(runAll(editAppendixFile(fresh(), 'app.js'), ['git commit -am "master: v2"', 'git checkout feature']), 'git rebase master').state
+    expect(stopped.missionsDone.rebase).toBe(false)
+    expect(run(stopped, 'git rebase --abort').state.missionsDone.rebase).toBe(false)
+    expect(run(stopped, 'git rebase --continue').state.missionsDone.rebase).toBe(false)
+    const added = run(chooseConflictPart(stopped, 'app.js', 'both'), 'git add app.js').state
+    expect(run(added, 'git rebase --continue').state.missionsDone.rebase).toBe(true)
+    expect(run(stopped, 'git rebase --skip').state.missionsDone.rebase).toBe(true)
   })
 
   it('сброс раздела: новое состояние без выполненных миссий', () => {

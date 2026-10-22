@@ -13,8 +13,9 @@
 // Вывод сверен с docs/git-trainer/reports/detached-head-git-runs.txt (О1–О31), section8-git-runs.txt (П8.15, П8.19),
 // appendix-g18e-git-runs.txt (П8.28, П8.32–П8.40) и appendix-g18g-git-runs.txt (П8.57–П8.68).
 //
-// Посреди cherry-pick и конфликта тайника (часть XI): проходят `-b <имя>` (у cherry-pick с предупреждением), `HEAD -- <файл>`, `-- <файл>`,
-// отказывают `<ветка>` и `-- <неслитый файл>`; остальное — отказ области (checkoutInConflict).
+// Посреди cherry-pick, rebase и конфликта тайника (часть XI): проходят `-b <имя>` (у cherry-pick с предупреждением, у rebase операция
+// продолжается на новой ветке, К13.b), `HEAD -- <файл>`, `-- <файл>`, отказывают `<ветка>` и `-- <неслитый файл>`; остальное — отказ области
+// (checkoutInConflict).
 //
 // Проверки git идут в таком порядке (П8.68): форма команды → ссылка → «нужна ветка» у `switch` → правки, которые
 // переход затёр бы. Ошибка игрока (отказ git) — результат с кодом возврата, не исключение.
@@ -276,7 +277,7 @@ function restoreFromHead(state: AppendixState, paths: readonly string[]): Outcom
     working[p] = head[p]
     delete unmerged[p]
   }
-  return exited({ ...state, index, working, unmerged }, '', 0, ru.conflicts.checkoutHeadFile([...new Set(paths)], state.operation !== null))
+  return exited({ ...state, index, working, unmerged }, '', 0, ru.conflicts.checkoutHeadFile([...new Set(paths)], state.operation === null ? null : state.operation.kind))
 }
 
 /**
@@ -291,6 +292,8 @@ function checkoutInConflict(state: AppendixState, args: readonly string[]): Outc
     const made = createBranchAndSwitch(state, args[1], 'checkout')
     if (made.result.exitCode !== 0 || state.operation === null) return made
     if (!unmerged) return conflictForm(state, `checkout ${args.join(' ')}`)
+    // У rebase операция продолжается на новой ветке, предупреждения нет (К13.b).
+    if (state.operation.kind === 'rebase') return exited(made.state, made.result.output, 0, ru.conflicts.rebaseCheckoutBranch(state.operation.branch))
     const notes = [made.result.explanation, ru.conflicts.checkoutCancelled].filter((n): n is string => n !== null)
     return exited({ ...made.state, operation: null }, `${made.result.output}\nwarning: cancelling a cherry picking in progress`, 0, notes.join(' '))
   }
