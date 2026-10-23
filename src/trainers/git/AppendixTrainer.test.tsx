@@ -4,10 +4,24 @@ import { MemoryRouter } from 'react-router'
 import { dictionary as site } from '../../i18n'
 import AppendixTrainer from './AppendixTrainer'
 import source from './AppendixTrainer.tsx?raw'
-import { createAppendixSection, getAppendixMissions, getFileContent, getWorkingFiles } from './engine/appendixSection'
+import {
+  chooseConflictPart,
+  createAppendixSection,
+  editAppendixFile,
+  getAppendixMissions,
+  getCommits,
+  getConflictFiles,
+  getConflictView,
+  getFileContent,
+  getWorkingFiles,
+  runAppendixCommand,
+} from './engine/appendixSection'
+import type { AppendixState } from './engine/appendixSection'
 import { ru } from './locales/ru'
 
 const ui = ru.appendix.ui
+const cui = ru.conflicts.ui
+const rc = ru.conflicts
 
 const renderScreen = () =>
   render(
@@ -32,6 +46,52 @@ const doneCount = () => document.querySelectorAll('[data-done="true"]').length
 async function run(user: ReturnType<typeof userEvent.setup>, line: string) {
   await user.type(terminalInput(), `${line}{Enter}`)
 }
+
+// ---------- Step C helpers ----------
+
+type User = ReturnType<typeof userEvent.setup>
+
+const editApp = (user: User) => user.click(screen.getByRole('button', { name: `${ui.files.editButton}: app.js` }))
+const framePanel = () => screen.getByRole('region', { name: cui.frame.title })
+const frameAbsent = () => expect(screen.queryByRole('region', { name: cui.frame.title })).toBeNull()
+const keepButton = (label: string, path = 'app.js') => screen.getByRole('button', { name: `${cui.editor.keepPart(label)}: ${path}` })
+const bothButton = (path = 'app.js') => screen.getByRole('button', { name: `${cui.editor.keepBoth}: ${path}` })
+const markerLines = () => Array.from(filesPanel().querySelectorAll('[data-marker="true"]')).map((el) => el.textContent ?? '')
+
+async function runAll(user: User, lines: string[]) {
+  for (const line of lines) await run(user, line)
+}
+
+/** The player's own input: an edit of app.js committed on master, then the copied fix from feature. */
+const cherryPickConflict = async (user: User) => {
+  await editApp(user)
+  await runAll(user, ['git commit -am "master: v2"', 'git cherry-pick feature~1'])
+}
+/** The edit is stashed on master, HEAD moves to feature, the stash comes back with a conflict. */
+const stashConflict = async (user: User, command = 'git stash pop') => {
+  await editApp(user)
+  await runAll(user, ['git stash', 'git checkout feature', command])
+}
+/** The edit is committed on master, feature is rebased onto it: stops on the first commit. */
+const rebaseConflict = async (user: User) => {
+  await editApp(user)
+  await runAll(user, ['git commit -am "master: v2"', 'git checkout feature', 'git rebase master'])
+}
+/** about.html created on master and committed: the rebase of feature copies the fix and stops on about.html (both added). */
+const rebaseConflictOnLastCommit = async (user: User) => {
+  await user.type(newFileField(), 'about.html{Enter}')
+  await runAll(user, ['git add about.html', 'git commit -m "master: about"', 'git checkout feature', 'git rebase master'])
+}
+
+// The same scenarios built straight in the engine: only to know what the engine answers (exit code, text) for a line.
+const engineRun = (state: AppendixState, lines: string[]) => lines.reduce((s, line) => runAppendixCommand(s, line).state, state)
+const engineEdited = () => editAppendixFile(createAppendixSection(), 'app.js')
+const ENGINE = {
+  'cherry-pick': () => engineRun(engineEdited(), ['git commit -am "master: v2"', 'git cherry-pick feature~1']),
+  stash: () => engineRun(engineEdited(), ['git stash', 'git checkout feature', 'git stash pop']),
+  rebase: () => engineRun(engineEdited(), ['git commit -am "master: v2"', 'git checkout feature', 'git rebase master']),
+}
+const SCREEN = { 'cherry-pick': cherryPickConflict, stash: stashConflict, rebase: rebaseConflict }
 
 describe('AppendixTrainer', () => {
   it('renders inside a sky-os window with the page heading and a link back to the trainers', () => {
@@ -398,6 +458,414 @@ describe('AppendixTrainer', () => {
 
     await user.click(screen.getByRole('button', { name: ui.resetButton }))
     expect(graph().querySelector('[data-faded]')).toBeNull()
+  })
+
+  describe('step C: cherry-pick with a conflict', () => {
+    it('stops with git exit code 1, marked failed, and shows the frame, the unmerged path and the highlighted markers', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+
+      const answer = runAppendixCommand(ENGINE['cherry-pick'](), 'git status').result!
+      expect(answer.ok).toBe(true)
+      const stop = ENGINE['cherry-pick']().history.filter((h) => h.kind === 'command').at(-1)!
+      expect(stop.kind === 'command' && stop.ok).toBe(false)
+      expect(within(log()).getByText(/CONFLICT \(content\): Merge conflict in app\.js/)).toBeInTheDocument()
+      expect(within(log()).getByText(site.trainers.failedOutput)).toBeInTheDocument()
+
+      const frame = framePanel()
+      expect(within(frame).getByText(cui.frame.operationCherryPick)).toBeInTheDocument()
+      expect(within(frame).getByText('UU')).toBeInTheDocument()
+      expect(within(frame).getByText(rc.cherryPickFinish)).toBeInTheDocument()
+      expect(within(frame).getByText(rc.cherryPickAbort)).toBeInTheDocument()
+      expect(within(frame).getByText(cui.frame.speaker)).toBeInTheDocument()
+      expect(frame.textContent).not.toMatch(/error:|hint:/)
+      expect(screen.getByRole('status')).toContainElement(frame)
+
+      const file = within(filesPanel()).getAllByRole('listitem').find((li) => li.textContent?.includes('app.js'))!
+      expect(within(file).getByText('UU')).toBeInTheDocument()
+      expect(within(file).getByText(cui.files.unmergedWord)).toBeInTheDocument()
+      expect(markerLines()).toHaveLength(3)
+      expect(markerLines()[0]).toMatch(/^<<<<<<< HEAD$/)
+      expect(markerLines()[1]).toBe('=======')
+      expect(markerLines()[2]).toMatch(/^>>>>>>> [0-9a-f]{7} \(/)
+      expect(missionItem(4)).toHaveAttribute('data-done', 'false')
+    })
+
+    it('shows the editor buttons with labels from the file, a group caption and no ours/theirs words', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      const [file] = getConflictFiles(ENGINE['cherry-pick']())
+      expect(file.topLabel).toBe('HEAD')
+      const group = screen.getByRole('group', { name: `${cui.editor.groupLabel}: app.js` })
+      expect(within(group).getByText(cui.editor.groupLabel)).toBeInTheDocument()
+      expect(keepButton('HEAD')).toBeInTheDocument()
+      expect(keepButton(file.bottomLabel)).toBeInTheDocument()
+      expect(bothButton()).toBeInTheDocument()
+      expect(group.textContent).not.toMatch(/ours|theirs|своё|чужое/i)
+      expect(screen.queryByText(cui.editor.rebaseSpeech)).toBeNull()
+    })
+
+    it('a button changes only the working copy: the path stays unmerged (UU) until git add, the note comes from the engine', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      const [file] = getConflictFiles(ENGINE['cherry-pick']())
+      await user.click(keepButton(file.bottomLabel))
+
+      expect(markerLines()).toHaveLength(0)
+      expect(within(filesPanel()).getByText(ru.appendix.seed.appFixed.trim())).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: new RegExp(cui.editor.keepBoth) })).toBeNull()
+      expect(within(log()).getByText(`# ${rc.choiceNote('bottom', 'app.js', file.topLabel, file.bottomLabel, rc.finishCherryPick)}`)).toBeInTheDocument()
+      expect(within(filesPanel()).getByText('UU')).toBeInTheDocument()
+      expect(within(framePanel()).getByText('UU')).toBeInTheDocument()
+      await run(user, 'git status --short')
+      expect(within(log()).getByText(/^UU app\.js$/)).toBeInTheDocument()
+    })
+
+    it('the edit button keeps the markers', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      await editApp(user)
+      expect(markerLines()).toHaveLength(3)
+    })
+
+    it('git add leaves the finish step in the frame and names the command; --continue ends the operation and counts mission 5', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      await user.click(bothButton())
+      await run(user, 'git add app.js')
+      expect(within(framePanel()).getByText(rc.cherryPickFinishAdded)).toBeInTheDocument()
+      expect(within(framePanel()).getByText(cui.frame.noUnmerged)).toBeInTheDocument()
+      expect(missionItem(4)).toHaveAttribute('data-done', 'false')
+
+      await run(user, 'git cherry-pick --continue')
+      expect(within(log()).getByText(/\[master [0-9a-f]{7}\] fix: опечатка в логе/)).toBeInTheDocument()
+      frameAbsent()
+      expect(missionItem(4)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('git status in the middle of the operation, --skip and --abort end it without mission 5', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      await run(user, 'git status')
+      expect(within(log()).getByText(/You are currently cherry-picking commit/)).toBeInTheDocument()
+      await run(user, 'git cherry-pick --skip')
+      expect(log().textContent).toContain(`💡 ${rc.cherryPickSkipped}`)
+      frameAbsent()
+      expect(markerLines()).toHaveLength(0)
+      expect(missionItem(4)).toHaveAttribute('data-done', 'false')
+    })
+
+    it('--abort ends the operation without mission 5', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      await run(user, 'git cherry-pick --abort')
+      frameAbsent()
+      expect(markerLines()).toHaveLength(0)
+      expect(missionItem(4)).toHaveAttribute('data-done', 'false')
+    })
+
+    it('a git refusal in the middle of the conflict (commit with unmerged files) has exit code 128 and no trainer marker', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      const { result } = runAppendixCommand(ENGINE['cherry-pick'](), 'git commit -m "x"')
+      expect(result!.exitCode).toBe(128)
+      expect(result!.output.startsWith('[тренажёр]')).toBe(false)
+      await run(user, 'git commit -m "x"')
+      expect(within(log()).getByText(/Committing is not possible because you have unmerged files\./)).toBeInTheDocument()
+      expect(within(log()).getAllByText(site.trainers.failedOutput, { exact: false }).length).toBeGreaterThan(0)
+      framePanel()
+    })
+
+    it('a path deleted with the trash button disappears from the files but stays an unmerged path, named from the conflict view', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      await user.click(screen.getByRole('button', { name: `${ui.files.deleteButton}: app.js` }))
+      expect(screen.queryByRole('button', { name: `${ui.files.editButton}: app.js` })).toBeNull()
+      const gone = within(filesPanel()).getByText(`${cui.files.unmergedWord}, ${cui.files.unmergedGone}`)
+      expect(gone.closest('li')).toHaveTextContent('app.js')
+      expect(gone.closest('li')).toHaveTextContent('UU')
+      expect(within(framePanel()).getByText('app.js')).toBeInTheDocument()
+    })
+  })
+
+  describe('step C: area refusals and git refusals are told apart by the engine answer, the screen shows the history as it is', () => {
+    const areaRefusals: [keyof typeof ENGINE, string][] = [
+      ['cherry-pick', 'git rebase --quit'],
+      ['cherry-pick', 'git cherry-pick --quit'],
+      ['cherry-pick', 'git merge feature'],
+      ['cherry-pick', 'git diff'],
+      ['cherry-pick', 'git switch -c other'],
+      ['cherry-pick', 'git commit --allow-empty -m "x"'],
+      ['rebase', 'git merge feature'],
+      ['rebase', 'git rebase --quit'],
+    ]
+    it.each(areaRefusals)('%s: "%s" is an area refusal (no exit code, starts with the marker) and is shown with it', async (kind, line) => {
+      const user = userEvent.setup()
+      renderScreen()
+      await SCREEN[kind](user)
+      const { result } = runAppendixCommand(ENGINE[kind](), line)
+      expect(result!.exitCode).toBeUndefined()
+      expect(result!.ok).toBe(false)
+      expect(result!.output.startsWith('[тренажёр]')).toBe(true)
+      await run(user, line)
+      expect(log().textContent).toContain(result!.output)
+    })
+
+    const gitRefusals: [keyof typeof ENGINE, string][] = [
+      ['cherry-pick', 'git commit -m "x"'],
+      ['rebase', 'git switch feature'],
+      ['rebase', 'git cherry-pick feature'],
+      ['rebase', 'git stash'],
+      ['rebase', 'git rebase --continue'],
+    ]
+    it.each(gitRefusals)('%s: "%s" is an answer of git with a number exit code, not an area refusal', async (kind, line) => {
+      const user = userEvent.setup()
+      renderScreen()
+      await SCREEN[kind](user)
+      const { result } = runAppendixCommand(ENGINE[kind](), line)
+      expect(typeof result!.exitCode).toBe('number')
+      expect(result!.ok).toBe(result!.exitCode === 0)
+      expect(result!.output.startsWith('[тренажёр]')).toBe(false)
+      await run(user, line)
+      expect(log().textContent).toContain(result!.output)
+    })
+
+    it('the stop on a conflict has exit code 1 and the failed mark; the success of --continue has exit code 0 and no mark', async () => {
+      const stop = ENGINE['cherry-pick']().history.at(-1)
+      expect(stop?.kind === 'command' && stop.ok).toBe(false)
+      expect(runAppendixCommand(engineRun(engineEdited(), ['git commit -am "master: v2"']), 'git cherry-pick feature~1').result!.exitCode).toBe(1)
+      const resolved = engineRun(ENGINE['cherry-pick'](), ['git add app.js'])
+      expect(runAppendixCommand(resolved, 'git cherry-pick --continue').result!.exitCode).toBe(0)
+
+      const user = userEvent.setup()
+      renderScreen()
+      await cherryPickConflict(user)
+      expect(within(log()).getAllByText(site.trainers.failedOutput)).toHaveLength(1)
+      await user.click(bothButton())
+      await runAll(user, ['git add app.js', 'git cherry-pick --continue'])
+      expect(within(log()).getAllByText(site.trainers.failedOutput)).toHaveLength(1)
+    })
+  })
+
+  describe('step C: stash pop and stash apply with a conflict', () => {
+    it('stash pop: the frame names the stash, not an operation; the labels are Updated upstream and Stashed changes; the stash stays', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await stashConflict(user)
+      const frame = framePanel()
+      expect(within(frame).getByText(cui.frame.operationStash)).toBeInTheDocument()
+      expect(within(frame).getByText(rc.stashFinish)).toBeInTheDocument()
+      expect(within(frame).getByText(rc.stashAbort)).toBeInTheDocument()
+      expect(within(frame).getByText('UU')).toBeInTheDocument()
+      expect(keepButton('Updated upstream')).toBeInTheDocument()
+      expect(keepButton('Stashed changes')).toBeInTheDocument()
+      expect(screen.queryByText(cui.editor.rebaseSpeech)).toBeNull()
+      expect(missionItem(3)).toHaveAttribute('data-done', 'false')
+      await run(user, 'git stash list')
+      expect(within(log()).getByText(/^stash@\{0\}: WIP on master:/)).toBeInTheDocument()
+    })
+
+    it('stash apply: the same frame; mission 4 is not counted', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await stashConflict(user, 'git stash apply')
+      expect(within(framePanel()).getByText(cui.frame.operationStash)).toBeInTheDocument()
+      expect(missionItem(3)).toHaveAttribute('data-done', 'false')
+    })
+
+    it('git add takes the frame away; the hint about git stash drop is the 💡 line of git add; git stash drop ends it', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await stashConflict(user)
+      await user.click(keepButton('Stashed changes'))
+      await run(user, 'git add app.js')
+      frameAbsent()
+      const chosen = chooseConflictPart(ENGINE.stash(), 'app.js', 'bottom')
+      expect(getConflictView(engineRun(chosen, ['git add app.js']))).toBeNull()
+      const added = runAppendixCommand(chosen, 'git add app.js').result!
+      expect(added.explanation).toContain(rc.allAddedStash)
+      expect(log().textContent).toContain(`💡 ${added.explanation}`)
+      await run(user, 'git stash drop')
+      expect(within(log()).getByText(/Dropped refs\/stash@\{0\}/)).toBeInTheDocument()
+    })
+
+    it('git reset --hard takes the frame and the markers away (no --abort for a stash)', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await stashConflict(user)
+      await run(user, 'git reset --hard')
+      frameAbsent()
+      expect(markerLines()).toHaveLength(0)
+      expect(within(filesPanel()).queryByText(cui.files.unmergedWord)).toBeNull()
+    })
+
+    it('git status in the middle of the stash conflict lists the unmerged path', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await stashConflict(user)
+      await run(user, 'git status')
+      expect(within(log()).getAllByText(/Unmerged paths:/).length).toBeGreaterThan(0)
+    })
+
+    it('mission 4 is counted for a pop without a conflict', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await editApp(user)
+      await runAll(user, ['git stash', 'git stash pop'])
+      expect(missionItem(3)).toHaveAttribute('data-done', 'true')
+      frameAbsent()
+    })
+  })
+
+  describe('step C: rebase with a conflict', () => {
+    it('stops on a conflict: the frame names rebase, the prompt and the graph show the detached HEAD, the status header is in the log', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      const state = ENGINE.rebase()
+      expect(state.head.kind).toBe('detached')
+      expect(within(framePanel()).getByText(cui.frame.operationRebase)).toBeInTheDocument()
+      expect(within(framePanel()).getByText(rc.rebaseFinish)).toBeInTheDocument()
+      expect(within(framePanel()).getByText(rc.rebaseAbort)).toBeInTheDocument()
+      expect(framePanel().textContent).not.toMatch(/merge/)
+      expect(screen.getAllByText(ui.terminal.promptDetached(state.head.kind === 'detached' ? state.head.id.slice(0, 7) : '')).length).toBeGreaterThan(0)
+
+      const commits = getCommits(state)
+      expect(commits.some((c) => c.decorations.includes('HEAD'))).toBe(true)
+      expect(commits.some((c) => c.decorations.some((d) => d.startsWith('HEAD ->')))).toBe(false)
+      expect(within(graph()).getByText('HEAD')).toBeInTheDocument()
+      expect(within(graph()).queryByText(/HEAD ->/)).toBeNull()
+      expect(within(graph()).getByText('feature')).toBeInTheDocument()
+
+      await run(user, 'git status')
+      const header = runAppendixCommand(state, 'git status').result!.output
+      expect(header).not.toMatch(/On branch/)
+      expect(log().textContent).toContain(header)
+      expect(within(log()).queryByText(/On branch feature/)).toBeNull()
+    })
+
+    it('shows the speech "HEAD is the new base" next to the editor buttons, with the labels of the file', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      expect(getConflictView(ENGINE.rebase())!.headIsNewBase).toBe(true)
+      expect(screen.getByText(cui.editor.rebaseSpeech)).toBeInTheDocument()
+      const [file] = getConflictFiles(ENGINE.rebase())
+      expect(keepButton('HEAD')).toBeInTheDocument()
+      expect(keepButton(file.bottomLabel)).toBeInTheDocument()
+      expect(markerLines()).toHaveLength(3)
+    })
+
+    it('--continue after the conflict: the final line, the frame is gone, old commits turn faded, mission 7 counts', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      expect(missionItem(6)).toHaveAttribute('data-done', 'false')
+      await user.click(bothButton())
+      await run(user, 'git add app.js')
+      expect(within(framePanel()).getByText(rc.rebaseFinishAdded)).toBeInTheDocument()
+      await run(user, 'git rebase --continue')
+      expect(within(log()).getByText(/Successfully rebased and updated refs\/heads\/feature\./)).toBeInTheDocument()
+      frameAbsent()
+      expect(screen.getAllByText('(feature) $').length).toBeGreaterThan(0)
+      const faded = graph().querySelectorAll('[data-faded]')
+      expect(faded.length).toBeGreaterThan(0)
+      expect(within(faded[0] as HTMLElement).getByText(ui.commitGraph.fadedNote, { exact: false })).toBeInTheDocument()
+      expect(missionItem(6)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('--skip after the conflict counts mission 7 too', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      await run(user, 'git rebase --skip')
+      frameAbsent()
+      expect(missionItem(6)).toHaveAttribute('data-done', 'true')
+    })
+
+    it('--abort does not count mission 7, brings HEAD back to the branch and removes the frame', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      await run(user, 'git rebase --abort')
+      frameAbsent()
+      expect(markerLines()).toHaveLength(0)
+      expect(screen.getAllByText('(feature) $').length).toBeGreaterThan(0)
+      expect(missionItem(6)).toHaveAttribute('data-done', 'false')
+    })
+
+    it('--abort after a stop on the last commit turns the copies made before it faded', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflictOnLastCommit(user)
+      expect(within(framePanel()).getByText('AA')).toBeInTheDocument()
+      expect(within(framePanel()).getByText(rc.kindBothAdded, { exact: false })).toBeInTheDocument()
+      expect(within(filesPanel()).getByText('AA')).toBeInTheDocument()
+      expect(graph().querySelector('[data-faded]')).toBeNull()
+      await run(user, 'git rebase --abort')
+      frameAbsent()
+      expect(graph().querySelectorAll('[data-faded]').length).toBeGreaterThan(0)
+    })
+
+    it('git add of every path and then git reset --hard leave the rebase going: the frame still names the finishing command', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflict(user)
+      await user.click(bothButton())
+      await run(user, 'git add app.js')
+      await run(user, 'git reset --hard')
+      expect(within(framePanel()).getByText(rc.rebaseFinishAdded)).toBeInTheDocument()
+    })
+  })
+
+  describe('step C: the section starts over', () => {
+    it('removes the unmerged paths, the operation, the frame and the faded commits and zeroes the missions', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflictOnLastCommit(user)
+      await run(user, 'git rebase --abort')
+      await run(user, 'git tag v1.0.0')
+      await rebaseConflict(user)
+      await user.click(screen.getByRole('button', { name: ui.resetButton }))
+
+      frameAbsent()
+      expect(markerLines()).toHaveLength(0)
+      expect(within(filesPanel()).queryByText(cui.files.unmergedWord)).toBeNull()
+      expect(graph().querySelector('[data-faded]')).toBeNull()
+      expect(doneCount()).toBe(0)
+      expect(screen.getByText('(master) $')).toBeInTheDocument()
+      expect(within(filesPanel()).getAllByRole('listitem')).toHaveLength(getWorkingFiles(initial()).length)
+    })
+  })
+
+  describe('step C: texts', () => {
+    it('the intro tells about the conflicts, the editor buttons and --continue, --skip, --abort', () => {
+      expect(ui.intro).toMatch(/конфликт/)
+      expect(ui.intro).toMatch(/--continue/)
+      expect(ui.intro).toMatch(/--skip/)
+      expect(ui.intro).toMatch(/--abort/)
+      expect(ui.intro).toMatch(/кнопк/)
+    })
+
+    it('the screen dictionary has no leftovers of "step B" or "not yet"', () => {
+      const text = JSON.stringify([ui, cui], (_k, v) => (typeof v === 'function' ? v('x') : v))
+      expect(text).not.toMatch(/шаг B|шаг A|пока нет|конфликты не разбираются/)
+    })
+
+    it('has no frame and no editor buttons without a conflict', () => {
+      renderScreen()
+      frameAbsent()
+      expect(screen.queryByRole('group')).toBeNull()
+    })
   })
 
   it('has no user strings of its own', () => {

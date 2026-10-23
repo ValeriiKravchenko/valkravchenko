@@ -1936,7 +1936,7 @@ export const ru = {
       heading: 'Git-тренажёр',
       subheading: 'Раздел 8 — приложение',
       intro:
-        'Небольшой репозиторий: ветки master и feature, четыре коммита. Ставь теги на коммиты, смотри подписи в git log и содержимое тега в git show, прячь незаконченную правку в тайник и возвращай её обратно. Можно переключаться между ветками и коммитами (git switch, git checkout), откатывать их (git reset), переносить коммиты (git cherry-pick, git rebase) и смотреть журнал перемещений HEAD (git reflog). Коммиты, которые никто больше не держит, остаются на графе бледными. Файлы можно менять кнопками рядом с терминалом.',
+        'Небольшой репозиторий: ветки master и feature, четыре коммита. Ставь теги на коммиты, смотри подписи в git log и содержимое тега в git show, прячь незаконченную правку в тайник и возвращай её обратно. Можно переключаться между ветками и коммитами (git switch, git checkout), откатывать их (git reset), переносить коммиты (git cherry-pick, git rebase) и смотреть журнал перемещений HEAD (git reflog). Коммиты, которые никто больше не держит, остаются на графе бледными. Файлы можно менять кнопками рядом с терминалом. Если cherry-pick, git stash pop или git rebase остановились на конфликте, в файле появятся строки <<<<<<<, ======= и >>>>>>>: оставь нужную часть кнопками редактора (или правкой ✎), добавь файл командой git add и закончи операцию: git cherry-pick --continue, git rebase --continue или git stash drop. Пропустить коммит можно командой --skip, отменить операцию — --abort (у тайника отмены нет: git reset --hard).',
       resetButton: '↺ Начать раздел заново',
 
       terminal: {
@@ -1958,7 +1958,7 @@ export const ru = {
 
       files: {
         title: 'Файлы в рабочем каталоге',
-        empty: 'Файлов пока нет.',
+        empty: 'В рабочем каталоге нет файлов.',
         newFileNameLabel: 'Имя нового файла',
         newFileNamePlaceholder: 'notes.txt',
         createButton: 'Создать файл',
@@ -2068,6 +2068,33 @@ export const ru = {
     stashAbort: 'У тайника нет --abort: git reset --hard вернёт всё как в HEAD, git checkout HEAD -- <файл> вернёт один файл.',
     kindBothModified: 'оба изменили файл',
     kindBothAdded: 'оба создали файл',
+
+    /** Тексты экрана раздела 8, шаг C (рамка конфликта, метки в панели файлов, кнопки редактора). Это речь тренажёра, не вывод git. */
+    ui: {
+      frame: {
+        title: 'Конфликт',
+        speaker: 'Речь тренажёра, не вывод git',
+        operationLabel: 'Что идёт',
+        operationCherryPick: 'идёт cherry-pick, он остановился на конфликте',
+        operationRebase: 'идёт rebase, он остановился на конфликте',
+        operationStash: 'неслитые пути после применения тайника',
+        unmergedLabel: 'Неслитые пути',
+        noUnmerged: 'Неслитых путей нет: все добавлены командой git add.',
+        finishLabel: 'Чем завершить',
+        abortLabel: 'Как отменить',
+      },
+      files: {
+        unmergedWord: 'неслитый путь',
+        unmergedGone: 'файла нет в рабочем каталоге',
+        statusCodeLabel: 'Код git status --short',
+      },
+      editor: {
+        groupLabel: 'Правка файла в редакторе — не команда git',
+        keepPart: (label: string) => `Оставить часть ${label}`,
+        keepBoth: 'Оставить обе части',
+        rebaseSpeech: 'HEAD здесь — новая база, твой коммит — нижняя часть.',
+      },
+    },
   },
 
   /**
