@@ -323,6 +323,17 @@ describe('--continue и git commit после git add (К5.4, К5.5, К7.1, К7.
   })
 })
 
+/**
+ * К5.6 и П8.4 сняты без построчной буферизации: подсказка о пустой копии (stderr) стоит первой, потому что stdout сбрасывается в конце
+ * команды. На терминале порядок обратный, как в П8.75 и П8.78: сначала git status, потом подсказка. Здесь протокольный вывод переставлен
+ * в порядок терминала (шесть строк подсказки уходят в конец), остальное сверяется как есть.
+ */
+function terminalOrder(output: string): string {
+  const lines = output.split('\n')
+  expect(lines[0]).toBe('The previous cherry-pick is now empty, possibly due to conflict resolution.')
+  return [...lines.slice(6), ...lines.slice(0, 6)].join('\n')
+}
+
 describe('итог совпал с HEAD (К5.6) и пустой cherry-pick с начала (П8.4)', () => {
   const matchesHead = () => run(chooseConflictPart(picking(), 'app.js', 'top'), 'git add app.js').state
 
@@ -330,9 +341,13 @@ describe('итог совпал с HEAD (К5.6) и пустой cherry-pick с �
     const ids: IdMap = new Map()
     const before = matchesHead()
     expect(run(before, 'git status').result.output).toBe(protocolEntry('К5.6', 'git status').output.replace(/ae28885/, (before.operation as { commit: string }).commit.slice(0, 7)))
-    const s = same(before, 'К5.6', 'git cherry-pick --continue', ids)
-    expect(s.operation).toEqual(before.operation)
-    expect(s.commits).toEqual(before.commits)
+    const entry = protocolEntry('К5.6', 'git cherry-pick --continue')
+    const s = run(before, 'git cherry-pick --continue')
+    expect(s.result.exitCode).toBe(entry.exitCode)
+    expect(compareOutputs(terminalOrder(entry.output), s.result.output, ids)).toBeNull()
+    expect(s.result.output.split('\n').slice(-6)[0]).toBe('The previous cherry-pick is now empty, possibly due to conflict resolution.')
+    expect(s.state.operation).toEqual(before.operation)
+    expect(s.state.commits).toEqual(before.commits)
     expect(run(before, 'git cherry-pick --continue').result.explanation).toBe(rc.cherryPickEmpty)
     expect(before.missionsDone.cherryPick).toBe(false)
   })
@@ -360,7 +375,7 @@ describe('итог совпал с HEAD (К5.6) и пустой cherry-pick с �
     const entry = protocolEntry('П8.4', 'git cherry-pick $(git rev-parse --short feature~1)')
     const r = run(applied, PICK)
     expect(r.result.exitCode).toBe(1)
-    expect(compareOutputs(entry.output, r.result.output, ids)).toBeNull()
+    expect(compareOutputs(terminalOrder(entry.output), r.result.output, ids)).toBeNull()
     expect(r.state.operation).toEqual({ kind: 'cherry-pick', commit: applied.commits[applied.branches.feature].parents[0] })
     expect(r.state.unmerged).toEqual({})
     expect(r.state.reflog).toEqual(applied.reflog)

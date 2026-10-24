@@ -14,6 +14,7 @@
 // отвечает честным отказом области, а не выдуманным выводом git.
 // ============================================================
 import type { FileTree } from './types'
+import { has } from './util'
 
 /** Состояние файла рабочего каталога для `git status` (отслеживаемых файлов в этих разделах нет). */
 export type StatusEntryKind = 'untracked' | 'ignored'
@@ -177,10 +178,6 @@ export function shortCommitId(id: string): string {
 }
 
 // ---------- checkSafety: «было бы затёрто» ----------
-
-function has(obj: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(obj, key)
-}
 
 /** Файлы, у которых HEAD, индекс и рабочее дерево не совпадают. */
 function localChangeFiles(head: FileTree, index: FileTree, working: FileTree): Set<string> {

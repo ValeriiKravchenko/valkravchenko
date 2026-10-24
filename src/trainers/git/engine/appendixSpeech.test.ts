@@ -100,6 +100,7 @@ describe('ru.appendix', () => {
       e.resetMixed('master', 'abc1234', false),
       e.resetMixed(null, 'abc1234', true),
       e.resetSameCommit,
+      e.resetSameCommitDetached,
       e.resetViaReflog('HEAD@{1}', 'abc1234'),
       e.resetLeftBehind(1),
       e.resetLeftBehind(2),
@@ -278,8 +279,9 @@ describe('ru.conflicts: речь о конфликтах (target.md, часть 
     c.stashAbort,
     c.kindBothModified,
     c.kindBothAdded,
-    c.rebaseConflict(['app.js'], 'feature'),
-    c.rebaseConflict(['app.js', 'about.html'], 'feature'),
+    c.rebaseConflict(['app.js'], 'feature', true),
+    c.rebaseConflict(['app.js'], 'feature', false),
+    c.rebaseConflict(['app.js', 'about.html'], 'feature', true),
     c.rebaseAlreadyRunning,
     c.rebaseStatusNote('feature', false),
     c.rebaseStatusNote('feature', true),
@@ -328,7 +330,7 @@ describe('ru.conflicts: речь о конфликтах (target.md, часть 
   })
 
   it('rebase: вверху новая база, внизу свой коммит; git add, --continue, --skip, --abort; ветка переедет в конце; совета про merge нет (опасное место 3, место 19)', () => {
-    const text = c.rebaseConflict(['app.js'], 'feature')
+    const text = c.rebaseConflict(['app.js'], 'feature', true)
     for (const word of ['git add <файл>', 'git rebase --continue', 'git rebase --skip', 'git rebase --abort', 'вверху (HEAD) — новая база', 'внизу — твой коммит', 'переедет только в самом конце']) expect(text).toContain(word)
     for (const value of [text, c.rebaseAlreadyRunning, c.allAddedRebase, c.rebaseFinish, c.rebaseFinishAdded, c.rebaseAbort, c.resetHardRebase]) expect(value).not.toMatch(/git merge/)
     expect(text).not.toMatch(/merge/i)

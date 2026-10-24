@@ -367,7 +367,7 @@ function switchPlain(state: AppendixState, word: string): Outcome {
   if (revision.kind === 'foreign') return refuse(state, ae.revisionForm('switch', word))
   if (revision.kind === 'reflogShort') return exited(state, reflogShortOutput(revision.entries), 128, ax.reflogShortEntries)
   if (revision.kind === 'missing') return exited(state, `fatal: invalid reference: ${word}`, 128)
-  // Для `HEAD` и `refs/heads/…` git называет в отказе другое слово вместо «commit»/«tag» (П8.58, П8.60): эта строка не сверена в общем виде.
+  // Для `HEAD` и `refs/heads/…` git отвечает по-особому, без слов commit и tag (П8.58); форма в разделе не делается, отказ области.
   if (word === 'HEAD' || word.startsWith('refs/heads/')) return refuse(state, ae.switchRefForm(word))
   const named = switchObjectKind(state, word)
   return moveHead(state, { to: { kind: 'commit', id: revision.id, spec: named.spec, objectKind: named.objectKind }, mode: 'switch', listCarried: true })

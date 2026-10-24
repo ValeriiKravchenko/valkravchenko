@@ -78,7 +78,7 @@ describe('остановка на конфликте (К6.1, П8.11)', () => {
     const fix = onFeature().commits[onFeature().branches.feature].parents[0]
     expect(r.result.output).toContain(`error: could not apply ${short(fix)}... ${seed.fixMessage}`)
     expect(r.result.output.split('\n').at(-1)).toBe(`Could not apply ${short(fix)}... # ${seed.fixMessage}`)
-    expect(r.result.explanation).toBe(rc.rebaseConflict(['app.js'], 'feature'))
+    expect(r.result.explanation).toBe(rc.rebaseConflict(['app.js'], 'feature', true))
   })
 
   it('состояние: HEAD отсоединён на новой базе, ветка на старом месте, метки в файле, неслитый путь, операция rebase, запись rebase (start) (К6.1, К7.5, место 11)', () => {
@@ -196,12 +196,43 @@ describe('остановка на конфликте (К6.1, П8.11)', () => {
   })
 
   it('речь остановки: вверху база, внизу свой коммит, add и --continue, --skip, --abort, ветка переедет в конце; совета про merge нет (опасное место 3, место 19)', () => {
-    const text = rc.rebaseConflict(['app.js'], 'feature')
+    const text = rc.rebaseConflict(['app.js'], 'feature', true)
     for (const part of ['вверху (HEAD) — новая база', 'внизу — твой коммит', 'git add', 'git rebase --continue', 'git rebase --skip', 'git rebase --abort', 'переедет только в самом конце']) {
       expect(text, part).toContain(part)
     }
     expect(text).not.toMatch(/merge/)
     expect(text).not.toMatch(/hint:|error:/)
+  })
+
+  it('HEAD при остановке: на первом коммите (К6.1) он на новой базе, на втором (К14.3) на копии первого коммита, база ниже', () => {
+    const first = stopped()
+    expect(first.head).toEqual({ kind: 'detached', id: first.branches.master })
+    expect(getConflictView(first)?.headIsNewBase).toBe(true)
+    expect(run(onFeature(), 'git rebase master').result.explanation).toBe(rc.rebaseConflict(['app.js'], 'feature', true))
+    expect(rc.rebaseConflict(['app.js'], 'feature', true)).toContain('стоит на новой базе')
+
+    const last = stoppedLast()
+    expect(last.head.kind).toBe('detached')
+    expect(last.head.kind === 'detached' ? last.head.id : '').not.toBe(last.branches.master)
+    expect(last.head.kind === 'detached' ? last.commits[last.head.id].parents : []).toEqual([last.branches.master])
+    expect(getConflictView(last)?.headIsNewBase).toBe(false)
+    const speech = run(onFeatureWithAbout(), 'git rebase master').result.explanation ?? ''
+    expect(speech).toBe(rc.rebaseConflict(['about.html'], 'feature', false))
+    expect(speech).not.toContain('стоит на новой базе')
+    expect(speech).toContain('стоит на копии первого коммита')
+    expect(speech).toContain('вверху (HEAD) — новая база')
+    expect(speech).toContain('внизу — твой коммит')
+  })
+
+  it('--abort называет отброшенные файлы в порядке байтов UTF-8, а не кодовых единиц UTF-16', () => {
+    const base = stopped()
+    // U+FF21 (байты EF BC A1) идёт раньше U+1F600 (байты F0 9F 98 80), хотя в UTF-16 суррогат D83D меньше FF21.
+    const wide = '\uFF21.txt'
+    const smile = '\u{1F600}.txt'
+    const dirty = { ...base, index: { ...base.index, [smile]: 'x\n', [wide]: 'y\n' }, working: { ...base.working, [smile]: 'x\n', [wide]: 'y\n' } }
+    const speech = run(dirty, 'git rebase --abort').result.explanation ?? ''
+    expect(speech).toContain(rc.discardedEdit(['app.js', wide, smile]))
+    expect(speech).not.toContain(rc.discardedEdit(['app.js', smile, wide]))
   })
 
   it('на конфликте миссия 7 не засчитывается', () => {

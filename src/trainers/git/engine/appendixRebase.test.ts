@@ -276,7 +276,7 @@ describe('отказы области (часть X, «Что НЕ входит�
     }
   })
 
-  it('rebase в отсоединённом HEAD — отказ области (S8-71, П8.12, П8.18): речь называет, что сделал бы git', () => {
+  it('rebase в отсоединённом HEAD — отказ области (S8-71, П8.12, П8.18): речь не обещает один исход', () => {
     for (const line of ['git rebase master', 'git rebase', 'git rebase feature~1']) {
       const s = play(fresh(), ['git checkout --detach feature~1'])
       const r = run(s, line)
@@ -284,7 +284,11 @@ describe('отказы области (часть X, «Что НЕ входит�
       expect(r.result.exitCode).toBeUndefined()
       expect(core(r.state)).toEqual(core(s))
     }
-    expect(ae.rebaseDetached).toContain('Successfully rebased and updated detached HEAD.')
+    // Исход зависит от состояния (уже на базе, неверная база, правки, конфликт, перенос), поэтому речь не обещает один из них.
+    expect(ae.rebaseDetached.startsWith('[тренажёр]')).toBe(true)
+    expect(ae.rebaseDetached).not.toContain('Successfully rebased')
+    expect(ae.rebaseDetached).not.toMatch(/перенёс бы|напечатал бы/)
+    for (const part of ['зависит от состояния', 'уже стоять на этой базе', 'неверной', 'правки', 'конфликт', 'git switch']) expect(ae.rebaseDetached, part).toContain(part)
     expect(ae.rebaseDetached).not.toMatch(/merge/)
   })
 

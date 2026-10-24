@@ -104,7 +104,7 @@ function overwriteRefusal(modified: readonly string[], untracked: readonly strin
   return [...parts, 'Aborting', 'fatal: cherry-pick failed'].join('\n')
 }
 
-/** Пустая копия, с начала (П8.4) или после разрешения (К5.6): подсказка git, за ней `git status`. */
+/** Пустая копия, с начала (П8.4) или после разрешения (К5.6): `git status`, за ним подсказка git, как на терминале (П8.75, П8.78; в К5.6 и П8.4 подсказка стоит первой из-за буферизации вывода). */
 const EMPTY_HINT = [
   'The previous cherry-pick is now empty, possibly due to conflict resolution.',
   'If you wish to commit it anyway, use:',
@@ -123,7 +123,7 @@ function parentTree(state: AppendixState, commit: AppendixCommit): FileTree {
 function emptyOutcome(state: AppendixState): Outcome {
   const status = stateStatus(state, false)
   if (!status.ok) return refuse(state, statusRefusal(status.reason, 'cherry-pick'))
-  return exited(state, [...EMPTY_HINT, status.output].join('\n'), 1, ru.conflicts.cherryPickEmpty)
+  return exited(state, [status.output, ...EMPTY_HINT].join('\n'), 1, ru.conflicts.cherryPickEmpty)
 }
 
 /** Пути, которых касается копия: у них результат слияния отличается от HEAD (в том числе конфликтные). */
