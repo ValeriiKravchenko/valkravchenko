@@ -195,7 +195,15 @@ describe('отмена и разрешение (К4.3, К4.4, К10.s, К11.s, К
     let s = same(popped(), 'К16.2', 'git stash drop', ids)
     s = same(s, 'К16.2', 'git status --short', ids)
     expect(s.stashes).toEqual([])
-    expect(run(popped(), 'git stash drop').result.explanation).toContain(rc.stashDropKeepsUnmerged)
+    const speech = run(popped(), 'git stash drop').result.explanation ?? ''
+    expect(speech).toContain(rc.stashDropKeepsUnmerged)
+    expect(rc.stashDropKeepsUnmerged).toContain('Тайник удалён из стопки без применения')
+    // Удалённый тайник можно вернуть по id из строки Dropped (git stash apply <id>), поэтому речь не говорит, что он пропал безвозвратно.
+    for (const text of [rc.stashDropKeepsUnmerged, speech]) {
+      expect(text).not.toContain('нельзя')
+      expect(text).not.toContain('вернуть тайник')
+      expect(text).not.toContain('обычными командами')
+    }
   })
 
   it(`повторный git stash pop после git add даёт новый конфликт с разрешённым текстом вверху (${where('К16.3', 'git stash pop')}); commit отказывает`, () => {

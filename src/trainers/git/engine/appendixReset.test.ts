@@ -234,6 +234,31 @@ describe('reset в отсоединённом HEAD: двигается толь�
     expect(run(back.state, 'git status').result.output).toBe('HEAD detached at refs/heads/master\nnothing to commit, working tree clean')
   })
 
+  it(`речь о записи в журнал: на ветке прежняя, в отсоединённом HEAD её нет (${where('П8.81', 'git reset --hard HEAD', 0)}, ${where('П8.81', 'git reset --hard HEAD', 1)})`, () => {
+    const onBranch = run(fresh(), 'git reset --hard HEAD').result.explanation
+    expect(onBranch).toContain(ax.resetSameCommit)
+    expect(onBranch).toContain('reset всегда оставляет след')
+    for (const line of ['git reset --hard HEAD', 'git reset --soft HEAD', 'git reset']) {
+      const r = run(detached, line)
+      expect(r.result.explanation, line).toContain(ax.resetSameCommitDetached)
+      expect(r.result.explanation, line).not.toContain(ax.resetSameCommit)
+      expect(r.result.explanation, line).not.toContain('всегда оставляет след')
+      expect(r.state.reflog, line).toEqual(detached.reflog)
+    }
+  })
+
+  it('посреди rebase с конфликтом (HEAD отсоединён) reset на тот же коммит не пишет в журнал и не говорит о следе в нём', () => {
+    const onFeature = runAll(editAppendixFile(fresh(), 'app.js'), ['git commit -am "master: v2"', 'git checkout feature'])
+    const stopped = run(onFeature, 'git rebase master').state
+    for (const line of ['git reset --hard', 'git reset', 'git reset --hard HEAD']) {
+      const r = run(stopped, line)
+      expect(r.result.exitCode, line).toBe(0)
+      expect(r.state.reflog, line).toEqual(stopped.reflog)
+      expect(r.result.explanation, line).toContain(ax.resetSameCommitDetached)
+      expect(r.result.explanation, line).not.toContain('всегда оставляет след')
+    }
+  })
+
   it(`reset на тот же коммит в отсоединённом HEAD не пишет в журнал, на ветке пишет (${where('П8.81', 'git reset --hard HEAD', 0)}, ${where('П8.81', 'git reset --hard HEAD', 1)})`, () => {
     for (const line of ['git reset --hard HEAD', 'git reset --hard master', 'git reset --soft HEAD', 'git reset HEAD@{0}', 'git reset']) {
       const r = run(detached, line)

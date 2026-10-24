@@ -30,13 +30,11 @@ function expectReplay(block: string | readonly string[], options: ReplayOptions 
 }
 
 describe('блоки протокола П8.75–П8.80 и О18 проигрываются на движке', () => {
-  // Повтор уже применённого: вне терминала git печатает статус раньше подсказки (порядок строк stdout и stderr); тренажёр — как на терминале, подсказка первой (П8.4, К5.6), поэтому строки сверяются как набор.
-  it('П8.75: ссылки, запись журнала, граф; повтор уже применённого — подсказка и статус, код 1', () =>
-    expectReplay('П8.75', { unordered: (e) => e.command === 'git cherry-pick HEAD@{1}' }))
+  // Пустая копия: П8.75 и П8.78 сняты в порядке терминала, статус первым, подсказка после него; строки сверяются по порядку.
+  it('П8.75: ссылки, запись журнала, граф; повтор уже применённого — статус и подсказка, код 1', () => expectReplay('П8.75'))
   it('П8.76: аннотированный тег, id7, полный id, ошибки', () => expectReplay('П8.76'))
   it('П8.77: правка в файле коммита, посторонний файл, подготовленная правка, неотслеживаемый файл', () => expectReplay('П8.77'))
-  it('П8.78: пустая копия и конфликт — cherry-pick остановился, --abort возвращает всё как было', () =>
-    expectReplay('П8.78', { unordered: (e) => ['git cherry-pick HEAD', 'git cherry-pick HEAD~1', 'git cherry-pick master'].includes(e.command) }))
+  it('П8.78: пустая копия и конфликт — cherry-pick остановился, --abort возвращает всё как было', () => expectReplay('П8.78'))
   it('П8.80: правки в нескольких местах, файл удалён в каталоге, удаление файла коммитом', () => expectReplay('П8.80'))
   it('О18: cherry-pick в отсоединённом HEAD', () => expectReplay('О18'))
 })
@@ -310,6 +308,16 @@ describe('cherry-pick останавливается: конфликт и пус
       expect(core(r.state), line).toEqual(core(s))
     }
     expect(protocolEntry('П8.78', 'git cherry-pick HEAD').exitCode).toBe(1)
+  })
+
+  it(`пустая копия: сначала статус, потом подсказка, как на терминале (${where('П8.78', 'git cherry-pick HEAD')}, ${where('П8.75', 'git cherry-pick HEAD@{1}')})`, () => {
+    const hint = 'The previous cherry-pick is now empty, possibly due to conflict resolution.'
+    for (const line of ['git cherry-pick HEAD', 'git cherry-pick HEAD~1', 'git cherry-pick master']) {
+      const lines = run(fresh(), line).result.output.split('\n')
+      expect(lines[0], line).toMatch(/^On branch master|^HEAD detached/)
+      expect(lines.indexOf(hint), line).toBeGreaterThan(lines.findIndex((l) => l.startsWith('nothing to commit') || l.startsWith('You are currently')))
+      expect(lines[lines.length - 1], line).toBe("Otherwise, please use 'git cherry-pick --skip'")
+    }
   })
 
   it('ключи, несколько коммитов, `--quit` и формы с лишними словами — отказ области: ключи из usage не unknown switch', () => {

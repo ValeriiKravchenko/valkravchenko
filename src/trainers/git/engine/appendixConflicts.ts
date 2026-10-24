@@ -156,7 +156,10 @@ type ViewKey = Extract<
 export interface ConflictView {
   /** Идущая операция; `null` у тайника. */
   operation: 'cherry-pick' | 'rebase' | null
-  /** Только у rebase: HEAD здесь — новая база (верхняя часть блока меток), а свой коммит — нижняя (К6.1). Для речи рядом с кнопками. */
+  /**
+   * Только у rebase: HEAD стоит прямо на новой базе, ничего ещё не перенесено (остановка на первом коммите, К6.1). После переноса первого
+   * коммита (остановка на втором, К14.3) HEAD стоит на его копии, и признак ложен. Верхняя часть блока меток в обоих случаях подписана «новая база».
+   */
   headIsNewBase: boolean
   /** Неслитые пути по алфавиту: вид, код `git status --short` и ключ подписи вида в `ru.conflicts`. */
   unmerged: { path: string; kind: ConflictKind; code: 'UU' | 'AA'; kindKey: ViewKey }[]
@@ -175,7 +178,7 @@ export function conflictView(state: AppendixState): ConflictView | null {
   const operation = state.operation === null ? null : state.operation.kind
   return {
     operation,
-    headIsNewBase: operation === 'rebase',
+    headIsNewBase: state.operation !== null && state.operation.kind === 'rebase' && state.head.kind === 'detached' && state.head.id === state.operation.onto,
     unmerged: paths.map((path) => ({ path, kind: state.unmerged[path].kind, code: shortCode(state.unmerged[path]), kindKey: state.unmerged[path].kind === 'both-added' ? 'kindBothAdded' : 'kindBothModified' })),
     allAdded,
     finishKey: operation === 'rebase' ? (allAdded ? 'rebaseFinishAdded' : 'rebaseFinish') : operation === 'cherry-pick' ? (allAdded ? 'cherryPickFinishAdded' : 'cherryPickFinish') : 'stashFinish',

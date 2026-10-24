@@ -2698,7 +2698,7 @@ Unmerged paths:
 |---|---|---|
 | merge, pull | коммит слияния создаётся всё равно | К1.6 |
 | revert | `git revert --continue` и `git commit -m` печатают `git status` (заголовок revert и `nothing to commit, working tree clean`), код 1. Выход — `git revert --skip`, пустой вывод | К2.6 |
-| cherry-pick | `git cherry-pick --continue` печатает `The previous cherry-pick is now empty, possibly due to conflict resolution.`, совет `git commit --allow-empty` или `git cherry-pick --skip`, затем `git status`; код 1. Выход — `--skip` | К5.6 |
+| cherry-pick | `git cherry-pick --continue` печатает `The previous cherry-pick is now empty, possibly due to conflict resolution.`, совет `git commit --allow-empty` или `git cherry-pick --skip`, затем `git status` (порядок К5.6 — артефакт буферизации; на терминале сначала `git status`, потом подсказка, П8.75, П8.78); код 1. Выход — `--skip` | К5.6 |
 | rebase | `git rebase --continue` молча выбрасывает коммит: `Successfully rebased and updated refs/heads/feature.`, фикса в истории нет | К6.5 |
 
 У cherry-pick это то же состояние, что пустой повтор (часть X, место 13; П8.4): операция без неслитых путей.
@@ -3329,14 +3329,14 @@ Switched to branch 'master'
 - Брошенный — недостижимый ни из одной ветки **и ни из одного тега**. Если на коммит указывает тег, предупреждения нет, печатается `Previous HEAD position was …` (О4). Из текста `not connected to any of your branches` этого не видно.
 - Предупреждение печатает и `git bisect reset`, если посреди bisect сделан коммит (О9), и уход после rebase, начатого с коммита: перенесённые коммиты не на ветке (О29).
 
-**`git switch` на коммит или тег без `--detach`** — отказ, код 128, HEAD на месте (О1, О8, О17):
+**`git switch` на коммит или тег без `--detach`** — отказ, код 128, HEAD на месте (О1, О8, О17). Для `HEAD` и `refs/heads/…` git пишет `got 'refs/heads/master'` или `got 'HEAD'` без слова commit (П8.58); тренажёр отвечает на эти две формы отказом области:
 
 ```
 fatal: a branch is expected, got commit '<как набрано>'
 hint: If you want to detach HEAD at the commit, try again with the --detach option.
 ```
 
-Для тега первая строка — `fatal: a branch is expected, got tag '<как набрано>'`, hint тот же (О17). `git switch -` отказывает так же, если предыдущее место — коммит; в кавычках полный id (О8). `git checkout -` в том же положении проходит.
+Для тега первая строка — `fatal: a branch is expected, got tag '<имя тега без префикса>'`, hint тот же (О17); `git switch tags/v2.0` и `git switch refs/tags/v2.0` дают `got tag 'v2.0'` (П8.58). `git switch -` отказывает так же, если предыдущее место — коммит; в кавычках полный id (О8). `git checkout -` в том же положении проходит.
 
 **Несохранённые правки**, которые переход затёр бы, мешают ему одинаково в обе стороны: `error: Your local changes to the following files would be overwritten by checkout:`, строки `\t<файл>`, `Please commit your changes or stash them before you switch branches.`, `Aborting`, код 1, HEAD на месте (О7, О16, О24 — с ветки на коммит; О16 — с коммита на ветку).
 
@@ -3472,7 +3472,7 @@ rebase с конфликтом в отсоединённом HEAD — в раз�
 | cherry-pick в отсоединённом HEAD | `cherry-pick: <тема>` | О18 |
 | `commit --amend` | `commit (amend): <тема>` | О6 |
 | merge-перемотка | `merge <как набрано>: Fast-forward` | О6 |
-| `reset --hard`, `--soft`, mixed | `reset: moving to <как набрано>` | О6, О20 |
+| `reset --hard`, `--soft`, mixed | `reset: moving to <как набрано>`; в отсоединённом HEAD при reset на тот же коммит записи нет | О6, О20, П8.81 |
 | `git stash`, `git stash -m`, `git stash pop` в отсоединённом HEAD | ничего | П8.19, О25 |
 | rebase в отсоединённом HEAD без конфликта | `rebase (start): checkout <база>`, `rebase (pick): <тема>`; записи `finish` нет | П8.18 |
 | `git rebase <база>` с конфликтом, с ветки и с коммита | `rebase (start): checkout <база>`; с ветки дальше — часть XI, К7 | О10, О26, О29, К7.5 |

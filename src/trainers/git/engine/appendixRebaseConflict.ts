@@ -33,6 +33,7 @@ import { commitOf, commitTree, currentCommitId, fadedCommitIds, headTree, sameTr
 import { abortTo, conflictOutput, enterConflict, type RebaseOperation, type RebaseStep } from './conflicts'
 import { fullCommitId, shortCommitId } from './sectionsCommon'
 import { has } from './util'
+import { compareBytes } from './appendixRefs'
 import { ru } from '../locales/ru'
 
 const ae = ru.appendix.errors
@@ -149,7 +150,7 @@ export function stopOnConflict(input: StopInput): Outcome {
   const subject = subjectLine(commit.message)
   const entered = enterConflict(stopped, { ...merged, base: input.before, ours: input.tree, theirs: commit.tree }, { top: 'HEAD', bottom: `${shortCommitId(commit.id)} (${subject})` })
   const output = conflictOutput({ command: 'rebase', merge: merged, commit: { id: commit.id, subject } })
-  return exited(entered, output, 1, rc.rebaseConflict(merged.conflicts.map((c) => c.file), input.branch))
+  return exited(entered, output, 1, rc.rebaseConflict(merged.conflicts.map((c) => c.file), input.branch, created.length === 0))
 }
 
 // ---------- конец rebase: перенос остального ----------
@@ -258,7 +259,7 @@ function abortRebase(state: AppendixState, op: RebaseOperation): Outcome {
   for (const path of Object.keys(aborted.index)) working[path] = aborted.index[path]
   const edited = [...new Set([...Object.keys(state.index), ...Object.keys(state.unmerged)])]
     .filter((path) => !has(head, path) || state.working[path] !== head[path] || (has(state.index, path) ? state.index[path] !== head[path] : true))
-    .sort()
+    .sort(compareBytes)
   const next: AppendixState = {
     ...aborted,
     working,

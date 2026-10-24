@@ -128,7 +128,7 @@ export function handleReset(state: AppendixState, args: readonly string[]): Outc
   const report = effective === 'mixed' ? unstagedReport(index, working) : ''
   const output = hard ? `HEAD is now at ${short} ${subjectOf(state, targetId)}` : report
   const notes: string[] = [hard ? ax.resetHard(branch, short) : effective === 'soft' ? ax.resetSoft(branch, short) : ax.resetMixed(branch, short, report !== '')]
-  if (targetId === currentCommitId(state)) notes.push(ax.resetSameCommit)
+  if (targetId === currentCommitId(state)) notes.push(sameInDetached ? ax.resetSameCommitDetached : ax.resetSameCommit)
   if (HEAD_AT.test(word)) notes.push(ax.resetViaReflog(word, short))
 
   // Миссия 6: ветка вернулась на коммит, на который до этого не указывала ни одна ветка и ни один тег.

@@ -145,8 +145,11 @@ describe('AppendixTrainer', () => {
       renderScreen()
       await run(user, 'git switch --detach')
       const tip = initial().branches.master
-      expect(screen.getAllByText(`(HEAD detached at ${tip.slice(0, 7)}) $`).length).toBeGreaterThan(0)
-      expect(screen.getAllByText(/^\(HEAD detached at [0-9a-f]{7}\) \$$/).length).toBeGreaterThan(0)
+      // The prompt is a trainer element, not git output (target.md, part XII, "Simplifications"): always `(detached@<id7>) $`.
+      expect(screen.getAllByText(`(detached@${tip.slice(0, 7)}) $`).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^\(detached@[0-9a-f]{7}\) \$$/).length).toBeGreaterThan(0)
+      expect(ui.terminal.promptDetached(tip.slice(0, 7))).toBe(`(detached@${tip.slice(0, 7)}) $`)
+      expect(screen.queryByText(/^\(HEAD detached at /)).toBeNull()
       expect(screen.queryByText('(master) $')).toBeNull()
     })
 
