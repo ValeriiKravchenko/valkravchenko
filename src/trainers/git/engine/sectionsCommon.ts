@@ -15,6 +15,7 @@
 // ============================================================
 import type { FileTree } from './types'
 import { has } from './util'
+import { compareBytes as compareUtf8Bytes } from './appendixRefs'
 
 /** Состояние файла рабочего каталога для `git status` (отслеживаемых файлов в этих разделах нет). */
 export type StatusEntryKind = 'untracked' | 'ignored'
@@ -251,7 +252,7 @@ export function checkSafety(head: FileTree, index: FileTree, working: FileTree, 
     if (notStaged && missingOnDisk) return
     if (oldVal !== newVal && idxVal !== newVal) modified.push(f)
   })
-  return { modified: modified.sort(), untracked: untracked.sort() }
+  return { modified: modified.sort(compareUtf8Bytes), untracked: untracked.sort(compareUtf8Bytes) }
 }
 
 // ---------- git status для репозитория с коммитами ----------

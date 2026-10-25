@@ -196,12 +196,14 @@ describe('отмена и разрешение (К4.3, К4.4, К10.s, К11.s, К
     s = same(s, 'К16.2', 'git status --short', ids)
     expect(s.stashes).toEqual([])
     const speech = run(popped(), 'git stash drop').result.explanation ?? ''
-    expect(speech).toContain(rc.stashDropKeepsUnmerged)
-    expect(rc.stashDropKeepsUnmerged).toContain('Тайник удалён из стопки без применения')
-    // Удалённый тайник можно вернуть по id из строки Dropped (git stash apply <id>), поэтому речь не говорит, что он пропал безвозвратно.
+    // Речь по target.md (часть X, место 20; К16.2): тайник удалён из стопки, неслитый путь и правка тайника в файле остались.
+    expect(speech).toBe('Тайник удалён из стопки, а неслитый путь и правка тайника в файле остались как были: drop конфликт не трогает. Разреши файл и git add.')
+    expect(speech.split('Тайник удалён из стопки')).toHaveLength(2)
     for (const text of [rc.stashDropKeepsUnmerged, speech]) {
+      expect(text).not.toContain('без применения')
       expect(text).not.toContain('нельзя')
       expect(text).not.toContain('вернуть тайник')
+      expect(text).not.toContain('по id')
       expect(text).not.toContain('обычными командами')
     }
   })

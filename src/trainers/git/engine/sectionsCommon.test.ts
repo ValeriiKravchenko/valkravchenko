@@ -110,6 +110,23 @@ describe('id коммита из 40 знаков (решение В2)', () => {
   })
 })
 
+describe('checkSafety: порядок имён в байтах UTF-8, не в кодовых единицах UTF-16', () => {
+  const wide = '\uFF21.txt'
+  const smile = '\u{1F600}.txt'
+  it('modified: U+FF21 (байты EF BC A1) раньше U+1F600 (байты F0 9F 98 80)', () => {
+    const head = { [smile]: '1', [wide]: '1', 'B.txt': '1', 'a.txt': '1' }
+    const working = { [smile]: 'моя', [wide]: 'моя', 'B.txt': 'моя', 'a.txt': 'моя' }
+    const target = { [smile]: '2', [wide]: '2', 'B.txt': '2', 'a.txt': '2' }
+    expect(checkSafety(head, head, working, target).modified).toEqual(['B.txt', 'a.txt', wide, smile])
+  })
+  it('untracked: тот же порядок', () => {
+    const head = { 'z.txt': '1' }
+    const working = { ...head, [smile]: 'x', [wide]: 'y', 'B.txt': 'z', 'a.txt': 'w' }
+    const target = { 'z.txt': '1', [smile]: '2', [wide]: '2', 'B.txt': '2', 'a.txt': '2' }
+    expect(checkSafety(head, head, working, target).untracked).toEqual(['B.txt', 'a.txt', wide, smile])
+  })
+})
+
 describe('checkSafety: переход не должен затереть несохранённые правки', () => {
   it('чистое дерево — переход проходит', () => {
     const head = { 'a.txt': '1' }

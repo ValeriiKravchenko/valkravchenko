@@ -237,7 +237,9 @@ describe('reset в отсоединённом HEAD: двигается толь�
   it(`речь о записи в журнал: на ветке прежняя, в отсоединённом HEAD её нет (${where('П8.81', 'git reset --hard HEAD', 0)}, ${where('П8.81', 'git reset --hard HEAD', 1)})`, () => {
     const onBranch = run(fresh(), 'git reset --hard HEAD').result.explanation
     expect(onBranch).toContain(ax.resetSameCommit)
-    expect(onBranch).toContain('reset всегда оставляет след')
+    expect(onBranch).toContain('Запись в журнал git на ветке')
+    expect(ax.resetSameCommit).not.toContain('всегда')
+    expect(ax.resetSameCommit).toContain('на ветке')
     for (const line of ['git reset --hard HEAD', 'git reset --soft HEAD', 'git reset']) {
       const r = run(detached, line)
       expect(r.result.explanation, line).toContain(ax.resetSameCommitDetached)
@@ -385,7 +387,7 @@ describe('миссия 6: успешный reset --hard HEAD@{n} на комми
     expect(r.result.explanation).toContain(ax.resetRescued('master', short(r.state.branches.master)))
   })
 
-  it('не засчитывается, если коммит достижим из ветки или тега, на --soft и смешанном, на HEAD~n и на id', () => {
+  it('не засчитывается, если коммит достижим из ветки или тега, на --soft и смешанном, на HEAD~n', () => {
     const s = fresh()
     // HEAD@{1} — базовый коммит: его держат master и feature.
     expect(run(s, 'git reset --hard HEAD@{1}').state.missionsDone.rescueCommit).toBe(false)
@@ -393,13 +395,31 @@ describe('миссия 6: успешный reset --hard HEAD@{n} на комми
     const l = lost()
     expect(run(l, 'git reset --soft HEAD@{1}').state.missionsDone.rescueCommit).toBe(false)
     expect(run(l, 'git reset HEAD@{1}').state.missionsDone.rescueCommit).toBe(false)
-    expect(run(l, `git reset --hard ${short(l.reflog[1].id)}`).state.missionsDone.rescueCommit).toBe(false)
+    // id из записи журнала считается так же, как HEAD@{n}
+    expect(run(l, `git reset --hard ${short(l.reflog[1].id)}`).state.missionsDone.rescueCommit).toBe(true)
+    expect(run(l, `git reset --soft ${short(l.reflog[1].id)}`).state.missionsDone.rescueCommit).toBe(false)
     expect(run(l, 'git reset --hard HEAD@{1}').state.missionsDone.rescueCommit).toBe(true)
     // тег на брошенном коммите возвращает ему достижимость
     const tagged = runAll(l, ['git tag keep HEAD@{1}'])
     expect(run(tagged, 'git reset --hard HEAD@{1}').state.missionsDone.rescueCommit).toBe(false)
     // отказ git не засчитывает
     expect(run(l, 'git reset --hard HEAD@{99}').state.missionsDone.rescueCommit).toBe(false)
+  })
+
+  it('засчитывается на reset --hard HEAD@{1}, на полный id и на id из 7 знаков из записи журнала; mixed и --soft с теми же ссылками нет', () => {
+    const l = lost()
+    const abandoned = l.reflog[1].id
+    for (const ref of ['HEAD@{1}', abandoned, short(abandoned)]) {
+      const r = run(l, `git reset --hard ${ref}`)
+      expect(r.result.exitCode, ref).toBe(0)
+      expect(r.state.branches.master, ref).toBe(abandoned)
+      expect(r.state.missionsDone.rescueCommit, ref).toBe(true)
+      for (const flags of ['reset', 'reset --mixed', 'reset --soft']) {
+        expect(run(l, `git ${flags} ${ref}`).state.missionsDone.rescueCommit, `${flags} ${ref}`).toBe(false)
+      }
+    }
+    // id, которого нет в журнале, и сокращение короче 7 знаков не засчитываются
+    expect(run(l, `git reset --hard ${abandoned.slice(0, 5)}`).state.missionsDone.rescueCommit).toBe(false)
   })
 
   it('в отсоединённом HEAD не засчитывается: ветка не двигается (target.md, часть XII, «Миссии»; ' + where('П8.73', 'git reset --hard HEAD@{2}') + ')', () => {

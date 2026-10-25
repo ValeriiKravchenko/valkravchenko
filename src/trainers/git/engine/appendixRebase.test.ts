@@ -331,6 +331,6 @@ describe('путь миссии 7 (П8.10, S8-79, S8-80)', () => {
 
   it('словарь: подпись и подсказка миссии 7', () => {
     expect(ru.appendix.missions.rebase.hint).toBe('git checkout feature → git rebase master')
-    expect(ru.appendix.missions.rebase.text).toContain('rebase')
+    expect(ru.appendix.missions.rebase.text).toContain('перебазируй')
   })
 })

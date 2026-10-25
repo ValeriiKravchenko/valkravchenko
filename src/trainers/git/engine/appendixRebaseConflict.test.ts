@@ -197,6 +197,7 @@ describe('остановка на конфликте (К6.1, П8.11)', () => {
 
   it('речь остановки: вверху база, внизу свой коммит, add и --continue, --skip, --abort, ветка переедет в конце; совета про merge нет (опасное место 3, место 19)', () => {
     const text = rc.rebaseConflict(['app.js'], 'feature', true)
+    expect(text).not.toContain('всегда')
     for (const part of ['вверху (HEAD) — новая база', 'внизу — твой коммит', 'git add', 'git rebase --continue', 'git rebase --skip', 'git rebase --abort', 'переедет только в самом конце']) {
       expect(text, part).toContain(part)
     }
@@ -208,8 +209,11 @@ describe('остановка на конфликте (К6.1, П8.11)', () => {
     const first = stopped()
     expect(first.head).toEqual({ kind: 'detached', id: first.branches.master })
     expect(getConflictView(first)?.headIsNewBase).toBe(true)
-    expect(run(onFeature(), 'git rebase master').result.explanation).toBe(rc.rebaseConflict(['app.js'], 'feature', true))
-    expect(rc.rebaseConflict(['app.js'], 'feature', true)).toContain('стоит на новой базе')
+    const firstSpeech = run(onFeature(), 'git rebase master').result.explanation ?? ''
+    expect(firstSpeech).toBe(
+      'rebase остановился на конфликте: новая база и твой коммит изменили одни и те же строки файла «app.js». Остальное git применил сам, а здесь оставил обе версии с метками. Сейчас HEAD отсоединён и стоит на новой базе, ничего ещё не перенесено: вверху (HEAD) — новая база, внизу — твой коммит, а ветка feature пока на старом месте и переедет только в самом конце. Исправь файл (кнопки редактора или ✎), затем git add <файл> и git rebase --continue. Пропустить этот коммит — git rebase --skip, отменить всё — git rebase --abort. Настоящий git перед конфликтом печатает строки «Rebasing (k/n)»; на терминале их затирает следующая строка, и тренажёр их не печатает.',
+    )
+    expect(firstSpeech).not.toContain('всегда')
 
     const last = stoppedLast()
     expect(last.head.kind).toBe('detached')
@@ -217,11 +221,14 @@ describe('остановка на конфликте (К6.1, П8.11)', () => {
     expect(last.head.kind === 'detached' ? last.commits[last.head.id].parents : []).toEqual([last.branches.master])
     expect(getConflictView(last)?.headIsNewBase).toBe(false)
     const speech = run(onFeatureWithAbout(), 'git rebase master').result.explanation ?? ''
-    expect(speech).toBe(rc.rebaseConflict(['about.html'], 'feature', false))
+    // К14.3: HEAD — копия первого коммита (fix), база (master: about) ниже.
+    expect(speech).toBe(
+      'rebase остановился на конфликте: новая база и твой коммит изменили одни и те же строки файла «about.html». Остальное git применил сам, а здесь оставил обе версии с метками. Сейчас HEAD отсоединён и стоит на копии первого коммита, уже перенесённого поверх новой базы; сама база лежит ниже. Верхняя часть меток — то, что уже лежит в HEAD (база вместе с перенесённым коммитом), нижняя — переносимый коммит, а ветка feature пока на старом месте и переедет только в самом конце. Исправь файл (кнопки редактора или ✎), затем git add <файл> и git rebase --continue. Пропустить этот коммит — git rebase --skip, отменить всё — git rebase --abort. Настоящий git перед конфликтом печатает строки «Rebasing (k/n)»; на терминале их затирает следующая строка, и тренажёр их не печатает.',
+    )
+    expect(speech).not.toContain('всегда')
     expect(speech).not.toContain('стоит на новой базе')
+    expect(speech).not.toContain('HEAD) — новая база')
     expect(speech).toContain('стоит на копии первого коммита')
-    expect(speech).toContain('вверху (HEAD) — новая база')
-    expect(speech).toContain('внизу — твой коммит')
   })
 
   it('--abort называет отброшенные файлы в порядке байтов UTF-8, а не кодовых единиц UTF-16', () => {

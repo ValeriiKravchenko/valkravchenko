@@ -23,7 +23,7 @@
 // `getBranches` отдают такой граф без особых случаев. Rebase с конфликтом, начатый с отсоединённого HEAD, по-прежнему отказ области.
 //
 // Исходы команды различаются по `CommandResult`: ответ git — с `exitCode` (0 — успех), отказ области — без `exitCode`,
-// вывод начинается с метки «[тренажёр]». Миссий семь (`APPENDIX_MISSION_IDS`): 5 — `cherry-pick`, 6 — `reset --hard HEAD@{n}`
+// вывод начинается с метки «[тренажёр]». Миссий семь (`APPENDIX_MISSION_IDS`): 5 — `cherry-pick`, 6 — `reset --hard` (`HEAD@{n}` или id из журнала)
 // на брошенный коммит, 7 — `rebase`, перенёсший коммиты или перемотавший ветку (в том числе `rebase --continue` или `--skip` после остановки на конфликте).
 // ============================================================
 import type { AppendixMissionId, AppendixMissionView, AppendixState, CommandResult, FileTree, Head, HistoryEntry } from './appendixTypes'
@@ -181,7 +181,7 @@ export function getStashes(state: AppendixState): StashView[] {
 
 /**
  * Миссии (1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное, 5 — `git cherry-pick`,
- * 6 — `git reset --hard HEAD@{n}` на брошенный коммит, 7 — `git rebase`); засчитанная остаётся засчитанной.
+ * 6 — `git reset --hard` (`HEAD@{n}` или id из журнала) на брошенный коммит, 7 — `git rebase`); засчитанная остаётся засчитанной.
  */
 export function getAppendixMissions(state: AppendixState): AppendixMissionView[] {
   return getAppendixMissionsRaw(state)

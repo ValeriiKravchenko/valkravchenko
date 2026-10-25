@@ -37,10 +37,17 @@ const filesPanel = () => screen.getByRole('region', { name: ui.files.title })
 const newFileField = () => screen.getByRole('textbox', { name: ui.files.newFileNameLabel })
 
 const initial = () => createAppendixSection()
-const missionItem = (index: number) => {
-  const mission = getAppendixMissions(initial())[index]
-  return screen.getByText(mission.text, { exact: false }).closest('li')!
-}
+/** Mission texts as the screen must show them (target.md, "Миссии": the wording does not change). */
+const MISSION_TEXTS = [
+  'Отметь текущий коммит версией — поставь лёгкий тег.',
+  'Поставь аннотированный тег с сообщением (например, на текущий коммит) и посмотри, что внутри.',
+  'Отредактируй app.js (кнопка ✎), но не коммить — вместо этого спрячь изменения.',
+  'Верни спрятанные изменения обратно.',
+  'В ветке feature два коммита. Посмотри её лог и скопируй к себе в master только фикс опечатки. (Правка app.js после stash pop ещё не закоммичена: если Git откажется копировать поверх неё — сначала верни файл командой git checkout -- app.js.)',
+  'Ошибись специально и спаси коммит: откати ветку на один коммит назад жёстко, найди потерянный коммит в журнале и верни его.',
+  'Переключись в feature и перебазируй её поверх master, затем посмотри историю: git log --oneline --all. Если ты уже копировал фикс в master, Git пропустит его как дубликат.',
+]
+const missionItem = (index: number) => screen.getByText(MISSION_TEXTS[index], { exact: false }).closest('li')!
 const doneCount = () => document.querySelectorAll('[data-done="true"]').length
 
 async function run(user: ReturnType<typeof userEvent.setup>, line: string) {
@@ -761,11 +768,19 @@ describe('AppendixTrainer', () => {
       renderScreen()
       await rebaseConflict(user)
       expect(getConflictView(ENGINE.rebase())!.headIsNewBase).toBe(true)
-      expect(screen.getByText(cui.editor.rebaseSpeech)).toBeInTheDocument()
+      expect(screen.getByText('HEAD здесь — новая база, твой коммит — нижняя часть.')).toBeInTheDocument()
       const [file] = getConflictFiles(ENGINE.rebase())
       expect(keepButton('HEAD')).toBeInTheDocument()
       expect(keepButton(file.bottomLabel)).toBeInTheDocument()
       expect(markerLines()).toHaveLength(3)
+    })
+
+    it('does not show the speech "HEAD is the new base" on the second stop, where HEAD is the copy of the first commit', async () => {
+      const user = userEvent.setup()
+      renderScreen()
+      await rebaseConflictOnLastCommit(user)
+      expect(screen.queryByText('HEAD здесь — новая база, твой коммит — нижняя часть.')).toBeNull()
+      expect(screen.queryByText(cui.editor.rebaseSpeech)).toBeNull()
     })
 
     it('--continue after the conflict: the final line, the frame is gone, old commits turn faded, mission 7 counts', async () => {
