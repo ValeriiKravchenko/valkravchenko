@@ -126,6 +126,8 @@ function resolveStashRef(state: AppendixState, command: string, token: string | 
   if (token.startsWith('HEAD@{') || token.includes('/')) return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
   const revision = resolveRevision(state, token)
   if (revision.kind === 'foreign') return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
+  // Токен, похожий на id коммита, но коммита с таким id нет (например, id удалённого тайника): ответ git не сверен, форма вне области.
+  if (revision.kind === 'missing' && (command === 'apply' || command === 'pop') && /^[0-9a-f]{4,40}$/.test(token)) return { ok: false, outcome: refuse(state, ae.stashIdForm(command, token)) }
   if (revision.kind === 'missing') return notValid
   // Коммит, а не тайник. При пустой стопке порядок проверок git не сверен.
   if (count === 0) return { ok: false, outcome: refuse(state, ae.stashRefForm(token)) }
@@ -229,7 +231,7 @@ function drop(state: AppendixState, token: string | undefined): Outcome {
   if (!ref.ok) return ref.outcome
   const entry = state.stashes[ref.position]
   // Неслитый путь `drop` не трогает (К16.2).
-  return exited(removeStash(state, ref.position), `Dropped ${ref.label} (${entry.id})`, 0, hasUnmerged(state) ? `${ax.stashDropped} ${ru.conflicts.stashDropKeepsUnmerged}` : ax.stashDropped)
+  return exited(removeStash(state, ref.position), `Dropped ${ref.label} (${entry.id})`, 0, hasUnmerged(state) ? ru.conflicts.stashDropKeepsUnmerged : ax.stashDropped)
 }
 
 function applyOrPop(state: AppendixState, token: string | undefined, pop: boolean): Outcome {

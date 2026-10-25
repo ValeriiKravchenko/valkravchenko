@@ -23,7 +23,7 @@
 import type { AppendixState, FileTree, Head } from './appendixTypes'
 import { exited, refuse, type Outcome } from './appendixOutcome'
 import { commitTree, graphOf, headTree, refsOf, currentCommitId } from './appendixRepo'
-import { isValidBranchName } from './appendixRefs'
+import { compareBytes, isValidBranchName } from './appendixRefs'
 import { BRANCH_INVALID, branchNameOutOfScope } from './appendixLocal'
 import { reflogShortOutput, resolveRevision } from './appendixRevisions'
 import { restoreFiles, isPlainPath } from './appendixRestore'
@@ -93,7 +93,7 @@ function applyTargetTree(state: AppendixState, target: FileTree): { index: FileT
       working[f] = target[f]
     }
   }
-  carried.sort((x, y) => (x.file < y.file ? -1 : x.file > y.file ? 1 : 0))
+  carried.sort((x, y) => compareBytes(x.file, y.file))
   return { index, working, carried: carried.map((c) => `${c.letter}\t${c.file}`) }
 }
 

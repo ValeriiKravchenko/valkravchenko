@@ -315,8 +315,16 @@ describe('cherry-pick останавливается: конфликт и пус
     for (const line of ['git cherry-pick HEAD', 'git cherry-pick HEAD~1', 'git cherry-pick master']) {
       const lines = run(fresh(), line).result.output.split('\n')
       expect(lines[0], line).toMatch(/^On branch master|^HEAD detached/)
-      expect(lines.indexOf(hint), line).toBeGreaterThan(lines.findIndex((l) => l.startsWith('nothing to commit') || l.startsWith('You are currently')))
-      expect(lines[lines.length - 1], line).toBe("Otherwise, please use 'git cherry-pick --skip'")
+      const hintAt = lines.indexOf(hint)
+      const currently = lines.findIndex((l) => l.startsWith('You are currently'))
+      expect(currently, line).toBe(1)
+      // Последняя строка статуса стоит непосредственно перед подсказкой (П8.78, П8.75): подсказка не вставлена после первой строки статуса.
+      expect(lines[hintAt - 1], line).toBe('nothing to commit, working tree clean')
+      expect(hintAt, line).toBeGreaterThan(currently + 3)
+      expect(lines.slice(hintAt), line).toEqual([hint, 'If you wish to commit it anyway, use:', '', '    git commit --allow-empty', '', "Otherwise, please use 'git cherry-pick --skip'"])
+      // Те же строки, что в протоколе, с точностью до id.
+      const masked = (text: string) => text.replace(/\b[0-9a-f]{7}\b/g, '<id>').split('\n')
+      expect(masked(run(fresh(), line).result.output), line).toEqual(masked(protocolEntry('П8.78', line).output))
     }
   })
 

@@ -426,6 +426,45 @@ describe('ссылки на тайник и ошибки (П8.3, П8.41–П8.44
     expect(run(fresh(), 'git stash drop 1').result.output).toBe('error: refs/stash@{1} is not a valid reference')
   })
 
+  it('id удалённого тайника в apply и pop: отказ области, а не is not a valid reference (выдержка из прогона git 2.53.0: после drop apply по id применял тайник, формы нет в протоколе)', () => {
+    const dropped = run(edit(fresh()), 'git stash')
+    const afterDrop = run(dropped.state, 'git stash drop')
+    const id = /\(([0-9a-f]{40})\)$/.exec(afterDrop.result.output)?.[1]
+    expect(id).toBeDefined()
+    expect(afterDrop.state.stashes).toEqual([])
+    for (const token of [id as string, (id as string).slice(0, 7)]) {
+      for (const sub of ['apply', 'pop']) {
+        const r = run(afterDrop.state, `git stash ${sub} ${token}`)
+        expect(r.result.output, `${sub} ${token}`).toBe(ru.appendix.errors.stashIdForm(sub, token))
+        refusal(r.result.output)
+        expect(r.result.output).not.toContain('is not a valid reference')
+        expect(r.result.exitCode).toBeUndefined()
+        expect(bare(r.state)).toEqual(bare(afterDrop.state))
+      }
+    }
+  })
+
+  it('id не найден, но стопка не пуста, токен не из шестнадцатеричных знаков и stash@{n} вне стопки: прежние ответы', () => {
+    const s = two()
+    expect(run(s, `git stash apply ${'a'.repeat(40)}`).result.output.startsWith('[тренажёр]')).toBe(true)
+    expect(run(s, 'git stash pop xyz1234').result).toMatchObject({ output: 'error: xyz1234 is not a valid reference', exitCode: 1 })
+    expect(run(fresh(), 'git stash apply stash@{0}').result).toMatchObject({ output: 'error: stash@{0} is not a valid reference', exitCode: 1 })
+    expect(run(s, 'git stash apply stash@{7}').result).toMatchObject({ output: "fatal: log for 'stash' only has 2 entries", exitCode: 128 })
+  })
+
+  it('drop с таким же id прежний: error: <id> is not a valid reference', () => {
+    expect(run(fresh(), 'git stash drop abcdef1').result).toMatchObject({ output: 'error: abcdef1 is not a valid reference', exitCode: 1 })
+  })
+
+  it('речь stashDropped: тайник удалён из стопки, в скобках id коммита; слов «вернуть» и «по id» нет', () => {
+    const text = ru.appendix.explain.stashDropped
+    expect(text).toContain('Тайник удалён из стопки')
+    expect(text).toContain('В скобках')
+    expect(text).not.toContain('вернуть')
+    expect(text).not.toContain('по id')
+    expect(text).not.toContain('без применения')
+  })
+
   it('ссылки, которые раздел не разбирает, получают отказ области: ключи, пустое слово, ведущий ноль, HEAD@{1}', () => {
     for (const token of ['-1', '--index', "''", '00', 'stash@{01}', 'HEAD@{1}', 'a..b', '99999999']) {
       const r = run(two(), `git stash pop ${token}`)

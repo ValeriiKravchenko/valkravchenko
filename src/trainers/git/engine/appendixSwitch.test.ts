@@ -270,6 +270,24 @@ describe('git switch', () => {
   })
 })
 
+describe('порядок файлов в отчёте перехода: байты UTF-8, а не кодовые единицы UTF-16', () => {
+  it('M\t<файл> для U+FF21 (байты EF BC A1) идёт раньше U+1F600 (байты F0 9F 98 80), хотя в UTF-16 суррогат D83D меньше FF21', () => {
+    const wide = '\uFF21.txt'
+    const smile = '\u{1F600}.txt'
+    let s = fresh()
+    // Два файла в коммите, затем ещё один коммит: переход на master~1 оставляет их, правка в них переезжает.
+    s = { ...s, working: { ...s.working, [smile]: 'x\n', [wide]: 'y\n' } }
+    s = run(run(s, `git add ${smile}`).state, `git add ${wide}`).state
+    s = run(s, 'git commit -m "wide"').state
+    s = run(run(editAppendixFile(s, 'app.js'), 'git add app.js').state, 'git commit -m "second"').state
+    s = { ...s, working: { ...s.working, [smile]: 'x2\n', [wide]: 'y2\n' } }
+    const r = run(s, 'git checkout master~1')
+    expect(r.result.exitCode).toBe(0)
+    const lines = r.result.output.split('\n').filter((l) => l.startsWith('M\t') || l.startsWith('A\t') || l.startsWith('D\t'))
+    expect(lines).toEqual([`M\t${wide}`, `M\t${smile}`])
+  })
+})
+
 describe('переход с правкой в рабочем каталоге (О7, О16, О24, П8.64, П8.65)', () => {
   const edited = (state: AppendixState, file: string): AppendixState => ({ ...state, working: { ...state.working, [file]: `${state.working[file].replace(/\n$/, '')} + правка\n` } })
   const start = fresh()

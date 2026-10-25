@@ -11,6 +11,7 @@ describe('ru.appendix', () => {
       a.errors.gitUsageNoArgs,
       a.errors.commandOutOfScope('rebase'),
       a.errors.stashRefForm('x'),
+      a.errors.stashIdForm('apply', 'abcdef1'),
       a.errors.stashMessageForm,
       a.errors.stashConflictKind('pop', ['app.js']),
       a.errors.stashUnverified('pop'),
@@ -220,8 +221,42 @@ describe('ru.appendix', () => {
   it('миссии 3 и 4 — тексты и подсказки из словаря (target.md, «Миссии»)', () => {
     expect(a.missions.stashSave.hint).toBe('измени файл (✎ изменить) → git stash')
     expect(a.missions.stashRestore.hint).toBe('git stash pop')
-    expect(a.missions.stashSave.text).toContain('тайник')
-    expect(a.missions.stashRestore.text).toContain('тайник')
+    expect(a.missions.stashSave.text).toBe('Отредактируй app.js (кнопка ✎), но не коммить — вместо этого спрячь изменения.')
+    expect(a.missions.stashRestore.text).toBe('Верни спрятанные изменения обратно.')
+  })
+
+  it('тексты миссий 3–7 дословно, как в исходной версии (target.md, «Миссии»: формулировки не меняются)', () => {
+    expect(a.missions.stashSave.text).toBe('Отредактируй app.js (кнопка ✎), но не коммить — вместо этого спрячь изменения.')
+    expect(a.missions.stashRestore.text).toBe('Верни спрятанные изменения обратно.')
+    expect(a.missions.cherryPick.text).toBe(
+      'В ветке feature два коммита. Посмотри её лог и скопируй к себе в master только фикс опечатки. (Правка app.js после stash pop ещё не закоммичена: если Git откажется копировать поверх неё — сначала верни файл командой git checkout -- app.js.)',
+    )
+    expect(a.missions.rescueCommit.text).toBe('Ошибись специально и спаси коммит: откати ветку на один коммит назад жёстко, найди потерянный коммит в журнале и верни его.')
+    expect(a.missions.rebase.text).toBe(
+      'Переключись в feature и перебазируй её поверх master, затем посмотри историю: git log --oneline --all. Если ты уже копировал фикс в master, Git пропустит его как дубликат.',
+    )
+  })
+
+  it('тексты о ветке и теге с одним именем: предупреждение при использовании имени, а не «при каждом» переходе', () => {
+    for (const text of [a.errors.branchNameIsTag('v1'), a.errors.tagNameIsBranch('master')]) {
+      expect(text).not.toContain('при каждом')
+      expect(text).toContain('при использовании этого имени')
+    }
+  })
+
+  it('речь stashDropped и конфликтная речь drop не обещают вернуть тайник по id', () => {
+    for (const text of [a.explain.stashDropped, ru.conflicts.stashDropKeepsUnmerged]) {
+      expect(text).not.toContain('вернуть')
+      expect(text).not.toContain('по id')
+      expect(text.split('Тайник удалён из стопки')).toHaveLength(2)
+    }
+    expect(ru.conflicts.stashDropKeepsUnmerged).not.toContain('без применения')
+  })
+
+  it('речь resetSameCommit: «на ветке», без «всегда»; для отсоединённого HEAD текст прежний', () => {
+    expect(a.explain.resetSameCommit).not.toContain('всегда')
+    expect(a.explain.resetSameCommit).toContain('на ветке')
+    expect(a.explain.resetSameCommitDetached).toBe('HEAD уже стоял на этом коммите, поэтому ничего не сдвинулось. В отсоединённом HEAD запись в журнал git здесь не делает.')
   })
 
   it('речь о тайниках не говорит, что тайник «привязан» к ветке или что pop возвращает подготовку (места 11–12)', () => {

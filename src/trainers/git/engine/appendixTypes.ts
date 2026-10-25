@@ -52,7 +52,7 @@ export interface AppendixStash {
 
 /**
  * Миссии: 1 — лёгкий тег, 2 — `git show` аннотированного тега, 3 — спрятать правку, 4 — вернуть спрятанное (шаг A);
- * 5 — `git cherry-pick`, создавший коммит, 6 — `git reset --hard HEAD@{n}` на брошенный коммит, 7 — `git rebase`, перенёсший коммиты или перемотавший ветку (шаг B).
+ * 5 — `git cherry-pick`, создавший коммит, 6 — `git reset --hard` (`HEAD@{n}` или id из журнала) на брошенный коммит, 7 — `git rebase`, перенёсший коммиты или перемотавший ветку (шаг B).
  */
 export type AppendixMissionId = 'lightTag' | 'annotatedShow' | 'stashSave' | 'stashRestore' | 'cherryPick' | 'rescueCommit' | 'rebase'
 

@@ -14,8 +14,8 @@
 //   (П8.5, П8.69–П8.71, П8.81); в отсоединённом HEAD при reset на тот же коммит записи нет (П8.72, П8.81).
 // - Слово, которого нет среди ссылок и файлов, — `fatal: ambiguous argument …`, код 128 (П8.69); `HEAD@{n}` за концом
 //   журнала — `fatal: log for 'HEAD' only has N entries`, код 128 (П8.69).
-// - Миссия 6: `--hard HEAD@{n}` на ветке, после которого ветка стоит на коммите, недостижимом до этого ни из одной ветки
-//   и ни из одного тега. В отсоединённом HEAD ветка не двигается, и миссию команда не засчитывает.
+// - Миссия 6: `--hard` на ветке со ссылкой `HEAD@{n}` либо с id (полным или из 7 знаков), который есть в записи журнала HEAD; после него
+//   ветка стоит на коммите, недостижимом до этого ни из одной ветки и ни из одного тега. Mixed и `--soft` миссию не засчитывают. В отсоединённом HEAD ветка не двигается, и миссию команда не засчитывает.
 // - Посреди cherry-pick и конфликта тайника (часть XI): `--hard` и mixed снимают неслитые пути и операцию (К4.3, К5.7, К10.c, К10.s);
 //   `--soft` отказывает (`Cannot do a soft reset in the middle of a merge.`, код 128, К5.9).
 // - Посреди rebase (К6.6, К10.b, К14.1): `--hard` и mixed без ссылки (или с `HEAD`) снимают неслитые пути, но rebase не снимают —
@@ -41,6 +41,13 @@ type ResetMode = 'soft' | 'mixed' | 'hard'
 
 const MODE_FLAGS: Readonly<Record<string, ResetMode>> = { '--soft': 'soft', '--mixed': 'mixed', '--hard': 'hard' }
 const HEAD_AT = /^HEAD@\{\d+\}$/
+
+/** Ссылка из журнала: `HEAD@{n}` либо полный id или id из 7 знаков (как `git reflog` его показывает), который есть в записи журнала HEAD. */
+function namesReflogEntry(state: AppendixState, word: string): boolean {
+  if (HEAD_AT.test(word)) return true
+  if (!/^[0-9a-f]+$/.test(word) || (word.length !== 7 && word.length !== 40)) return false
+  return state.reflog.some((entry) => entry.id === word || shortCommitId(entry.id) === word)
+}
 
 /** Неотслеживаемые файлы (нет ни в индексе, ни в HEAD) `reset --hard` не трогает. */
 function untrackedFiles(state: AppendixState): FileTree {
@@ -132,7 +139,7 @@ export function handleReset(state: AppendixState, args: readonly string[]): Outc
   if (HEAD_AT.test(word)) notes.push(ax.resetViaReflog(word, short))
 
   // Миссия 6: ветка вернулась на коммит, на который до этого не указывала ни одна ветка и ни один тег.
-  const rescued = hard && branch !== null && HEAD_AT.test(word) && fadedCommitIds(state).has(targetId)
+  const rescued = hard && branch !== null && namesReflogEntry(state, word) && fadedCommitIds(state).has(targetId)
   if (rescued) notes.push(ax.resetRescued(branch, short))
   if (rebase !== null) notes.push(hard ? ru.conflicts.resetHardRebase : ru.conflicts.resetMixedRebase)
   else if (inConflict(state)) notes.push(hard ? ru.conflicts.resetHardCleared : ru.conflicts.resetMixedCleared)
