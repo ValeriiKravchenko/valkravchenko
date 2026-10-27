@@ -1,5 +1,4 @@
 import { screen, within } from '@testing-library/react'
-import { REPO_URL } from '../data/aboutPaths'
 import { dictionary as t } from '../i18n'
 import { renderAt } from '../test/renderAt'
 
@@ -45,16 +44,17 @@ describe('trainers showcase', () => {
     expect(router.state.location.pathname).toBe('/trainers')
   })
 
-  it('says next to each link that launching is for the owner only and links the repository', () => {
+  it('says next to each card that the source is in a closed repository and has no repository link', () => {
     renderAt('/trainers')
     const notes = screen.getAllByText(t.trainers.showcase.note, { exact: false })
     expect(notes).toHaveLength(2)
     for (const note of notes) {
-      const repo = within(note).getByRole('link')
-      expect(repo).toHaveAttribute('href', REPO_URL)
-      expect(repo).toHaveAttribute('href', 'https://github.com/ValeriiKravchenko/valkravchenko')
-      expect(repo).toHaveAttribute('target', '_blank')
-      expect(repo).toHaveAttribute('rel', 'noopener noreferrer')
+      expect(within(note).queryByRole('link')).toBeNull()
+    }
+    const win = screen.getByRole('region', { name: t.trainers.windowTitle })
+    for (const link of within(win).getAllByRole('link')) {
+      expect(link).not.toHaveAttribute('target', '_blank')
+      expect(link.getAttribute('href') ?? '').not.toContain('github.com')
     }
   })
 
