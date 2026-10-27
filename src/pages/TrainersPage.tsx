@@ -1,7 +1,6 @@
 import { Button } from '../components/Button'
 import { PageHeading } from '../components/PageHeading'
 import { Window } from '../components/Window'
-import { REPO_URL } from '../data/aboutPaths'
 import { TRAINERS_APP_PATH } from '../data/trainerPaths'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDictionary } from '../i18n'
@@ -29,18 +28,7 @@ export function TrainersPage() {
             <Button href={TRAINERS_APP_PATH} variant="primary" aria-label={t.trainers.ctaAriaLabel(card.title)}>
               {t.trainers.cta}
             </Button>
-            <p className="m-0 text-[15px] text-muted">
-              {t.trainers.showcase.note}{' '}
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${t.trainers.showcase.repoLabel} ${t.projects.newTabNote}`}
-                className="text-accent underline decoration-teal-deco underline-offset-4 hover:text-accent-hover"
-              >
-                {t.trainers.showcase.repoLabel}
-              </a>
-            </p>
+            <p className="m-0 text-[15px] text-muted">{t.trainers.showcase.note}</p>
           </li>
         ))}
       </ul>

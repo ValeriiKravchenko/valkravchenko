@@ -20,7 +20,7 @@ Sections are listed in the registry `src/data/sections.ts`. Menu and routes are 
 | java | `/java` | disabled |
 | basics | `/basics` | disabled |
 
-The `/trainers` page is a showcase. The trainers themselves are a separate HTML entry, `trainers-app/index.html`, served at `/trainers-app/` (hash router, built as a second page in `vite.config.ts`).
+The `/trainers` page is a showcase. The trainers themselves live in a separate private repository and are published at `/trainers-app/` by the deploy script; they are not built from this repository.
 
 A disabled section has no menu item, no route (its path shows the 404 page) and no link on the home page. A section is published only when it has real content.
 
@@ -67,8 +67,6 @@ Routes are client-side, so a static host must serve `index.html` for unknown pat
 - `src/layout/` root layout (skip link, header, menu, footer, focus handling).
 - `src/pages/` one component per page, plus the 404 page.
 - `src/components/` UI components, each with a test next to it.
-- `src/trainers/` trainer logic and screens (git, english).
-- `src/trainers-app/` the separate trainers page (`/trainers-app/`) with its own routes.
 - `src/i18n/` text dictionaries (`ru.ts`; add `en.ts` with the same `Dictionary` shape).
 - `src/index.css` design tokens (`@theme`), fonts, focus and reduced-motion rules.
 

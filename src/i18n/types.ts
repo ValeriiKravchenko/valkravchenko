@@ -110,9 +110,8 @@ export interface Dictionary {
     /** Texts of the public showcase on the main site. */
     showcase: {
       intro: string
-      /** Note before the repository link. */
+      /** Note under each card. */
       note: string
-      repoLabel: string
     }
     /** Shown while a trainer screen is loading. */
     loading: string
